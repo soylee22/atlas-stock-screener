@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { quantile, axisScale, quadrantModel, regression } from '../static/quadrant-math.js';
+import { quantile, axisScale, quadrantModel, regression, paretoFrontier, zoomViewport, panViewport, centreViewport, validViewport, orderPoints } from '../static/quadrant-math.js';
 const fields = { x: { kind:'usd' }, y:{kind:'integer'} };
 const settings = { x:'x', y:'y', xPrefer:'higher', yPrefer:'higher', xScale:'linear', yScale:'linear', split:'median' };
 const rows = [-4,-2,2,4].map((x,i)=>({symbol:String(i),x,y:[1,3,1,3][i]}));
@@ -33,3 +33,31 @@ assert.equal(regression([{tx:1,ty:2},{tx:2,ty:3}]),null);
 const all = quadrantModel(Array.from({length:1000},(_,x)=>({x,y:x})),settings,fields);
 assert.equal(all.points.length,1000); assert.equal(all.xcut,499.5); assert.equal(all.counts.dream,500);
 console.log('Quadrant quantiles, full-population counts, ties, losses, scales and regression checks passed');
+
+const frontierRows=[{x:5,y:1},{x:3,y:3},{x:1,y:5},{x:3,y:3},{x:3,y:2},{x:2,y:2},{x:-1,y:0}];
+const ids=ps=>ps.map(p=>p.row.symbol).sort();
+for(const xPrefer of ['higher','lower'])for(const yPrefer of ['higher','lower']) {
+  let seed=47; const rand=()=>{seed=(seed*16807)%2147483647;return seed;};
+  const input=[...frontierRows,...Array.from({length:300},()=>({x:rand()%17-8,y:rand()%11-5}))];
+  const m=quadrantModel(input.map((p,i)=>({...p,symbol:String(i)})),{...settings,xPrefer,yPrefer},fields);
+  const sx=xPrefer==='higher'?1:-1,sy=yPrefer==='higher'?1:-1;
+  const oracle=m.points.filter(p=>!m.points.some(q=>sx*q.x>=sx*p.x&&sy*q.y>=sy*p.y&&(sx*q.x>sx*p.x||sy*q.y>sy*p.y)));
+  assert.deepEqual(ids(m.frontier),ids(oracle));
+  const logs=quadrantModel(input.map((p,i)=>({...p,symbol:String(i)})),{...settings,xPrefer,yPrefer,xScale:'symlog',yScale:'rank'},fields);
+  assert.deepEqual(ids(logs.frontier),ids(oracle));
+}
+const fm=quadrantModel(frontierRows.map((p,i)=>({...p,symbol:String(i)})),settings,fields);
+assert.deepEqual(ids(fm.frontier),['0','1','2','3']);
+assert.equal(fm.points.filter(p=>p.pareto).length,4);
+assert.equal(paretoFrontier([]).length,0);
+const view={x:[0,100],y:[-10,10]};
+assert.deepEqual(zoomViewport(view,.5),{x:[25,75],y:[-5,5]});
+assert.deepEqual(zoomViewport(view,.5,{x:0,y:1}),{x:[0,50],y:[0,10]});
+assert.deepEqual(panViewport(view,.1,.25),{x:[-10,90],y:[-5,15]});
+assert.deepEqual(centreViewport(view,0,5),{x:[-50,50],y:[-5,15]});
+assert.equal(validViewport(view),true); assert.equal(validViewport({x:[0,0],y:[1,2]}),false);
+assert.equal(validViewport({x:[0,Infinity],y:[1,2]}),false);
+const tiny=zoomViewport(view,1e-10);assert.ok(tiny.x[1]-tiny.x[0]>=.00999);
+assert.deepEqual(ids(orderPoints(fm.points,'frontier').slice(0,4)),['0','1','2','3']);
+assert.equal(orderPoints(fm.points,'x')[0].x,5);assert.equal(orderPoints(fm.points,'y')[0].y,5);
+console.log('Pareto oracle, raw-scale invariance, viewport and ordering checks passed');

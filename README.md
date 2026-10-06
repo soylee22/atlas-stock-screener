@@ -154,3 +154,9 @@ The best-fit line uses ordinary least squares in the displayed scales. Its corre
 Zone selection hides other points without recalculating the cut-offs or fit. The list shows up to 100 stocks ranked by average preferred percentile.
 Click a point or list entry for its deep dive. Chart settings are included in saved screens. Export screen includes both selected axis metrics and all matching listings.
 Missing values are excluded from the plot and counted visibly. Dividend growth streaks remain observed Yahoo history.
+
+Chart navigation: drag to pan, scroll or pinch to zoom, and use the zoom buttons for precise steps. Fit all restores the data extent. Centre cut-offs moves the quadrant intersection to the middle at the current zoom. Maximise chart opens a larger view with the same controls. Restore chart or Escape returns to the page.
+
+The purple Pareto frontier marks observed listings for which no other matching listing is at least as good on both raw metrics and strictly better on one. It respects each axis preference and retains exact duplicate pairs. Frontier only limits plotted stocks and the list. Navigation and zone selection do not change the comparison population. The line joins observed frontier points and does not promise intermediate combinations.
+
+The list defaults to a balanced score: half the preferred X percentile plus half the preferred Y percentile, on a 0 to 100 scale. Order can instead use preferred X, preferred Y or frontier membership first. Balanced score breaks secondary ties, then symbol. Log X and Log Y independently switch between signed-log and linear scales. Chart settings, including the viewport, are saved with screens.

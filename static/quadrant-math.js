@@ -55,8 +55,11 @@ export function quadrantModel(rows, settings, fields) {
   const points = paired.map(row => {
     const x = row[settings.x], y = row[settings.y], px = preferred(x, xcut, settings.xPrefer), py = preferred(y, ycut, settings.yPrefer);
     const zone = px ? py ? 'dream' : 'x' : py ? 'y' : 'lagging'; counts[zone]++;
-    return { row, x, y, tx: xaxis.forward(x), ty: yaxis.forward(y), zone, score: (xaxis.percentile(x) + yaxis.percentile(y)) / 2 };
+    const xRank=xaxis.percentile(x), yRank=yaxis.percentile(y);
+    return { row, x, y, tx: xaxis.forward(x), ty: yaxis.forward(y), zone, xRank, yRank, score: (xRank+yRank)/2 };
   });
+  const frontier=paretoFrontier(points,settings.xPrefer,settings.yPrefer);
+  const members=new Set(frontier); for(const p of points)p.pareto=members.has(p);
   const domain = (values, cut, mode) => {
     let lo = Math.min(...values, cut), hi = Math.max(...values, cut);
     const pad = (hi - lo || Math.max(Math.abs(lo) * .1, 1)) * .07;
@@ -64,7 +67,43 @@ export function quadrantModel(rows, settings, fields) {
     if (mode === 'rank' && hi <= 0) return [-102,2];
     return [lo - pad, hi + pad];
   };
-  return { points, counts, total: rows.length, missing: rows.length - points.length, xcut, ycut, xaxis, yaxis,
+  return { points, frontier, counts, total: rows.length, missing: rows.length - points.length, xcut, ycut, xaxis, yaxis,
     xt: xaxis.forward(xcut), yt: yaxis.forward(ycut), xdomain: domain(points.map(p=>p.tx), xaxis.forward(xcut), settings.xScale),
     ydomain: domain(points.map(p=>p.ty), yaxis.forward(ycut), settings.yScale), fit: regression(points) };
+}
+
+// Strict Pareto dominance in raw values. Equal pairs never dominate each other.
+export function paretoFrontier(points, xPrefer='higher', yPrefer='higher') {
+  const sx=xPrefer==='lower'?-1:1, sy=yPrefer==='lower'?-1:1;
+  const ordered=points.map(p=>({p,x:sx*p.x,y:sy*p.y})).sort((a,b)=>b.x-a.x||b.y-a.y);
+  const frontier=[]; let bestY=-Infinity;
+  for(let i=0;i<ordered.length;) {
+    let end=i+1; while(end<ordered.length&&ordered[end].x===ordered[i].x)end++;
+    const topY=ordered[i].y;
+    if(topY>bestY) for(let j=i;j<end&&ordered[j].y===topY;j++)frontier.push(ordered[j].p);
+    bestY=Math.max(bestY,topY); i=end;
+  }
+  return frontier;
+}
+export function validViewport(view) {
+  return !!view && ['x','y'].every(a=>Array.isArray(view[a])&&view[a].length===2&&view[a].every(Number.isFinite)&&view[a][1]>view[a][0]);
+}
+export function zoomViewport(view, factor, anchor={x:.5,y:.5}, bounds=view) {
+  const result={};
+  for(const a of ['x','y']) {
+    const [lo,hi]=view[a], base=bounds[a][1]-bounds[a][0], at=Math.max(0,Math.min(1,anchor[a]));
+    const span=Math.max(base/10000,Math.min(base*100,(hi-lo)*factor)), fixed=lo+(hi-lo)*at;
+    result[a]=[fixed-span*at,fixed+span*(1-at)];
+  }
+  return result;
+}
+export function panViewport(view, dx, dy) {
+  return {x:view.x.map(v=>v-dx*(view.x[1]-view.x[0])),y:view.y.map(v=>v+dy*(view.y[1]-view.y[0]))};
+}
+export function centreViewport(view, x, y) {
+  const hx=(view.x[1]-view.x[0])/2,hy=(view.y[1]-view.y[0])/2;
+  return {x:[x-hx,x+hx],y:[y-hy,y+hy]};
+}
+export function orderPoints(points, order='balanced') {
+  return [...points].sort((a,b)=>(order==='x'?b.xRank-a.xRank:order==='y'?b.yRank-a.yRank:order==='frontier'?Number(b.pareto)-Number(a.pareto):0)||b.score-a.score||a.row.symbol.localeCompare(b.row.symbol));
 }
