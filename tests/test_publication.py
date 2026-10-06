@@ -1,4 +1,6 @@
 import json
+import re
+import shutil
 import sys
 import threading
 from pathlib import Path
@@ -33,7 +35,9 @@ def test_public_build_and_seed_only_publish_allowed_data(tmp_path):
     assert result['detail_files'] == 6
     html = (output / 'index.html').read_text()
     assert 'content="snapshot"' in html
-    assert 'src="./static/app.js"' in html
+    script = re.search(r'src="\./(static/[a-f0-9]{16}/app.js)"', html).group(1)
+    assert (output / script).is_file()
+    assert (output / script).parent.joinpath('data-source.js').is_file()
     data = json.loads((output / 'data' / 'stocks.json').read_text())
     mapped = [dict(zip(data['fields'], row)) for row in data['rows']]
     assert mapped[0]['market_cap'] == 12.5e9
@@ -96,3 +100,22 @@ def test_expired_budget_stops_new_source_requests(tmp_path, monkeypatch):
     pipeline.load_fx()
     pipeline.ingest()
     assert store.get('TEST.US')['price'] == 12.5
+
+
+def test_deployments_version_modules_and_retain_previous_bundle(tmp_path, monkeypatch):
+    store = seeded_store(tmp_path)
+    source = tmp_path / 'source'
+    shutil.copytree(model.ROOT / 'static', source / 'static')
+    monkeypatch.setattr(model, 'ROOT', source)
+    output = tmp_path / 'site'
+    build_site.build_site(store.path, output)
+    old_script = re.search(r'src="\./(static/[a-f0-9]{16}/app.js)"', (output / 'index.html').read_text()).group(1)
+    with (source / 'static' / 'format.js').open('a') as target:
+        target.write('\n// New calculation helper revision\n')
+    build_site.build_site(store.path, output)
+    new_script = re.search(r'src="\./(static/[a-f0-9]{16}/app.js)"', (output / 'index.html').read_text()).group(1)
+    assert old_script != new_script
+    assert (output / old_script).is_file()
+    assert (output / new_script).is_file()
+    assert 'New calculation helper revision' not in (output / old_script).parent.joinpath('format.js').read_text()
+    assert 'New calculation helper revision' in (output / new_script).parent.joinpath('format.js').read_text()

@@ -114,10 +114,31 @@ def build_site(database, output, seed=None):
         if target.exists():
             shutil.rmtree(target)
     shutil.copytree(model.ROOT / "static", output / "static")
+    # Version the entire module graph, including relative imports, to avoid mixed cached code.
+    source_files = sorted(p for p in (model.ROOT / "static").iterdir() if p.is_file())
+    version = hashlib.sha256(b"".join(p.name.encode() + p.read_bytes() for p in source_files)).hexdigest()[:16]
+    asset_cache = store.path.parent / "site-assets"
+    current = asset_cache / version
+    if not current.exists():
+        shutil.copytree(model.ROOT / "static", current)
+    previous = sorted((p for p in asset_cache.iterdir() if p.is_dir() and re.fullmatch(r"[a-f0-9]{16}", p.name)), key=lambda p: p.stat().st_mtime, reverse=True)
+    # Retain previous bundles while an edge cache can still serve an older index page.
+    retained = [current, *[bundle for bundle in previous if bundle != current][:2]]
+    for bundle in retained:
+        destination = output / "static" / bundle.name
+        destination.mkdir()
+        for source_file in source_files:
+            old_file = bundle / source_file.name
+            if old_file.is_file() and not old_file.is_symlink():
+                shutil.copyfile(old_file, destination / source_file.name)
+    for bundle in previous:
+        if bundle not in retained:
+            shutil.rmtree(bundle)
     shutil.copyfile(model.ROOT / "static" / "export-worker.js", output / "export-worker.js")
     html = (model.ROOT / "static" / "index.html").read_text()
     html = html.replace("<head>", '<head>\n<meta name="atlas-data-mode" content="snapshot">')
     html = html.replace('href="/', 'href="./').replace('src="/', 'src="./')
+    html = html.replace('./static/', f'./static/{version}/')
     html = html.replace("while the local service runs", "on GitHub")
     html = html.replace("Use Refresh data for a new universe scan.", "Use Refresh data to load the latest published snapshot.")
     html = html.replace("Financials load in a rolling queue, prioritising visible rows, and are cached for seven days.", "Financials load in scheduled batches. Published snapshots update every four hours.")
