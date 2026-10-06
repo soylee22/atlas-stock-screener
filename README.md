@@ -41,7 +41,8 @@ Missing values stay at the end in either direction.
 Use Columns to add, remove and reorder metrics.
 Save screen stores markets, filters, sorting and columns in this browser.
 The star beside a ticker adds it to the browser's watchlist.
-Export downloads all matching rows with raw numeric values and period metadata.
+Export prepares all matching rows with raw numeric values and period metadata.
+Use Download CSV or Copy CSV. Copy CSV works in embedded browsers that block generated file downloads.
 
 Select a company to open its stock deep dive.
 Select Explore dividend history for annual dividends per share and individual events.

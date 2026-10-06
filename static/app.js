@@ -252,7 +252,18 @@ function bindEvents() {
   $('save-form').onsubmit = e => { e.preventDefault(); const name = $('view-name').value.trim(); if (!name) return; state.view = name; saved[name] = JSON.parse(JSON.stringify(state)); persist('atlas.views.v1', saved); persist('atlas.last.v1', state); renderSaved(); $('unsaved').hidden = true; $('save-dialog').close(); toast('Screen saved in this browser'); };
   $('delete-view').onclick = () => { delete saved[state.view]; state.view = ''; persist('atlas.views.v1', saved); renderSaved(); $('save-dialog').close(); toast('Saved screen removed'); };
   $('saved-views').onchange = e => { const name = e.target.value; if (name && saved[name]) { Object.assign(state, { mainOnly: true }, saved[name], { page: 0, view: name }); $('page-size').value = state.pageSize; } else Object.assign(state, { view: '', columns: [...defaults], filters: [], search: '', regions: [], preset: 'all', watchOnly: false, mainOnly: true, sort: 'market_cap', direction: 'desc', page: 0 }); $('unsaved').hidden = true; renderControls(); loadRows(); persist('atlas.last.v1', state); };
-  $('export').onclick = async () => { const p = params(); p.set('columns', state.columns.join(',')); if (isPublished) { await exportSnapshot(p); toast('Exported all matching rows with raw numeric USD values'); return; } const a = document.createElement('a'); a.href = '/api/export?' + p; a.download = 'atlas-stocks-usd.csv'; a.click(); toast('Exporting all matching rows with raw numeric USD values'); };
+  $('export').onclick = async () => { const p = params(); p.set('columns', state.columns.join(',')); if (isPublished) {
+      $('export-dialog').showModal(); $('export-summary').textContent = 'Preparing your CSV…';
+      $('download-csv').hidden = true; $('copy-csv').disabled = true;
+      try {
+        const prepared = await exportSnapshot(p);
+        $('export-summary').textContent = `${prepared.count.toLocaleString('en-GB')} matching listings ready to export.`;
+        $('download-csv').href = prepared.url; $('download-csv').hidden = false; $('copy-csv').disabled = false;
+        $('copy-csv').onclick = async () => { try { await navigator.clipboard.writeText(prepared.csv); toast('CSV copied to clipboard'); } catch { toast('Clipboard access unavailable. Use Download CSV.'); } };
+        $('export-dialog').onclose = prepared.dispose;
+      } catch (error) { $('export-summary').textContent = error.message; }
+      return;
+    } const a = document.createElement('a'); a.href = '/api/export?' + p; a.download = 'atlas-stocks-usd.csv'; a.click(); toast('Exporting all matching rows with raw numeric USD values'); };
   $('refresh').onclick = async () => { if (isPublished) { await reloadSnapshot(); await Promise.all([loadRows(), loadStatus()]); toast('Latest published snapshot loaded'); return; } await api('/api/refresh', { method: 'POST' }); toast('Quote and FX refresh queued'); setTimeout(loadStatus, 800); };
   $('data-button').onclick = $('method-button').onclick = () => { renderCoverage(); $('data-dialog').showModal(); };
   $('include-other').onchange = e => update({ includeOther: e.target.checked });

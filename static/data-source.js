@@ -56,7 +56,8 @@ export async function api(input, options) {
 
 export async function exportSnapshot(params) {
   const data = await snapshot();
-  const csv = snapshotCSV(selectSnapshot(data.rows, data.schema, params), data.schema, params.get('columns') || '');
+  const selected = selectSnapshot(data.rows, data.schema, params);
+  const csv = snapshotCSV(selected, data.schema, params.get('columns') || '');
   if ('serviceWorker' in navigator) {
     const registration = await navigator.serviceWorker.register(new URL('export-worker.js', document.baseURI));
     await navigator.serviceWorker.ready;
@@ -70,12 +71,8 @@ export async function exportSnapshot(params) {
       channel.port1.onmessage = () => { clearTimeout(timeout); channel.port1.close(); resolve(); };
       registration.active.postMessage({ token, csv }, [channel.port2]);
     });
-    const link = document.createElement('a');
-    link.href = new URL(`atlas-export.csv?token=${token}`, document.baseURI);
-    link.download = 'atlas-stocks-usd.csv'; document.body.append(link); link.click(); link.remove();
-    return;
+    return { csv, count: selected.length, url: new URL(`atlas-export.csv?token=${token}`, document.baseURI).href, dispose() {} };
   }
   const url = URL.createObjectURL(new Blob(['\ufeff', csv], { type: 'text/csv;charset=utf-8' }));
-  const link = document.createElement('a'); link.href = url; link.download = 'atlas-stocks-usd.csv';
-  document.body.append(link); link.click(); link.remove(); setTimeout(() => URL.revokeObjectURL(url), 60000);
+  return { csv, count: selected.length, url, dispose() { URL.revokeObjectURL(url); } };
 }
