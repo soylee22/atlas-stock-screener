@@ -1,0 +1,18 @@
+import assert from 'node:assert/strict';
+import { parseNumber, annualDividends, compact, escapeHtml } from '../static/format.js';
+assert.equal(parseNumber('10B'), 10000000000);
+assert.equal(parseNumber('$100M'), 100000000);
+assert.equal(parseNumber('3.5%'), 3.5);
+assert.equal(parseNumber('-1.2B'), -1200000000);
+assert.equal(parseNumber('invalid'), null);
+assert.equal(compact(10e9).unit, 'B');
+assert.equal(compact(100e6).unit, 'M');
+assert.equal(escapeHtml('<script>'), '&lt;script&gt;');
+const annual = annualDividends([{date:'2023-01-01',amount:1},{date:'2023-06-01',amount:1},{date:'2025-06-01',amount:3},{date:'2026-06-01',amount:1}], 2026);
+assert.equal(annual[0].total, 2);
+assert.equal(annual[1].total, 0);
+assert.equal(annual[1].growth, -100);
+assert.equal(annual[2].growth, null);
+assert.equal(annual[3].incomplete, true);
+assert.equal(annual[3].growth, null);
+console.log('14 formatting and dividend assertions passed');

@@ -1,0 +1,173 @@
+"""Build the standalone GitHub Pages snapshot and optional public-data seed."""
+from __future__ import annotations
+
+import argparse
+import hashlib
+import io
+import json
+import re
+import shutil
+import tarfile
+from pathlib import Path
+
+import app as model
+
+EXTRA_FIELDS = {
+    "symbol", "name", "region_code", "instrument", "active", "main_listing", "listing_reason",
+    "website", "domicile", "description", "source", "quote_fetched", "quote_timestamp", "market_state",
+    "financial_error", "dividend_error", "dividend_fetched", "dividend_currency", "dividend_events",
+    "dividend_years", "dividend_history_start", "dividend_end_year", "universe_run",
+    "price_local", "market_cap_local", "low_52w_local", "high_52w_local",
+    *(key + "_local" for key in model.MONETARY_FINANCIAL),
+}
+PUBLIC_FIELDS = EXTRA_FIELDS | set(model.FIELDS)
+INDEX_FIELDS = list(dict.fromkeys([
+    "symbol", "name", "region_code", "instrument", "active", "main_listing", "listing_reason",
+    "financial_error", "detail_key", "logo_url", *[field["key"] for field in model.COLUMNS],
+]))
+META_KEYS = ["coverage", "fx", "quote_completed", "last_quote_run", "quote_error", "last_financial", "refresh_health"]
+ICON_FILE = re.compile(r"[a-f0-9]{64}\.(png|jpg|gif|webp|ico)")
+
+
+def public_row(row):
+    out = {key: value for key, value in row.items() if key in PUBLIC_FIELDS}
+    for key in ["financial_error", "dividend_error"]:
+        if out.get(key):
+            out[key] = "Yahoo source unavailable. Cached values retained where available."
+    return out
+
+
+def clean_metadata(data):
+    if isinstance(data, dict):
+        return {key: "Yahoo refresh failed. Cached data retained." if key in {"error", "quote_error"} and value else clean_metadata(value) for key, value in data.items()}
+    if isinstance(data, list):
+        return [clean_metadata(value) for value in data]
+    return data
+
+
+def write_json(path, data):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(data, ensure_ascii=False, separators=(",", ":"), allow_nan=False) + "\n")
+
+
+def snapshot_status(rows, metadata, icon_count, built):
+    counts = []
+    for code in model.REGIONS:
+        regional = [r for r in rows if r.get("active") and r["region_code"] == code]
+        counts.append(dict(region=code, total=len(regional), stocks=sum(r.get("instrument") == "stock" for r in regional),
+            enriched=sum(bool(r.get("financial_fetched")) for r in regional),
+            main_stocks=sum(bool(r.get("main_listing")) for r in regional),
+            main_enriched=sum(bool(r.get("main_listing") and r.get("financial_fetched")) for r in regional),
+            fcf=sum(r.get("fcf") is not None for r in regional)))
+    return dict(counts=counts, coverage=metadata.get("coverage", {}), fx=metadata.get("fx", {}),
+        refreshing=False, completed=metadata.get("quote_completed"), error=metadata.get("quote_error"),
+        last_financial=metadata.get("last_financial"), refresh_health=metadata.get("refresh_health"),
+        missing_fx=sum(r.get("market_cap_local") is not None and r.get("market_cap") is None for r in rows),
+        logos=dict(cached=icon_count, queued=0, downloading=0), snapshot=dict(built=built, version=1, cadence="Every four hours. Quotes refresh daily."))
+
+
+def make_seed(destination, rows, metadata, assets, icon_root):
+    destination = Path(destination)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    payload = dict(version=1, rows=rows, metadata=metadata, logos=assets)
+    content = json.dumps(payload, ensure_ascii=False, separators=(",", ":"), allow_nan=False).encode()
+    with tarfile.open(destination, "w:gz") as archive:
+        member = tarfile.TarInfo("data.json")
+        member.size = len(content)
+        archive.addfile(member, io.BytesIO(content))
+        for asset in assets:
+            filename = asset["filename"]
+            path = icon_root / filename
+            if path.is_file() and not path.is_symlink():
+                member = tarfile.TarInfo("logos/" + filename)
+                member.size = path.stat().st_size
+                with path.open("rb") as source:
+                    archive.addfile(member, source)
+
+
+def build_site(database, output, seed=None):
+    store = model.Store(database)
+    store.classify_listings(force=True)
+    icon_root = store.path.parent / "logos"
+    with store.connect() as conn:
+        rows = [public_row(json.loads(r[0])) for r in conn.execute("SELECT data FROM stocks ORDER BY symbol")]
+        assets = [dict(r) for r in conn.execute("SELECT * FROM logo_assets WHERE filename IS NOT NULL")]
+    assets = [a for a in assets if ICON_FILE.fullmatch(a["filename"]) and (icon_root / a["filename"]).is_file() and not (icon_root / a["filename"]).is_symlink()]
+    metadata = clean_metadata({key: store.meta(key) for key in META_KEYS})
+    active = [r for r in rows if r.get("active")]
+    if not active or not all(any(r["region_code"] == code for r in active) for code in model.REGIONS):
+        raise ValueError("Publish only a snapshot containing all six markets")
+    output = Path(output).resolve()
+    protected = [model.ROOT.resolve(), store.path.parent.resolve()]
+    if any(output == path or output in path.parents for path in protected):
+        raise ValueError("Output must not contain the source or cache directory")
+    if output.exists() and any(output.iterdir()) and not (output / ".atlas-generated").exists():
+        # Permit upgrading earlier generated snapshots, identified by their mode marker.
+        index = output / "index.html"
+        if not index.is_file() or 'name="atlas-data-mode" content="snapshot"' not in index.read_text():
+            raise ValueError("Output is not an Atlas generated directory")
+    output.mkdir(parents=True, exist_ok=True)
+    (output / ".atlas-generated").write_text("Atlas generated site\n")
+    # Only clear this builder's generated directories, leaving unrelated files alone.
+    for name in ["static", "data", "logos"]:
+        target = output / name
+        if target.exists():
+            shutil.rmtree(target)
+    shutil.copytree(model.ROOT / "static", output / "static")
+    shutil.copyfile(model.ROOT / "static" / "export-worker.js", output / "export-worker.js")
+    html = (model.ROOT / "static" / "index.html").read_text()
+    html = html.replace("<head>", '<head>\n<meta name="atlas-data-mode" content="snapshot">')
+    html = html.replace('href="/', 'href="./').replace('src="/', 'src="./')
+    html = html.replace("while the local service runs", "on GitHub")
+    html = html.replace("Use Refresh data for a new universe scan.", "Use Refresh data to load the latest published snapshot.")
+    html = html.replace("Financials load in a rolling queue, prioritising visible rows, and are cached for seven days.", "Financials load in scheduled batches. Published snapshots update every four hours.")
+    html = html.replace("Files are stored locally", "Files are stored with the published site")
+    (output / "index.html").write_text(html)
+    (output / ".nojekyll").write_text("")
+    (output / "logos").mkdir()
+    by_domain = {asset["domain"]: asset for asset in assets}
+    for asset in assets:
+        shutil.copyfile(icon_root / asset["filename"], output / "logos" / asset["filename"])
+    built = model.now_iso()
+    # CSV calculations use this same database and FX snapshot.
+    model.store = store
+    for row in active:
+        asset = by_domain.get(model.company_domain(row.get("website")))
+        row["logo_url"] = "logos/" + asset["filename"] if asset else None
+        has_details = bool(row.get("financial_fetched") or row.get("dividend_events") or row.get("description"))
+        row["detail_key"] = hashlib.sha256(row["symbol"].encode()).hexdigest() if has_details else None
+        if has_details:
+            detail = dict(row)
+            detail["dividend_exports"] = {mode: f"data/dividends/{row['detail_key']}-{mode}.csv" for mode in ["annual", "events"]}
+            write_json(output / "data" / "details" / (row["detail_key"] + ".json"), detail)
+            for mode, filename in detail["dividend_exports"].items():
+                destination = output / filename
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                destination.write_bytes(model.dividend_export(row["symbol"], mode).body)
+    write_json(output / "data" / "schema.json", dict(columns=model.COLUMNS, regions=model.REGIONS))
+    write_json(output / "data" / "stocks.json", dict(version=1, built=built, fields=INDEX_FIELDS, rows=[[r.get(key) for key in INDEX_FIELDS] for r in active]))
+    status = snapshot_status(active, metadata, len(assets), built)
+    write_json(output / "data" / "status.json", status)
+    if seed:
+        # Browser-derived fields and storage are never part of the source seed.
+        make_seed(seed, [public_row(r) for r in rows], metadata, assets, icon_root)
+    size = sum(p.stat().st_size for p in output.rglob("*") if p.is_file())
+    if size > 900_000_000:
+        raise ValueError("Snapshot exceeds the Pages publication size budget")
+    result = dict(built=built, stocks=sum(c["stocks"] for c in status["counts"]), main_listings=sum(c["main_stocks"] for c in status["counts"]),
+        detail_files=sum(bool(r["detail_key"]) for r in active), icons=len(assets), bytes=size)
+    print(json.dumps(result))
+    return result
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--database", type=Path, default=model.DB)
+    parser.add_argument("--output", type=Path, default=model.ROOT / "public")
+    parser.add_argument("--seed", type=Path)
+    args = parser.parse_args()
+    build_site(args.database, args.output, args.seed)
+
+
+if __name__ == "__main__":
+    main()
