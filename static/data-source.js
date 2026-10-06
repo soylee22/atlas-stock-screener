@@ -15,6 +15,21 @@ async function snapshot() {
   return loaded;
 }
 export async function reloadSnapshot() { loaded = undefined; details.clear(); return snapshot(); }
+export async function chartRows(params, x, y) {
+  const query = new URLSearchParams(params); query.set('x', x); query.set('y', y);
+  if (isPublished) {
+    const data = await snapshot();
+    const numeric = new Set(data.schema.columns.filter(f => f.kind !== 'text').map(f => f.key));
+    if (!numeric.has(x) || !numeric.has(y)) throw new Error('Choose numeric chart metrics');
+    const selected = selectSnapshot(data.rows, data.schema, query);
+    const rows = selected.filter(r => typeof r[x] === 'number' && Number.isFinite(r[x]) && typeof r[y] === 'number' && Number.isFinite(r[y]));
+    return { rows, total: selected.length };
+  }
+  const response = await fetch('/api/chart?' + query);
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.detail || 'Chart data unavailable');
+  return data;
+}
 export async function api(input, options) {
   if (!isPublished) return fetch(input, options);
   try {

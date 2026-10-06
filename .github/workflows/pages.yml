@@ -46,6 +46,8 @@ jobs:
           python -m pytest -q tests
           node --experimental-default-type=module tests/test_format.mjs
           node --experimental-default-type=module tests/test_snapshot.mjs
+          node --experimental-default-type=module tests/test_quadrant.mjs
+          node --check static/quadrant.js
           node --check static/app.js
       - name: Restore market data cache
         uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25 # v5

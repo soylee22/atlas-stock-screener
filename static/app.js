@@ -1,11 +1,13 @@
-import { api, isPublished, reloadSnapshot, exportSnapshot } from './data-source.js';
+import { api, isPublished, reloadSnapshot, exportSnapshot, chartRows } from './data-source.js';
+import { createQuadrant, quadrantDefaults } from './quadrant.js';
 import { parseNumber, compact, escapeHtml as esc, annualDividends } from './format.js';
 
 const $ = id => document.getElementById(id);
 const FLAGS = { us: '🇺🇸', gb: '🇬🇧', ca: '🇨🇦', jp: '🇯🇵', kr: '🇰🇷', tw: '🇹🇼' };
 const SHORT = { us: 'US', gb: 'UK', ca: 'Canada', jp: 'Japan', kr: 'South Korea', tw: 'Taiwan' };
 function readStorage(key, fallback) { try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; } }
-const state = { regions: [], search: '', filters: [], sort: 'market_cap', direction: 'desc', columns: [], page: 0, pageSize: 100, includeOther: false, mainOnly: true, preset: 'all', watchOnly: false, view: '' };
+const state = { regions: [], search: '', filters: [], sort: 'market_cap', direction: 'desc', columns: [], page: 0, pageSize: 100, includeOther: false, mainOnly: true, preset: 'all', watchOnly: false, view: '', section:'table', quadrant:{...quadrantDefaults} };
+let quadrant, chartRefreshed = 0;
 let schema, fields, defaults, rows = [], total = 0, status = {}, saved = readStorage('atlas.views.v1', {}), watched = readStorage('atlas.watch.v1', []);
 let requestSeq = 0, selectedSymbol = null, dividendSymbol = null, filterIndex = -1, toastTimeout, refreshTimer, isLoading = false;
 
@@ -40,6 +42,14 @@ function companyIcon(row, color = '#385943') {
   return `<span class="company-monogram" style="background:${color}45;color:#c1cfb4">${initials}${row.logo_url ? `<img class="company-logo" src="${esc(row.logo_url)}" alt="" loading="lazy" decoding="async">` : ''}</span>`;
 }
 function markEdited() { $('unsaved').hidden = false; }
+function showSection(section, refresh = true) {
+  state.section = section === 'quadrant' ? 'quadrant' : 'table';
+  const chart = state.section === 'quadrant';
+  $('table-view').hidden = chart; $('quadrant-view').hidden = !chart; $('columns').hidden = chart;
+  $('export').querySelector('span').textContent = chart ? 'Export screen' : 'Export';
+  for (const key of ['table','quadrant']) { const b = $(key+'-section'); b.classList.toggle('active',state.section===key); b.setAttribute('aria-pressed',state.section===key); }
+  if (chart && refresh) { chartRefreshed = Date.now(); quadrant.refresh(state.quadrant); }
+}
 function update(changes = {}, edited = true) {
   Object.assign(state, changes, { page: 0 });
   if (edited) markEdited();
@@ -104,6 +114,7 @@ async function loadRows(quiet = false) {
     const data = await response.json();
     if (seq !== requestSeq) return;
     rows = data.rows; total = data.total; isLoading = false; renderTable();
+    if (state.section === 'quadrant' && (!quiet || Date.now()-chartRefreshed >= 60000)) { chartRefreshed=Date.now(); quadrant.refresh(state.quadrant); }
   } catch (error) { if (seq === requestSeq) { isLoading = false; toast(error.message); } }
   if (seq === requestSeq) $('loading-dot').classList.remove('pulse');
 }
@@ -211,6 +222,8 @@ function renderDividends() {
 }
 
 function bindEvents() {
+  $('table-section').onclick = () => { showSection('table'); markEdited(); persist('atlas.last.v1',state); };
+  $('quadrant-section').onclick = () => { showSection('quadrant'); markEdited(); persist('atlas.last.v1',state); };
   $('markets').onclick = e => { const code = e.target.closest('[data-region]')?.dataset.region; if (!code) return; update({ regions: code === 'all' ? [] : state.regions.includes(code) ? state.regions.filter(x => x !== code) : [...state.regions, code] }); };
   let searchTimer; $('search').oninput = e => { clearTimeout(searchTimer); searchTimer = setTimeout(() => update({ search: e.target.value }), 250); };
   $('thead').onclick = e => { const key = e.target.closest('[data-sort]')?.dataset.sort; if (key) update({ sort: key, direction: state.sort === key && state.direction === 'desc' ? 'asc' : 'desc' }); };
@@ -251,8 +264,8 @@ function bindEvents() {
   $('save-view').onclick = () => { $('view-name').value = state.view; $('delete-view').hidden = !state.view; $('save-dialog').showModal(); };
   $('save-form').onsubmit = e => { e.preventDefault(); const name = $('view-name').value.trim(); if (!name) return; state.view = name; saved[name] = JSON.parse(JSON.stringify(state)); persist('atlas.views.v1', saved); persist('atlas.last.v1', state); renderSaved(); $('unsaved').hidden = true; $('save-dialog').close(); toast('Screen saved in this browser'); };
   $('delete-view').onclick = () => { delete saved[state.view]; state.view = ''; persist('atlas.views.v1', saved); renderSaved(); $('save-dialog').close(); toast('Saved screen removed'); };
-  $('saved-views').onchange = e => { const name = e.target.value; if (name && saved[name]) { Object.assign(state, { mainOnly: true }, saved[name], { page: 0, view: name }); $('page-size').value = state.pageSize; } else Object.assign(state, { view: '', columns: [...defaults], filters: [], search: '', regions: [], preset: 'all', watchOnly: false, mainOnly: true, sort: 'market_cap', direction: 'desc', page: 0 }); $('unsaved').hidden = true; renderControls(); loadRows(); persist('atlas.last.v1', state); };
-  $('export').onclick = async () => { const p = params(); p.set('columns', state.columns.join(',')); if (isPublished) {
+  $('saved-views').onchange = e => { const name = e.target.value; if (name && saved[name]) { Object.assign(state, { mainOnly: true, section:'table', quadrant:{...quadrantDefaults} }, saved[name], { page: 0, view: name }); $('page-size').value = state.pageSize; } else Object.assign(state, { view: '', columns: [...defaults], filters: [], search: '', regions: [], preset: 'all', watchOnly: false, mainOnly: true, sort: 'market_cap', direction: 'desc', page: 0, section:'table', quadrant:{...quadrantDefaults} }); showSection(state.section,false); $('unsaved').hidden = true; renderControls(); loadRows(); persist('atlas.last.v1', state); };
+  $('export').onclick = async () => { const p = params(); p.set('columns', [...new Set([...state.columns, ...(state.section === 'quadrant' ? [state.quadrant.x,state.quadrant.y] : [])])].join(',')); if (isPublished) {
       $('export-dialog').showModal(); $('export-summary').textContent = 'Preparing your CSV…';
       $('download-csv').hidden = true; $('copy-csv').disabled = true;
       try {
@@ -281,6 +294,8 @@ async function boot() {
   state.columns = state.columns.length ? state.columns.filter(k => fields[k]) : [...defaults];
   state.filters = state.filters.filter(f => fields[f.field]);
   state.regions = state.regions.filter(r => FLAGS[r]); if (!fields[state.sort]) state.sort = 'market_cap';
+  quadrant = createQuadrant($('quadrant-view'), { fields, settings:state.quadrant, loadData: settings => chartRows(params(),settings.x,settings.y), format:fmt, onDetail:openDetail, onChange:settings=>{state.quadrant=settings;markEdited();persist('atlas.last.v1',state);} });
+  state.quadrant = quadrant.settings(); showSection(state.section,false);
   $('page-size').value = state.pageSize; renderSaved(); bindEvents(); renderControls(); await Promise.all([loadRows(), loadStatus()]);
   refreshTimer = setInterval(async () => { if (document.hidden) return; await loadStatus(); await loadRows(true); if (selectedSymbol && !$('dividend-dialog').open) openDetail(selectedSymbol); if ($('dividend-dialog').open && dividendSymbol) { const row = await api('/api/stock/' + encodeURIComponent(dividendSymbol)).then(r => r.json()); if (row.financial_fetched !== dividendRow?.financial_fetched) { dividendRow = row; renderDividends(); } } }, isPublished ? 60000 : 12000);
   const context = document.modelContext;

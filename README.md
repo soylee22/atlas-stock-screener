@@ -143,3 +143,14 @@ python3 build_site.py --output public
 Custom CSV downloads use a service worker to serve an in-memory file response.
 Exports and saved screens are never uploaded or stored by the site.
 Site links, data and icons use relative paths for GitHub project Pages.
+
+## Quadrant explorer
+
+Open Quadrant explorer beside Table. It shares the current screen filters and uses every matching listing with both selected metrics available.
+Choose any two numeric metrics, axis preferences and linear, signed-log or percentile scales.
+Medians are the default cut-offs. Top quartile uses the 75th percentile for higher values and the 25th percentile for lower values. Custom targets accept numeric suffixes such as 1B.
+Exact cut-off ties belong to the preferred side. Percentile positions use average ranks for tied values.
+The best-fit line uses ordinary least squares in the displayed scales. Its correlation and R² describe the full paired population.
+Zone selection hides other points without recalculating the cut-offs or fit. The list shows up to 100 stocks ranked by average preferred percentile.
+Click a point or list entry for its deep dive. Chart settings are included in saved screens. Export screen includes both selected axis metrics and all matching listings.
+Missing values are excluded from the plot and counted visibly. Dividend growth streaks remain observed Yahoo history.

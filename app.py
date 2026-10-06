@@ -885,6 +885,29 @@ def stock(symbol: str):
     return logos.decorate(row)
 
 
+@app.get("/api/chart")
+def chart(x: str = "net_income", y: str = "div_years", search: str = "", regions: str = "",
+          filters: str = "[]", sort: str = "market_cap", direction: str = "desc",
+          include_other: bool = False, only_symbols: str = "", main_only: bool = True):
+    if any(key not in FIELDS or FIELDS[key]["kind"] == "text" for key in [x, y]):
+        raise HTTPException(400, "Choose numeric chart metrics")
+    if main_only:
+        store.classify_listings()
+    try:
+        where, args, _ = query_sql(search, regions, filters, sort, direction, include_other, only_symbols, main_only)
+    except (ValueError, TypeError, KeyError) as exc:
+        raise HTTPException(400, str(exc)) from exc
+    keys = sorted({"symbol", "name", "region", "region_code", "sector", "industry", "exchange",
+                   "income_period", "cf_period", "fcf_growth_period", "financial_fetched", "quote_time", x, y})
+    # Project only plot fields and paired values. Do not load every dividend event or description.
+    projection = "json_object(" + ",".join(f"'{key}',json_extract(data,'$.{key}')" for key in keys) + ")"
+    paired = " AND ".join(f"json_type(data,'$.{key}') IN ('integer','real')" for key in {x, y})
+    with store.connect() as conn:
+        total = conn.execute("SELECT COUNT(*) FROM stocks WHERE " + where, args).fetchone()[0]
+        records = conn.execute("SELECT " + projection + " FROM stocks WHERE " + where + " AND " + paired, args).fetchall()
+    return dict(rows=[json.loads(row[0]) for row in records], total=total)
+
+
 @app.get("/api/dividends/{symbol}/export")
 def dividend_export(symbol: str, mode: str = "annual"):
     if mode not in {"annual", "events"}:

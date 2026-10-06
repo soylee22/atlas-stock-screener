@@ -142,3 +142,48 @@ td { height: 56px; padding: 7px 14px; font-size: 16px; line-height: 22px; color:
   .div-table th { font-size: 13px; }
   .div-table td { font-size: 15px; }
 }
+
+/* Quadrant explorer shares the table's screen and readable type. */
+.section-nav{display:flex;gap:8px;padding:10px 16px;border-bottom:1px solid var(--line);background:#0d1014}
+.section-nav button{padding:9px 13px;font-size:15px;border-radius:6px;color:var(--muted)}
+.section-nav button.active{background:#26321c;color:var(--accent)}
+#quadrant-view{padding:24px 20px 20px;border-top:1px solid var(--line)}
+.quad-heading{display:flex;justify-content:space-between;align-items:center;gap:20px;margin-bottom:22px}
+.quad-heading h2{font-family:'Space Grotesk',var(--font);font-weight:500;font-size:28px;letter-spacing:-.6px;margin:8px 0}
+.quad-heading p,.quad-scope{font-size:14px;color:var(--muted)}
+.quad-controls{display:grid;grid-template-columns:1fr 1fr auto;gap:18px;align-items:start;background:#141a20;border:1px solid var(--line);border-radius:8px;padding:16px}
+.quad-axis-controls{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.quad-axis-controls>label:first-child{grid-column:1/-1}
+.quad-controls label,.quad-custom label{display:flex;flex-direction:column;gap:7px;font-size:12px;color:var(--muted)}
+.quad-controls select,.quad-custom input{font-size:14px;padding:10px 9px;min-height:40px;width:100%;min-width:0;max-width:100%}
+.quad-split-controls{display:flex;flex-direction:column;gap:12px;min-width:215px}
+.quad-split-controls .quad-fit-switch{display:flex;flex-direction:row;align-items:center;gap:8px;font-size:14px;color:var(--text)}
+.quad-fit-switch input{accent-color:var(--accent);width:17px;height:17px}
+.quad-custom{display:flex;gap:12px;align-items:end;margin-top:14px}.quad-custom label{max-width:230px}
+.quad-summary{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:20px 0 16px;color:#b5c0cd;font-size:14px}
+#quad-fit-stats{font-variant-numeric:tabular-nums;color:#8c9cac}
+.quad-zones{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px}
+.quad-zone{text-align:left;border:1px solid var(--line);border-top:2px solid var(--zone);border-radius:7px;background:#151a20;padding:13px 16px}
+.quad-zone:hover,.quad-zone.selected{border-color:var(--zone);background:#1e262c}
+.quad-zone>span{color:var(--zone);font-size:15px;font-weight:600}
+.quad-zone strong{display:flex;align-items:baseline;gap:10px;font-family:'Space Grotesk',var(--font);font-size:27px;margin-top:9px;font-weight:500}
+.quad-zone small{font-family:var(--font);font-size:13px;color:#9aa8b8}.quad-zone em{display:block;font-style:normal;font-size:12px;color:var(--muted);margin-top:6px}
+.quad-plot{position:relative;width:100%;height:480px;background:#0c1116;border:1px solid #2a343e;border-radius:8px;overflow:hidden}
+.quad-plot canvas,.quad-plot svg{position:absolute;inset:0;width:100%;height:100%}.quad-plot svg{pointer-events:none}
+.quad-plot svg text{fill:#96a6b8;font-size:12px;font-family:var(--font)}.quad-plot svg .quad-axis-name{fill:#c5cfdc;font-size:13px}
+.quad-plot svg .quad-zone-label{font-size:11px;letter-spacing:1px}
+.quad-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;max-width:550px;margin:auto;padding:40px;text-align:center;color:var(--muted);font-size:15px;line-height:1.7;pointer-events:none}
+.quad-loading .quad-plot{opacity:.45;pointer-events:none}
+.quad-tooltip{position:absolute;z-index:2;width:285px;max-width:calc(100% - 16px);padding:14px 16px;background:#1b242d;border:1px solid #536576;border-radius:8px;box-shadow:0 10px 30px #0007;pointer-events:none;font-size:13px}
+.quad-tooltip>strong{display:block;font-size:17px}.quad-tooltip>span{display:block;color:#b8c7d7;margin-top:5px}.quad-tooltip dl{display:grid;grid-template-columns:1fr auto;gap:8px;margin:15px 0}.quad-tooltip dt{color:var(--muted)}.quad-tooltip dd{margin:0;font-variant-numeric:tabular-nums}.quad-tooltip small{display:block;color:#8fa3b8;margin-top:9px;font-size:11px}
+.quad-axis-caption{display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;color:#a8b5c4;padding:12px 0;font-size:13px}
+.quad-method{font-size:12px;line-height:1.8;color:#8d9fb1;margin-bottom:22px;max-width:1100px}
+.quad-list-heading{display:flex;justify-content:space-between;align-items:center;gap:12px}.quad-list-heading h3{font-size:17px;font-weight:500}
+.quad-list-note{color:var(--muted);font-size:12px;margin:8px 0 14px}
+.quad-stock-list{border:1px solid var(--line);border-radius:7px;overflow:auto;max-height:400px;scrollbar-width:thin}
+.quad-stock-header,.quad-stock{display:grid;grid-template-columns:minmax(240px,1fr) 150px 150px 130px;gap:18px;align-items:center;padding:12px 16px;text-align:right;min-width:750px;width:100%;font-size:15px}
+.quad-stock-header{position:sticky;top:0;background:#1a222b;color:#a8b7c9;font-size:13px;z-index:1}.quad-stock-header>span:first-child,.quad-stock>span:first-child{text-align:left}
+.quad-stock{border-top:1px solid var(--line);background:#11171d;font-variant-numeric:tabular-nums}.quad-stock:hover{background:#1e2931}.quad-stock small{display:block;font-size:13px;color:var(--muted);margin-top:4px}.quad-zone-tag{font-size:12px}
+@media(min-width:1700px){.quad-plot{height:560px}}
+@media(max-width:1100px){.quad-controls{grid-template-columns:1fr 1fr}.quad-split-controls{grid-column:1/-1;flex-direction:row;align-items:end;flex-wrap:wrap}.quad-scope{display:none}.quad-heading h2{font-size:25px}}
+@media(max-width:750px){#quadrant-view{padding:18px 12px}.section-nav{padding:8px 12px}.section-nav button{font-size:14px;padding:8px 10px}.quad-controls{grid-template-columns:1fr;gap:16px;padding:12px}.quad-split-controls{grid-column:auto;gap:10px}.quad-split-controls>label:first-child{flex-basis:100%}.quad-custom{flex-wrap:wrap}.quad-custom label{flex:1;min-width:100px}.quad-zones{grid-template-columns:1fr 1fr}.quad-zone{padding:12px}.quad-zone strong{font-size:24px}.quad-zone em{font-size:11px}.quad-zone>span{font-size:14px}.quad-heading h2{font-size:24px}.quad-plot{height:400px}.quad-axis-caption{font-size:12px}.quad-stock-header,.quad-stock{grid-template-columns:240px 130px 130px 110px;min-width:680px;font-size:14px}.quad-stock small{font-size:12px}}
