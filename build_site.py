@@ -18,12 +18,13 @@ EXTRA_FIELDS = {
     "financial_error", "dividend_error", "dividend_fetched", "dividend_currency", "dividend_events",
     "dividend_years", "dividend_history_start", "dividend_end_year", "universe_run",
     "price_local", "market_cap_local", "low_52w_local", "high_52w_local",
+    "annual_income_history", "annual_growth_version", "annual_growth_fetched", "annual_growth_missing",
     *(key + "_local" for key in model.MONETARY_FINANCIAL),
 }
 PUBLIC_FIELDS = EXTRA_FIELDS | set(model.FIELDS)
 INDEX_FIELDS = list(dict.fromkeys([
     "symbol", "name", "region_code", "instrument", "active", "main_listing", "listing_reason",
-    "financial_error", "detail_key", "logo_url", *[field["key"] for field in model.COLUMNS],
+    "financial_error", "detail_key", "logo_url", "annual_growth_missing", *[field["key"] for field in model.COLUMNS],
 ]))
 META_KEYS = ["coverage", "fx", "quote_completed", "last_quote_run", "quote_error", "last_financial", "refresh_health"]
 ICON_FILE = re.compile(r"[a-f0-9]{64}\.(png|jpg|gif|webp|ico)")
@@ -87,6 +88,8 @@ def make_seed(destination, rows, metadata, assets, icon_root):
 
 def build_site(database, output, seed=None):
     store = model.Store(database)
+    # Recompute quote-derived values when upgrading a cached snapshot.
+    store.recalibrate_fx()
     store.classify_listings(force=True)
     icon_root = store.path.parent / "logos"
     with store.connect() as conn:

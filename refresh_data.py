@@ -140,6 +140,51 @@ def refresh(store, seed, seconds=720, limit=400, force_quotes=False):
     return result
 
 
+def backfill_growth(store, seconds=90, limit=100):
+    """Fetch only annual income statements for existing profiles missing growth."""
+    deadline = time.monotonic() + seconds
+    counts = dict(attempted=0, succeeded=0, failed=0)
+    lock = threading.Lock()
+
+    def worker():
+        while time.monotonic() < deadline:
+            with lock:
+                if counts["attempted"] >= limit:
+                    return
+                symbol = store.next_growth_enrichment()
+                if not symbol:
+                    return
+                counts["attempted"] += 1
+            try:
+                row = store.get(symbol)
+                income = model.yf.Ticker(symbol).income_stmt
+                if income.empty:
+                    raise ValueError("Yahoo annual income statements unavailable")
+                values = model.annual_growth_values(income, row["financial_currency"], row)
+                values.update(symbol=symbol, region_code=row["region_code"])
+                store.upsert_many([values])
+                with lock:
+                    counts["succeeded"] += 1
+            except Exception as exc:
+                logging.warning("Annual statements %s: %s", symbol, exc)
+                with lock:
+                    counts["failed"] += 1
+                if "429" in str(exc) or "rate" in str(exc).lower():
+                    return
+
+    workers = [threading.Thread(target=worker, daemon=True) for _ in range(2)]
+    for thread in workers:
+        thread.start()
+    while any(thread.is_alive() for thread in workers) and time.monotonic() < deadline:
+        for thread in workers:
+            thread.join(timeout=.5)
+    # A slow in-flight request must not prevent a bounded publication job.
+    result = dict(annual_growth=counts.copy(), finished=model.now_iso())
+    store.set_meta("annual_growth_backfill", result)
+    print(json.dumps(result), flush=True)
+    return result
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--database", type=Path, default=model.DB)
@@ -148,11 +193,15 @@ def main():
     parser.add_argument("--limit", type=int, default=400)
     parser.add_argument("--force-quotes", action="store_true")
     parser.add_argument("--seed-only", action="store_true")
+    parser.add_argument("--growth-only", action="store_true")
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO)
     store = model.Store(args.database)
     if args.seed_only:
         print(json.dumps(dict(seed_restored=restore_seed(store, args.seed))))
+    elif args.growth_only:
+        restore_seed(store, args.seed)
+        backfill_growth(store, max(1, args.seconds), max(0, args.limit))
     else:
         refresh(store, args.seed, max(1, args.seconds), max(0, args.limit), args.force_quotes)
 

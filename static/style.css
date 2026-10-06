@@ -205,3 +205,5 @@ td { height: 56px; padding: 7px 14px; font-size: 16px; line-height: 22px; color:
 .quad-stage:fullscreen .quad-plot,.quad-stage.quad-expanded .quad-plot{flex:1;min-height:240px;height:auto}
 .quad-stage:fullscreen .quad-navigation,.quad-stage.quad-expanded .quad-navigation{margin-top:0}
 @media(max-width:750px){.quad-stage:fullscreen,.quad-stage.quad-expanded{padding:12px}#quad-maximise{margin-left:0}}
+
+.detail-metric small { display: block; margin-top: 8px; color: var(--muted); font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; }

@@ -50,7 +50,7 @@ export function snapshotCSV(rows, schema, requested = '') {
   const allowed = new Set(['symbol', 'name', 'instrument', ...schema.columns.map(f => f.key)]);
   const columns = requested ? requested.split(',') : schema.columns.filter(f => f.default).map(f => f.key);
   if (columns.some(k => !allowed.has(k))) throw new Error('Invalid export column');
-  const keys = [...new Set(['symbol', 'name', ...columns, 'income_period', 'cf_period', 'fcf_growth_period', 'quote_time', 'financial_fetched'])];
+  const keys = [...new Set(['symbol', 'name', ...columns, 'income_period', 'cf_period', 'fcf_growth_period', 'quote_time', 'financial_fetched', ...columns.filter(k => /^(revenue|net_income)_growth_(1|3|5|10)y$/.test(k)).map(k => k + '_period'), ...(columns.some(k => /^(revenue|net_income)_growth_(1|3|5|10)y$/.test(k)) ? ['annual_growth_fetched'] : [])])];
   const cell = value => {
     if (value == null) return '';
     let text = String(value);

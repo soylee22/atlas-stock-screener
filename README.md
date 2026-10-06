@@ -160,3 +160,11 @@ Chart navigation: drag to pan, scroll or pinch to zoom, and use the zoom buttons
 The purple Pareto frontier marks observed listings for which no other matching listing is at least as good on both raw metrics and strictly better on one. It respects each axis preference and retains exact duplicate pairs. Frontier only limits plotted stocks and the list. Navigation and zone selection do not change the comparison population. The line joins observed frontier points and does not promise intermediate combinations.
 
 The list defaults to a balanced score: half the preferred X percentile plus half the preferred Y percentile, on a 0 to 100 scale. Order can instead use preferred X, preferred Y or frontier membership first. Balanced score breaks secondary ties, then symbol. Each axis has one Scale menu with Linear, Signed log and Percentile options. Signed log retains zero and negative values. Chart settings, including the viewport, are saved with screens.
+
+### Annual growth and 52-week distance
+
+Revenue and net income offer 1-year fiscal-year growth and 3-year, 5-year and 10-year CAGR. Growth uses nominal reporting currency so current FX movements do not create growth. Dates accompany each metric in stock details and CSV exports.
+Yahoo usually returns four annual statements. These support 1-year growth and 3-year CAGR. Longer horizons remain unavailable until the cache holds consecutive years. The cache retains older annual observations as Yahoo windows advance. Changing reporting currency clears incompatible observations. No SEC or other source supplements this history.
+A positive starting value is required for percentage growth. One-year net income growth can include a move from profit to loss. Multi-year CAGR requires a non-negative endpoint. Missing years and irregular fiscal spans remain unavailable.
+Below 52W high is 100 × (high − latest price) / high in matching local quote units. Zero means at the high. Lower values mean closer. A negative value means above the provider's quoted high. This differs from the existing 52-week price change.
+Existing profiles receive a bounded annual-statement backfill during publication. Run `python refresh_data.py --growth-only --seconds 90 --limit 100` to advance that queue. Full profile refreshes update and retain the same annual history.

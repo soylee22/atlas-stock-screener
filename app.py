@@ -39,6 +39,15 @@ def col(key, label, kind="number", default=False, group="Overview", description=
     return dict(key=key, label=label, kind=kind, default=default, group=group, description=description)
 
 
+GROWTH_HORIZONS = (1, 3, 5, 10)
+GROWTH_KEYS = [f"{metric}_growth_{years}y" for metric in ("revenue", "net_income") for years in GROWTH_HORIZONS]
+GROWTH_COLUMNS = [col(key, f"{'Revenue' if key.startswith('revenue') else 'Net income'} {'growth 1Y' if years == 1 else 'CAGR ' + str(years) + 'Y'}",
+    "percent", group="Growth", description=f"{years}-year growth over consecutive completed fiscal-year statements in reporting currency. "
+    + ("Latest FY versus preceding FY. Requires a positive base." if years == 1 else "Annualised CAGR. Requires a positive base and non-negative endpoint.")
+    + " Yahoo usually supplies four annual records. Longer horizons stay unavailable until enough history is cached.")
+    for metric in ("revenue", "net_income") for years in GROWTH_HORIZONS for key in [f"{metric}_growth_{years}y"]]
+
+
 COLUMNS = [
     col("market_cap", "Market cap", "usd", True, description="Yahoo market cap converted from its base quote currency to USD."),
     col("price", "Price", "price", True, description="Latest Yahoo quote in USD. UK pence prices are divided by 100 before conversion."),
@@ -56,6 +65,7 @@ COLUMNS = [
     col("exchange", "Exchange", "text", True),
     col("change", "Day change", "percent", group="Performance"),
     col("revenue", "Revenue", "usd", group="Financials"),
+    *GROWTH_COLUMNS,
     col("operating_cf", "Operating cash flow", "usd", group="Cash flow"),
     col("fcf_delta", "FCF change $", "usd", group="Cash flow", description="Latest FY less preceding FY, converted using the current cached FX rate."),
     col("fcf_yield", "FCF yield", "percent", group="Cash flow", description="Reported FCF divided by current USD market cap. Period may be TTM or FY."),
@@ -67,12 +77,15 @@ COLUMNS = [
     col("avg_volume", "Avg volume 3M", group="Overview"),
     col("low_52w", "52W low", "price", group="Performance"),
     col("high_52w", "52W high", "price", group="Performance"),
+    col("below_52w_high", "Below 52W high", "percent", group="Performance", description="100 × (52-week high − latest price) / high, using matching quote units. 0% is at the high. Lower values are closer to the high. Negative values indicate a price above the quoted high."),
     col("change_52w", "52W change", "percent", group="Performance"),
     col("quote_currency", "Quote currency", "text"),
     col("financial_currency", "Reporting currency", "text", group="Financials"),
     col("income_period", "Income period", "text", group="Financials"),
     col("cf_period", "Cash flow period", "text", group="Cash flow"),
     col("fcf_growth_period", "FCF growth period", "text", group="Cash flow"),
+    *[col(field["key"] + "_period", field["label"] + " period", "text", group="Growth") for field in GROWTH_COLUMNS],
+    col("annual_growth_fetched", "Annual statements fetched", "text", group="Growth"),
     col("quote_time", "Quote time", "text"), col("financial_fetched", "Financials fetched", "text", group="Financials"),
     col("delay", "Quote delay (min)", "integer"),
     col("quote_type", "Yahoo instrument type", "text"),
@@ -331,6 +344,8 @@ def dollarise(row, fx):
         row[key] = usd(row.get(key + "_local"), row.get("financial_currency"), fx)
     cap, fcf = row.get("market_cap"), row.get("fcf")
     row["fcf_yield"] = fcf / cap * 100 if cap and cap > 0 and fcf is not None else None
+    price, high = number(row.get("price_local")), number(row.get("high_52w_local"))
+    row["below_52w_high"] = (1 - price / high) * 100 if high is not None and high > 0 and price is not None and price >= 0 else None
     return row
 
 
@@ -383,6 +398,54 @@ def four_quarters(series):
 
 def annual_value(series):
     return (number(series.iloc[0]), "FY " + series.index[0].date().isoformat()) if len(series) else (None, None)
+
+
+def annual_growth_values(income, currency, previous=None):
+    """Retain Yahoo FY observations, never substitute quarterly or TTM totals."""
+    previous = previous or {}
+    cached = previous.get("annual_income_history", {})
+    history = dict(currency=currency)
+    out = dict(annual_growth_version=1, annual_growth_fetched=now_iso(), annual_growth_missing={})
+    for metric, names in [("revenue", ["Total Revenue"]), ("net_income", ["Net Income", "Net Income Common Stockholders"])]:
+        observations = dict(cached.get(metric, {})) if currency and cached.get("currency") == currency else {}
+        observations.update({str(day.date()): number(value) for day, value in statement_series(income, names).items()})
+        # Ignore malformed/non-finite cached observations rather than inventing zeroes.
+        valid = {}
+        for day, value in observations.items():
+            try:
+                if re.fullmatch(r"\d{4}-\d{2}-\d{2}", day) and number(value) is not None:
+                    valid[date.fromisoformat(day).isoformat()] = number(value)
+            except ValueError:
+                continue
+        observations = valid
+        dates = sorted(observations, reverse=True)
+        history[metric] = {day: observations[day] for day in dates}
+        for years in GROWTH_HORIZONS:
+            key = f"{metric}_growth_{years}y"
+            out[key], out[key + "_period"] = None, None
+            reason = None
+            if not currency:
+                reason = "Reporting currency unavailable"
+            elif len(dates) < years + 1:
+                reason = f"Needs {years + 1} annual records. {len(dates)} available from Yahoo/cache."
+            else:
+                window = dates[:years + 1]
+                days = [date.fromisoformat(day) for day in window]
+                out[key + "_period"] = f"FY {window[0]} / {window[-1]} · {currency} · Yahoo"
+                if not all(330 <= (a - b).days <= 400 for a, b in zip(days, days[1:])) or abs((days[0] - days[-1]).days - 365.25 * years) > 45:
+                    reason = "Consecutive full fiscal years unavailable"
+                else:
+                    latest, base = observations[window[0]], observations[window[-1]]
+                    if base <= 0:
+                        reason = "Percentage growth requires a positive starting value"
+                    elif years > 1 and latest < 0:
+                        reason = "CAGR unavailable with a negative ending value"
+                    else:
+                        out[key] = number(((latest / base) ** (1 / years) - 1) * 100)
+            if reason:
+                out["annual_growth_missing"][key] = reason
+    out["annual_income_history"] = history
+    return out
 
 
 def financial_values(income_q, income_a, cf_q, cf_a):
@@ -512,7 +575,8 @@ class Store:
     def next_enrichment(self):
         with self.connect() as conn:
             conn.execute("BEGIN IMMEDIATE")
-            row = conn.execute("""SELECT symbol FROM stocks WHERE enriched < ? AND attempted < ?
+            row = conn.execute("""SELECT symbol FROM stocks WHERE
+                (enriched < ? OR COALESCE(json_extract(data,'$.annual_growth_version'),0)<1) AND attempted < ?
                 AND json_extract(data,'$.instrument')='stock' AND json_extract(data,'$.active')=1
                 ORDER BY (json_extract(data,'$.main_listing')=1) DESC,
                 (enriched=0) DESC, json_extract(data,'$.market_cap') DESC LIMIT 1""",
@@ -525,6 +589,21 @@ class Store:
         with self.connect() as conn:
             conn.execute("UPDATE stocks SET attempted=?, data=json_set(data,'$.financial_error',?) WHERE symbol=?",
                          (time.time(), str(error)[:250], symbol))
+
+    def next_growth_enrichment(self):
+        with self.connect() as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            row = conn.execute("""SELECT symbol FROM stocks
+                WHERE COALESCE(json_extract(data,'$.annual_growth_version'),0)<1
+                AND COALESCE(json_extract(data,'$.annual_growth_attempted'),0) < ?
+                AND json_extract(data,'$.financial_fetched') IS NOT NULL
+                AND json_extract(data,'$.financial_currency') IS NOT NULL
+                AND json_extract(data,'$.instrument')='stock' AND json_extract(data,'$.active')=1
+                ORDER BY (json_extract(data,'$.main_listing')=1) DESC,
+                json_extract(data,'$.market_cap') DESC LIMIT 1""", (time.time() - 6 * 3600,)).fetchone()
+            if row:
+                conn.execute("UPDATE stocks SET data=json_set(data,'$.annual_growth_attempted',?) WHERE symbol=?", (time.time(), row[0]))
+        return row[0] if row else None
 
     def classify_listings(self, force=False):
         # Refresh the classification as home-country profiles become available.
@@ -763,7 +842,9 @@ class Pipeline:
         if not info or not info.get("symbol"):
             raise ValueError("Yahoo did not return company details")
         row = self.store.get(symbol)
-        values = financial_values(ticker.quarterly_income_stmt, ticker.income_stmt, ticker.quarterly_cashflow, ticker.cashflow)
+        annual_income = ticker.income_stmt
+        values = financial_values(ticker.quarterly_income_stmt, annual_income, ticker.quarterly_cashflow, ticker.cashflow)
+        values.update(annual_growth_values(annual_income, info.get("financialCurrency"), row))
         try:
             # Explicit start avoids invalid 'max' ranges on some secondary listings.
             history = ticker.history(start="1900-01-01", auto_adjust=False, actions=True, raise_errors=True)
@@ -898,7 +979,8 @@ def chart(x: str = "net_income", y: str = "div_years", search: str = "", regions
     except (ValueError, TypeError, KeyError) as exc:
         raise HTTPException(400, str(exc)) from exc
     keys = sorted({"symbol", "name", "region", "region_code", "sector", "industry", "exchange",
-                   "income_period", "cf_period", "fcf_growth_period", "financial_fetched", "quote_time", x, y})
+                   "income_period", "cf_period", "fcf_growth_period", "financial_fetched", "quote_time", x, y,
+                   *[key + "_period" for key in (x, y) if key in GROWTH_KEYS]})
     # Project only plot fields and paired values. Do not load every dividend event or description.
     projection = "json_object(" + ",".join(f"'{key}',json_extract(data,'$.{key}')" for key in keys) + ")"
     paired = " AND ".join(f"json_type(data,'$.{key}') IN ('integer','real')" for key in {x, y})
@@ -970,7 +1052,9 @@ def export(search: str = "", regions: str = "", filters: str = "[]", sort: str =
     selected = columns.split(",") if columns else [x["key"] for x in COLUMNS if x["default"]]
     if not all(k in FIELDS for k in selected):
         raise HTTPException(400, "Unknown export column")
-    selected = list(dict.fromkeys(["symbol", "name"] + selected + ["income_period", "cf_period", "fcf_growth_period", "quote_time", "financial_fetched"]))
+    selected = list(dict.fromkeys(["symbol", "name"] + selected + ["income_period", "cf_period", "fcf_growth_period", "quote_time", "financial_fetched"]
+                                 + [key + "_period" for key in selected if key in GROWTH_KEYS]
+                                 + (["annual_growth_fetched"] if any(key in GROWTH_KEYS for key in selected) else [])))
     rows, _ = select_rows(search, regions, filters, sort, direction, include_other, only_symbols, 100000, 0, main_only)
     out = io.StringIO()
     writer = csv.writer(out)
