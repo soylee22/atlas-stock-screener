@@ -400,6 +400,48 @@ def annual_value(series):
     return (number(series.iloc[0]), "FY " + series.index[0].date().isoformat()) if len(series) else (None, None)
 
 
+def parse_annual_records(payload):
+    """Keep full fiscal years in one currency directly from Yahoo records."""
+    body = payload.get("timeseries")
+    if not isinstance(body, dict):
+        raise ValueError("Yahoo returned an unexpected annual statement response")
+    if body.get("error") and body["error"].get("code") not in {"Not Found", "NotFound"}:
+        raise ValueError("Yahoo annual statement request failed")
+    names = {"annualTotalRevenue": "Total Revenue", "annualNetIncome": "Net Income",
+             "annualNetIncomeCommonStockholders": "Net Income Common Stockholders"}
+    records = []
+    for group in body.get("result") or []:
+        for key, label in names.items():
+            for item in group.get(key, []):
+                try:
+                    day = date.fromisoformat(item["asOfDate"]).isoformat()
+                except (KeyError, ValueError):
+                    continue
+                value = number(item.get("reportedValue", {}).get("raw"))
+                if item.get("periodType") == "12M" and item.get("currencyCode") and value is not None:
+                    records.append((day, label, item["currencyCode"], value))
+    if not records:
+        return pd.DataFrame(), None
+    # Prefer the latest revenue currency. Never combine changing currencies.
+    revenue = [r for r in records if r[1] == "Total Revenue"]
+    currency = max(revenue or records, key=lambda r: r[0])[2]
+    series = {}
+    for day, label, unit, value in records:
+        if unit == currency:
+            series.setdefault(label, {})[pd.Timestamp(day)] = value
+    return pd.DataFrame.from_dict(series, orient="index"), currency
+
+
+def fetch_annual_income(symbol):
+    end = int(pd.Timestamp.utcnow().ceil("D").timestamp())
+    ticker = yf.Ticker(symbol)
+    types = "annualTotalRevenue,annualNetIncome,annualNetIncomeCommonStockholders"
+    url = f"https://query2.finance.yahoo.com/ws/fundamentals-timeseries/v1/finance/timeseries/{symbol}?symbol={symbol}&type={types}&period1=1483142400&period2={end}"
+    response = ticker._data.cache_get(url=url, timeout=15)
+    response.raise_for_status()
+    return parse_annual_records(response.json())
+
+
 def annual_growth_values(income, currency, previous=None):
     """Retain Yahoo FY observations, never substitute quarterly or TTM totals."""
     previous = previous or {}
@@ -590,20 +632,34 @@ class Store:
             conn.execute("UPDATE stocks SET attempted=?, data=json_set(data,'$.financial_error',?) WHERE symbol=?",
                          (time.time(), str(error)[:250], symbol))
 
-    def next_growth_enrichment(self):
+    def growth_candidates(self):
+        """Scan once per batch, then alternate markets in market-cap order."""
         with self.connect() as conn:
-            conn.execute("BEGIN IMMEDIATE")
-            row = conn.execute("""SELECT symbol FROM stocks
+            rows = conn.execute("""SELECT symbol,region FROM stocks
                 WHERE COALESCE(json_extract(data,'$.annual_growth_version'),0)<1
                 AND COALESCE(json_extract(data,'$.annual_growth_attempted'),0) < ?
-                AND json_extract(data,'$.financial_fetched') IS NOT NULL
-                AND json_extract(data,'$.financial_currency') IS NOT NULL
                 AND json_extract(data,'$.instrument')='stock' AND json_extract(data,'$.active')=1
-                ORDER BY (json_extract(data,'$.main_listing')=1) DESC,
-                json_extract(data,'$.market_cap') DESC LIMIT 1""", (time.time() - 6 * 3600,)).fetchone()
-            if row:
-                conn.execute("UPDATE stocks SET data=json_set(data,'$.annual_growth_attempted',?) WHERE symbol=?", (time.time(), row[0]))
-        return row[0] if row else None
+                AND COALESCE(json_extract(data,'$.main_listing'),1)=1
+                ORDER BY json_extract(data,'$.market_cap') DESC""", (time.time() - 6 * 3600,)).fetchall()
+        buckets = {region: [] for region in REGIONS}
+        for row in rows:
+            buckets[row['region']].append(row['symbol'])
+        return [buckets[region][i] for i in range(max((len(v) for v in buckets.values()), default=0))
+                for region in REGIONS if i < len(buckets[region])]
+
+    def claim_growth(self, symbol):
+        with self.connect() as conn:
+            cursor = conn.execute("""UPDATE stocks SET data=json_set(data,'$.annual_growth_attempted',?)
+                WHERE symbol=? AND COALESCE(json_extract(data,'$.annual_growth_version'),0)<1
+                AND COALESCE(json_extract(data,'$.annual_growth_attempted'),0)<?""",
+                (time.time(), symbol, time.time() - 6 * 3600))
+        return cursor.rowcount == 1
+
+    def next_growth_enrichment(self):
+        for symbol in self.growth_candidates():
+            if self.claim_growth(symbol):
+                return symbol
+        return None
 
     def classify_listings(self, force=False):
         # Refresh the classification as home-country profiles become available.
@@ -984,10 +1040,25 @@ def chart(x: str = "net_income", y: str = "div_years", search: str = "", regions
     # Project only plot fields and paired values. Do not load every dividend event or description.
     projection = "json_object(" + ",".join(f"'{key}',json_extract(data,'$.{key}')" for key in keys) + ")"
     paired = " AND ".join(f"json_type(data,'$.{key}') IN ('integer','real')" for key in {x, y})
+    def pending_sql(key):
+        missing = f"COALESCE(json_type(data,'$.{key}') IN ('integer','real'),0)=0"
+        if key in GROWTH_KEYS:
+            source = "COALESCE(json_extract(data,'$.annual_growth_version'),0)<1"
+        elif key in {"net_income", "revenue", "net_margin"}:
+            source = "json_extract(data,'$.financial_fetched') IS NULL AND json_extract(data,'$.income_fetched') IS NULL"
+        elif (FIELDS[key].get("group") in {"Financials", "Cash flow", "Dividends"} and key != "div_yield") or key == "beta":
+            source = "json_extract(data,'$.financial_fetched') IS NULL"
+        else:
+            return "0"
+        return f"(({missing}) AND ({source}))"
+    pending = f"({pending_sql(x)} OR {pending_sql(y)})"
     with store.connect() as conn:
-        total = conn.execute("SELECT COUNT(*) FROM stocks WHERE " + where, args).fetchone()[0]
+        total, plotted, awaiting = conn.execute(
+            f"SELECT COUNT(*),COALESCE(SUM(CASE WHEN {paired} THEN 1 ELSE 0 END),0),"
+            f"COALESCE(SUM(CASE WHEN {pending} THEN 1 ELSE 0 END),0) FROM stocks WHERE " + where, args).fetchone()
         records = conn.execute("SELECT " + projection + " FROM stocks WHERE " + where + " AND " + paired, args).fetchall()
-    return dict(rows=[json.loads(row[0]) for row in records], total=total)
+    return dict(rows=[json.loads(row[0]) for row in records], total=total,
+                coverage=dict(awaiting=awaiting, unavailable=total-plotted-awaiting))
 
 
 @app.get("/api/dividends/{symbol}/export")

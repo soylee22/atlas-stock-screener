@@ -27,6 +27,18 @@ def test_yahoo_four_year_window_supports_only_1y_and_3y():
     assert data['revenue_growth_3y_period'] == 'FY 2026-06-30 / 2023-06-30 · USD · Yahoo'
 
 
+def test_rate_limit_stops_queue_without_marking_source_unavailable(tmp_path, monkeypatch):
+    store = model.Store(tmp_path/'rate.sqlite')
+    store.upsert_many([dict(symbol=f'RATE{i}',region_code='us',active=True,instrument='stock') for i in range(10)])
+    def limited(symbol):
+        raise RuntimeError('HTTP 429 Too Many Requests')
+    monkeypatch.setattr(model,'fetch_annual_income',limited)
+    result = refresh_data.backfill_growth(store,seconds=10,limit=10,workers=1)
+    assert result['annual_growth'] == dict(attempted=1,succeeded=0,failed=1,no_data=0)
+    assert len(store.growth_candidates()) == 9
+    assert not any(store.get(f'RATE{i}').get('annual_growth_version') for i in range(10))
+
+
 def test_accumulated_history_retains_older_years_and_updates_restatements():
     old = model.annual_growth_values(annual([100 * 1.1 ** i for i in range(3, -1, -1)], end=2019), 'JPY')
     for year in range(2020, 2027):
@@ -103,11 +115,9 @@ def test_growth_backfill_preserves_profile_age_and_public_seed_history(tmp_path,
         financial_currency='USD',financial_fetched='2026-10-01',private_note='secret')], enriched=True)
     with store.connect() as conn:
         enriched = conn.execute('SELECT enriched FROM stocks').fetchone()[0]
-    class Ticker:
-        income_stmt = annual([133.1,121,110,100])
-    monkeypatch.setattr(model.yf, 'Ticker', lambda symbol: Ticker())
+    monkeypatch.setattr(model, 'fetch_annual_income', lambda symbol: (annual([133.1,121,110,100]), 'USD'))
     result = refresh_data.backfill_growth(store, seconds=5, limit=10)
-    assert result['annual_growth'] == dict(attempted=1,succeeded=1,failed=0)
+    assert result['annual_growth'] == dict(attempted=1,succeeded=1,failed=0,no_data=0)
     row = store.get('TEST')
     assert row['financial_fetched'] == '2026-10-01'
     with store.connect() as conn:
@@ -118,3 +128,63 @@ def test_growth_backfill_preserves_profile_age_and_public_seed_history(tmp_path,
     assert public['annual_growth_version'] == 1
     assert 'private_note' not in public and 'annual_growth_attempted' not in public
     assert store.next_growth_enrichment() is None
+
+
+def yahoo_record(day, value, currency='JPY', period='12M'):
+    return dict(asOfDate=day,reportedValue=dict(raw=value),currencyCode=currency,periodType=period)
+
+
+def test_direct_annual_records_verify_currency_and_periods():
+    payload = {'timeseries': {'result': [
+        {'annualTotalRevenue': [yahoo_record('2026-03-31',120),yahoo_record('2025-03-31',100),yahoo_record('2024-03-31',80,'USD'),yahoo_record('2026-06-30',90,period='3M')]},
+        {'annualNetIncome': [yahoo_record('2026-03-31',12),yahoo_record('2025-03-31',10)]}]}}
+    income,currency = model.parse_annual_records(payload)
+    assert currency == 'JPY'
+    assert list(income.columns) == list(pd.to_datetime(['2026-03-31','2025-03-31']))
+    values = model.annual_growth_values(income,currency)
+    assert values['revenue_growth_1y'] == pytest.approx(20)
+    assert values['net_income_growth_1y'] == pytest.approx(20)
+    assert values['revenue_growth_3y'] is None
+    with pytest.raises(ValueError):
+        model.parse_annual_records({'finance':{'error':{'code':'Failure'}}})
+    with pytest.raises(ValueError):
+        model.parse_annual_records({'timeseries':{'error':{'code':'Unauthorized'}}})
+    assert model.parse_annual_records({'timeseries':{'result':[]}})[0].empty
+
+
+def test_whole_universe_queue_balances_unprofiled_stocks_and_skips_secondary(tmp_path,monkeypatch):
+    store=model.Store(tmp_path/'test.sqlite')
+    for region in model.REGIONS:
+        for i in range(3):
+            store.upsert_many([dict(symbol=f'{region}{i}',region_code=region,instrument='stock',active=True,main_listing=True,
+                quote_currency='USD',market_cap_local=(3-i)*1e9)])
+    store.upsert_many([dict(symbol='WRAPPER',region_code='ca',instrument='stock',active=True,main_listing=False)])
+    queue=store.growth_candidates()
+    assert queue[:6] == [region+'0' for region in model.REGIONS]
+    assert 'WRAPPER' not in queue and len(queue)==18
+    income=annual([120,100])
+    income.loc['Net Income']=[12,10]
+    monkeypatch.setattr(model,'fetch_annual_income',lambda symbol:(income,'JPY'))
+    result=refresh_data.backfill_growth(store,seconds=10,limit=18)
+    assert result['annual_growth']==dict(attempted=18,succeeded=18,failed=0,no_data=0)
+    assert not store.growth_candidates()
+    row=store.get('jp0')
+    assert row['revenue_growth_1y']==pytest.approx(20)
+    assert row['financial_currency']=='JPY' and row['income_period']=='FY 2026-06-30'
+    assert row['net_margin']==pytest.approx(10)
+    assert not row.get('financial_fetched')
+
+
+def test_source_empty_checked_but_http_failure_remains_pending(tmp_path,monkeypatch):
+    store=model.Store(tmp_path/'test.sqlite')
+    store.upsert_many([dict(symbol=s,region_code='us',instrument='stock',active=True,main_listing=True) for s in ['EMPTY','FAIL']])
+    def fetch(symbol):
+        if symbol=='FAIL': raise ValueError('HTTP 503')
+        return pd.DataFrame(),None
+    monkeypatch.setattr(model,'fetch_annual_income',fetch)
+    result=refresh_data.backfill_growth(store,seconds=10,limit=2)
+    assert result['annual_growth']==dict(attempted=2,succeeded=0,failed=1,no_data=1)
+    assert store.get('EMPTY')['annual_growth_version']==1
+    assert store.get('EMPTY')['annual_growth_status']=='no_data'
+    assert not store.get('FAIL').get('annual_growth_version')
+    assert not store.growth_candidates()

@@ -46,6 +46,23 @@ export function selectSnapshot(rows, schema, params) {
   });
 }
 
+export function chartCoverage(rows, x, y, fields) {
+  const finite = value => typeof value === 'number' && Number.isFinite(value);
+  const pending = (row, key) => {
+    if (finite(row[key])) return false;
+    if (/^(revenue|net_income)_growth_(1|3|5|10)y$/.test(key)) return !row.annual_growth_version;
+    if (['net_income', 'revenue', 'net_margin'].includes(key)) return !row.financial_fetched && !row.income_fetched;
+    if ((['Financials', 'Cash flow', 'Dividends'].includes(fields[key]?.group) && key !== 'div_yield') || key === 'beta') return !row.financial_fetched;
+    return false;
+  };
+  const coverage = { awaiting: 0, unavailable: 0 };
+  for (const row of rows) {
+    if (finite(row[x]) && finite(row[y])) continue;
+    coverage[pending(row, x) || pending(row, y) ? 'awaiting' : 'unavailable']++;
+  }
+  return coverage;
+}
+
 export function snapshotCSV(rows, schema, requested = '') {
   const allowed = new Set(['symbol', 'name', 'instrument', ...schema.columns.map(f => f.key)]);
   const columns = requested ? requested.split(',') : schema.columns.filter(f => f.default).map(f => f.key);

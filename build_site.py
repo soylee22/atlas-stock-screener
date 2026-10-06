@@ -19,14 +19,15 @@ EXTRA_FIELDS = {
     "dividend_years", "dividend_history_start", "dividend_end_year", "universe_run",
     "price_local", "market_cap_local", "low_52w_local", "high_52w_local",
     "annual_income_history", "annual_growth_version", "annual_growth_fetched", "annual_growth_missing",
+    "annual_growth_status", "income_fetched",
     *(key + "_local" for key in model.MONETARY_FINANCIAL),
 }
 PUBLIC_FIELDS = EXTRA_FIELDS | set(model.FIELDS)
 INDEX_FIELDS = list(dict.fromkeys([
     "symbol", "name", "region_code", "instrument", "active", "main_listing", "listing_reason",
-    "financial_error", "detail_key", "logo_url", "annual_growth_missing", *[field["key"] for field in model.COLUMNS],
+    "financial_error", "detail_key", "logo_url", "annual_growth_missing", "annual_growth_version", "income_fetched", *[field["key"] for field in model.COLUMNS],
 ]))
-META_KEYS = ["coverage", "fx", "quote_completed", "last_quote_run", "quote_error", "last_financial", "refresh_health"]
+META_KEYS = ["coverage", "fx", "quote_completed", "last_quote_run", "quote_error", "last_financial", "refresh_health", "annual_growth_backfill"]
 ICON_FILE = re.compile(r"[a-f0-9]{64}\.(png|jpg|gif|webp|ico)")
 
 
@@ -63,6 +64,7 @@ def snapshot_status(rows, metadata, icon_count, built):
     return dict(counts=counts, coverage=metadata.get("coverage", {}), fx=metadata.get("fx", {}),
         refreshing=False, completed=metadata.get("quote_completed"), error=metadata.get("quote_error"),
         last_financial=metadata.get("last_financial"), refresh_health=metadata.get("refresh_health"),
+        annual_growth_backfill=metadata.get("annual_growth_backfill"),
         missing_fx=sum(r.get("market_cap_local") is not None and r.get("market_cap") is None for r in rows),
         logos=dict(cached=icon_count, queued=0, downloading=0), snapshot=dict(built=built, version=1, cadence="Every four hours. Quotes refresh daily."))
 
@@ -158,7 +160,7 @@ def build_site(database, output, seed=None):
     for row in active:
         asset = by_domain.get(model.company_domain(row.get("website")))
         row["logo_url"] = "logos/" + asset["filename"] if asset else None
-        has_details = bool(row.get("financial_fetched") or row.get("dividend_events") or row.get("description"))
+        has_details = bool(row.get("financial_fetched") or row.get("annual_growth_version") or row.get("dividend_events") or row.get("description"))
         row["detail_key"] = hashlib.sha256(row["symbol"].encode()).hexdigest() if has_details else None
         if has_details:
             detail = dict(row)

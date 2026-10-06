@@ -28,3 +28,32 @@ def test_chart_rejects_non_numeric_axes(axis):
     with pytest.raises(HTTPException) as error:
         model.chart(x=axis)
     assert error.value.status_code == 400
+
+
+def test_chart_distinguishes_pending_from_checked_unavailable(tmp_path, monkeypatch):
+    store = model.Store(tmp_path / 'coverage.sqlite')
+    common = dict(region_code='us', region='United States', active=True, instrument='stock')
+    store.upsert_many([
+        dict(common,symbol='ZERO',revenue_growth_3y=0,net_income_growth_1y=-150),
+        dict(common,symbol='PENDING'),
+        dict(common,symbol='INVALID',annual_growth_version=1,revenue_growth_3y=12),
+        dict(common,symbol='EMPTY',annual_growth_version=1),
+    ])
+    monkeypatch.setattr(model, 'store', store)
+    result = model.chart(x='revenue_growth_3y',y='net_income_growth_1y',main_only=False)
+    assert result['total'] == 4
+    assert len(result['rows']) == 1
+    assert result['coverage'] == dict(awaiting=1, unavailable=2)
+    assert result['rows'][0]['net_income_growth_1y'] == -150
+    filtered = model.chart(x='revenue_growth_3y',y='net_income_growth_1y',main_only=False,search='ZERO')
+    assert filtered['coverage'] == dict(awaiting=0, unavailable=0)
+
+
+def test_chart_income_fetch_does_not_pretend_full_profile_loaded(tmp_path, monkeypatch):
+    store = model.Store(tmp_path / 'income.sqlite')
+    store.set_meta('fx', {'USD': {'rate': 1}})
+    common = dict(region_code='us',active=True,instrument='stock',financial_currency='USD')
+    store.upsert_many([dict(common,symbol='ANNUAL',income_fetched='2026-10-06',revenue_local=10),dict(common,symbol='PENDING')])
+    monkeypatch.setattr(model,'store',store)
+    assert model.chart(x='revenue',y='net_income',main_only=False)['coverage'] == dict(awaiting=1,unavailable=1)
+    assert model.chart(x='revenue',y='fcf',main_only=False)['coverage'] == dict(awaiting=2,unavailable=0)

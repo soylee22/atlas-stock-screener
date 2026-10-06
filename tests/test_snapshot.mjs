@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { decodeSnapshot, selectSnapshot, snapshotCSV } from '../static/snapshot-engine.js';
+import { decodeSnapshot, selectSnapshot, snapshotCSV, chartCoverage } from '../static/snapshot-engine.js';
 const schema = { regions: { us: 'US', ca: 'Canada' }, columns: [
   { key: 'market_cap', kind: 'usd', default: true }, { key: 'sector', kind: 'text' },
 ] };
@@ -46,3 +46,15 @@ const growthCSV=snapshotCSV(growthRows,growthSchema,'revenue_growth_3y,below_52w
 assert.ok(growthCSV.includes('revenue_growth_3y_period'));
 assert.ok(growthCSV.includes('FY 2026 / 2023 · USD · Yahoo'));
 console.log('27 published filtering, numeric sorting and CSV assertions passed');
+const coverageRows = [
+  {revenue_growth_3y:0,net_income_growth_1y:-150},
+  {revenue_growth_3y:null,net_income_growth_1y:null},
+  {annual_growth_version:1,revenue_growth_3y:12,net_income_growth_1y:null},
+  {annual_growth_version:1,revenue_growth_3y:null,net_income_growth_1y:null},
+];
+assert.deepEqual(chartCoverage(coverageRows,'revenue_growth_3y','net_income_growth_1y',{}),{awaiting:1,unavailable:2});
+assert.deepEqual(chartCoverage([{income_fetched:'2026-10-06',revenue:10,net_income:null},{revenue:null,net_income:null}], 'revenue','net_income',{}),{awaiting:1,unavailable:1});
+assert.deepEqual(chartCoverage([{financial_fetched:'2026-10-06',fcf:null},{fcf:null},{fcf:0}], 'fcf','fcf',{fcf:{group:'Cash flow'}}),{awaiting:1,unavailable:1});
+assert.deepEqual(chartCoverage([{below_52w_high:null},{below_52w_high:0}], 'below_52w_high','below_52w_high',{}),{awaiting:0,unavailable:1});
+assert.deepEqual(chartCoverage(coverageRows.slice(0,1),'revenue_growth_3y','net_income_growth_1y',{}),{awaiting:0,unavailable:0});
+console.log('5 source coverage and zero/loss handling assertions passed');

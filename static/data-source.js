@@ -1,4 +1,4 @@
-import { decodeSnapshot, selectSnapshot, snapshotCSV } from './snapshot-engine.js';
+import { decodeSnapshot, selectSnapshot, snapshotCSV, chartCoverage } from './snapshot-engine.js';
 
 export const isPublished = document.querySelector('meta[name="atlas-data-mode"]')?.content === 'snapshot';
 let loaded, checkedAt = 0;
@@ -23,7 +23,7 @@ export async function chartRows(params, x, y) {
     if (!numeric.has(x) || !numeric.has(y)) throw new Error('Choose numeric chart metrics');
     const selected = selectSnapshot(data.rows, data.schema, query);
     const rows = selected.filter(r => typeof r[x] === 'number' && Number.isFinite(r[x]) && typeof r[y] === 'number' && Number.isFinite(r[y]));
-    return { rows, total: selected.length };
+    return { rows, total: selected.length, coverage: chartCoverage(selected, x, y, Object.fromEntries(data.schema.columns.map(f => [f.key, f]))) };
   }
   const response = await fetch('/api/chart?' + query);
   const data = await response.json();

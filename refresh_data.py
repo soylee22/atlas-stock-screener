@@ -140,45 +140,69 @@ def refresh(store, seed, seconds=720, limit=400, force_quotes=False):
     return result
 
 
-def backfill_growth(store, seconds=90, limit=100):
-    """Fetch only annual income statements for existing profiles missing growth."""
+def backfill_growth(store, seconds=1200, limit=30000, workers=4):
+    """Fetch annual statements across all main listings without full profiles."""
     deadline = time.monotonic() + seconds
-    counts = dict(attempted=0, succeeded=0, failed=0)
-    lock = threading.Lock()
+    counts = dict(attempted=0, succeeded=0, failed=0, no_data=0)
+    lock, stop = threading.Lock(), threading.Event()
+    candidates = iter(store.growth_candidates())
+    heartbeat = time.monotonic()
 
     def worker():
-        while time.monotonic() < deadline:
+        while not stop.is_set() and time.monotonic() < deadline:
             with lock:
                 if counts["attempted"] >= limit:
                     return
-                symbol = store.next_growth_enrichment()
+                symbol = next(candidates, None)
                 if not symbol:
                     return
+                if not store.claim_growth(symbol):
+                    continue
                 counts["attempted"] += 1
             try:
                 row = store.get(symbol)
-                income = model.yf.Ticker(symbol).income_stmt
-                if income.empty:
-                    raise ValueError("Yahoo annual income statements unavailable")
-                values = model.annual_growth_values(income, row["financial_currency"], row)
+                income, currency = model.fetch_annual_income(symbol)
+                if stop.is_set() or time.monotonic() >= deadline:
+                    # Do not postpone an unfinished request for the retry cooldown.
+                    with store.connect() as conn:
+                        conn.execute("UPDATE stocks SET data=json_remove(data,'$.annual_growth_attempted') WHERE symbol=? AND COALESCE(json_extract(data,'$.annual_growth_version'),0)<1", (symbol,))
+                    return
+                values = model.annual_growth_values(income, currency, row)
                 values.update(symbol=symbol, region_code=row["region_code"])
+                if not income.empty and currency:
+                    # Fill FY income totals for listings without a loaded income period.
+                    if not row.get("income_period") and (not row.get("financial_fetched") or row.get("financial_currency") == currency):
+                        totals = model.financial_values(model.pd.DataFrame(), income, model.pd.DataFrame(), model.pd.DataFrame())
+                        values.update({key: totals[key] for key in ["net_income_local", "revenue_local", "net_margin", "income_period"]})
+                        values.update(financial_currency=currency, income_fetched=model.now_iso())
+                    values["annual_growth_status"] = "available"
+                else:
+                    values["annual_growth_status"] = "no_data"
+                    values["annual_growth_missing"] = {key: "Yahoo returned no full annual records in a reporting currency" for key in model.GROWTH_KEYS}
                 store.upsert_many([values])
                 with lock:
-                    counts["succeeded"] += 1
+                    counts["no_data" if income.empty else "succeeded"] += 1
             except Exception as exc:
                 logging.warning("Annual statements %s: %s", symbol, exc)
                 with lock:
                     counts["failed"] += 1
                 if "429" in str(exc) or "rate" in str(exc).lower():
+                    stop.set()
                     return
+            stop.wait(.05)
 
-    workers = [threading.Thread(target=worker, daemon=True) for _ in range(2)]
-    for thread in workers:
+    threads = [threading.Thread(target=worker, daemon=True) for _ in range(max(1, min(4, workers)))]
+    for thread in threads:
         thread.start()
-    while any(thread.is_alive() for thread in workers) and time.monotonic() < deadline:
-        for thread in workers:
+    while any(thread.is_alive() for thread in threads) and time.monotonic() < deadline:
+        for thread in threads:
             thread.join(timeout=.5)
-    # A slow in-flight request must not prevent a bounded publication job.
+        if time.monotonic() - heartbeat >= 30:
+            print(json.dumps(dict(annual_progress=counts.copy())), flush=True)
+            heartbeat = time.monotonic()
+    stop.set()
+    for thread in threads:
+        thread.join(timeout=16)
     result = dict(annual_growth=counts.copy(), finished=model.now_iso())
     store.set_meta("annual_growth_backfill", result)
     print(json.dumps(result), flush=True)
@@ -194,6 +218,7 @@ def main():
     parser.add_argument("--force-quotes", action="store_true")
     parser.add_argument("--seed-only", action="store_true")
     parser.add_argument("--growth-only", action="store_true")
+    parser.add_argument("--workers", type=int, default=4)
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO)
     store = model.Store(args.database)
@@ -201,7 +226,7 @@ def main():
         print(json.dumps(dict(seed_restored=restore_seed(store, args.seed))))
     elif args.growth_only:
         restore_seed(store, args.seed)
-        backfill_growth(store, max(1, args.seconds), max(0, args.limit))
+        backfill_growth(store, max(1, args.seconds), max(0, args.limit), args.workers)
     else:
         refresh(store, args.seed, max(1, args.seconds), max(0, args.limit), args.force_quotes)
 

@@ -71,6 +71,22 @@ def test_builder_rejects_source_and_unrelated_output(tmp_path):
     assert (output / 'precious.txt').read_text() == 'keep'
 
 
+def test_annual_only_stock_has_detail_without_fabricated_dividend_history(tmp_path):
+    store = seeded_store(tmp_path)
+    store.upsert_many([dict(symbol='ANNUAL',region_code='us',active=True,instrument='stock',
+        annual_growth_version=1,income_fetched='2026-10-06',revenue_growth_1y=20,
+        annual_income_history={'currency':'USD','revenue':{'2026-06-30':120,'2025-06-30':100}})])
+    output = tmp_path / 'site'
+    build_site.build_site(store.path,output)
+    snapshot = json.loads((output / 'data' / 'stocks.json').read_text())
+    row = next(dict(zip(snapshot['fields'],values)) for values in snapshot['rows'] if values[snapshot['fields'].index('symbol')]=='ANNUAL')
+    assert row['annual_growth_version'] == 1 and row['income_fetched'] == '2026-10-06'
+    detail = json.loads((output / 'data' / 'details' / (row['detail_key']+'.json')).read_text())
+    assert detail['annual_income_history']['revenue']['2026-06-30'] == 120
+    assert not detail.get('financial_fetched') and not detail.get('dividend_events')
+    assert (output / detail['dividend_exports']['annual']).read_text().count('\n') == 1
+
+
 def test_incomplete_quote_scan_restores_previous_data(tmp_path, caplog):
     store = seeded_store(tmp_path)
     class BrokenPipeline:

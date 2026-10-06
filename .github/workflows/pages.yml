@@ -26,7 +26,7 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 45
     permissions:
       contents: read
       pages: read
@@ -61,7 +61,7 @@ jobs:
         if: github.event_name != 'push'
         env:
           FORCE_QUOTES: ${{ inputs.force_quotes || 'false' }}
-          ENRICH_LIMIT: ${{ inputs.enrich_limit || 400 }}
+          ENRICH_LIMIT: ${{ github.event_name == 'workflow_dispatch' && format('{0}', inputs.enrich_limit) || '400' }}
         run: |
           args=(--seconds 720 --limit "$ENRICH_LIMIT")
           if [ "$FORCE_QUOTES" = true ]; then args+=(--force-quotes); fi
@@ -69,7 +69,7 @@ jobs:
       - name: Build public site
         # Populate new growth fields even when a push skips the full provider scan.
         run: |
-          python refresh_data.py --growth-only --seconds 90 --limit 100
+          python refresh_data.py --growth-only --seconds 1200 --limit 30000 --workers 4
           python build_site.py --output public
       - name: Preserve refreshed data
         uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25 # v5
