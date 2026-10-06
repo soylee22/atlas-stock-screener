@@ -1,5 +1,6 @@
 import json
 import sys
+import threading
 from pathlib import Path
 
 import pytest
@@ -66,11 +67,12 @@ def test_builder_rejects_source_and_unrelated_output(tmp_path):
     assert (output / 'precious.txt').read_text() == 'keep'
 
 
-def test_incomplete_quote_scan_restores_previous_data(tmp_path):
+def test_incomplete_quote_scan_restores_previous_data(tmp_path, caplog):
     store = seeded_store(tmp_path)
     class BrokenPipeline:
         def __init__(self):
             self.store = store
+            self.stop = threading.Event()
         def load_fx(self):
             store.set_meta('fx', {'GBP': {'rate': 99}})
         def ingest(self):
@@ -80,3 +82,17 @@ def test_incomplete_quote_scan_restores_previous_data(tmp_path):
     assert store.get('TEST.US')['price'] == 12.5
     assert store.meta('fx')['GBP']['rate'] == 1.25
     assert 'Previous quotes retained' in store.meta('quote_error')
+    assert 'Yahoo did not finish every market' in caplog.text
+
+
+def test_expired_budget_stops_new_source_requests(tmp_path, monkeypatch):
+    store = seeded_store(tmp_path)
+    pipeline = model.Pipeline(store)
+    pipeline.stop.set()
+    def unexpected(*args, **kwargs):
+        pytest.fail('No new Yahoo request is allowed after the job deadline')
+    monkeypatch.setattr(model.yf, 'Ticker', unexpected)
+    monkeypatch.setattr(model.yf, 'screen', unexpected)
+    pipeline.load_fx()
+    pipeline.ingest()
+    assert store.get('TEST.US')['price'] == 12.5

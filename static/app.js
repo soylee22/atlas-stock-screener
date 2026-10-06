@@ -257,7 +257,7 @@ function bindEvents() {
       $('download-csv').hidden = true; $('copy-csv').disabled = true;
       try {
         const prepared = await exportSnapshot(p);
-        $('export-summary').textContent = `${prepared.count.toLocaleString('en-GB')} matching listings ready to export.`;
+        $('export-summary').textContent = `${prepared.count.toLocaleString('en-GB')} matching ${prepared.count === 1 ? 'listing' : 'listings'} ready to export.`;
         $('download-csv').href = prepared.url; $('download-csv').hidden = false; $('copy-csv').disabled = false;
         $('copy-csv').onclick = async () => { try { await navigator.clipboard.writeText(prepared.csv); toast('CSV copied to clipboard'); } catch { toast('Clipboard access unavailable. Use Download CSV.'); } };
         $('export-dialog').onclose = prepared.dispose;

@@ -634,6 +634,8 @@ class Pipeline:
             currencies.update(base_currency(r[0]) for r in conn.execute("SELECT DISTINCT json_extract(data,'$.financial_currency') FROM stocks") if r[0])
         currencies.discard("USD")
         for currency in currencies:
+            if self.stop.is_set():
+                break
             try:
                 hist = yf.Ticker(currency + "USD=X").history(period="5d")
                 if hist.empty:
@@ -672,10 +674,14 @@ class Pipeline:
         self.store.set_meta("quote_error", None)
         # Seed the first page in every market before filling the entire universe.
         for region in REGIONS:
+            if self.stop.is_set():
+                return
             coverage[region] = self.page(region, 0, run_id, sort="intradaymarketcap")
             coverage[region]["loaded"] = 0
             self.store.set_meta("coverage", coverage)
         for region, progress in coverage.items():
+            if self.stop.is_set():
+                return
             if progress.get("error"):
                 continue
             try:

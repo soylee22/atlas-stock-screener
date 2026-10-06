@@ -58,7 +58,7 @@ export async function exportSnapshot(params) {
   const data = await snapshot();
   const selected = selectSnapshot(data.rows, data.schema, params);
   const csv = snapshotCSV(selected, data.schema, params.get('columns') || '');
-  if ('serviceWorker' in navigator) {
+  if ('serviceWorker' in navigator) try {
     const registration = await navigator.serviceWorker.register(new URL('export-worker.js', document.baseURI));
     await navigator.serviceWorker.ready;
     if (!navigator.serviceWorker.controller) await new Promise((resolve, reject) => {
@@ -73,6 +73,7 @@ export async function exportSnapshot(params) {
     });
     return { csv, count: selected.length, url: new URL(`atlas-export.csv?token=${token}`, document.baseURI).href, dispose() {} };
   }
+  catch { /* Copy CSV and the ordinary download remain available. */ }
   const url = URL.createObjectURL(new Blob(['\ufeff', csv], { type: 'text/csv;charset=utf-8' }));
   return { csv, count: selected.length, url, dispose() { URL.revokeObjectURL(url); } };
 }
