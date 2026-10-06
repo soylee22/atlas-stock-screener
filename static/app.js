@@ -70,7 +70,7 @@ function renderControls() {
   }).join('');
   for (const b of $('presets').querySelectorAll('button')) b.classList.toggle('active', b.dataset.preset === state.preset);
 }
-function colWidth(field) { if (field.kind === 'text') return field.key === 'industry' ? 210 : field.key.includes('period') || field.key.includes('time') || field.key.includes('fetched') ? 175 : 140; return field.key === 'div_years' ? 130 : 123; }
+function colWidth(field) { if (field.kind === 'text') return field.key === 'industry' ? 240 : field.key.includes('period') || field.key.includes('time') || field.key.includes('fetched') ? 190 : 160; return field.key === 'div_years' ? 155 : 145; }
 function renderTable() {
   $('thead').innerHTML = `<tr><th class="symbol-head ${state.sort === 'symbol' ? 'sorted' : ''}"><button data-sort="symbol">Company <span class="sort-arrow">${state.sort === 'symbol' ? (state.direction === 'desc' ? '↓' : '↑') : ''}</span></button><span class="col-unit">SYMBOL / NAME</span></th>` + state.columns.map(key => {
     const f = fields[key], unit = ['usd', 'price'].includes(f.kind) ? 'USD' : f.kind === 'percent' ? '%' : key === 'fcf_change' ? 'FY YoY' : key === 'volume' ? 'SHARES' : key === 'div_years' ? 'OBSERVED STREAK' : '';
@@ -84,7 +84,7 @@ function renderTable() {
       return `<td class="${f.kind === 'text' ? 'text' : ''} ${valueClass(val, key)}" title="${esc(period ? period + ' · ' : '')}${esc(val ?? 'Unavailable or awaiting retrieval')}">${fmt(val, f)}</td>`;
     }).join('') + '</tr>';
   }).join('');
-  $('stock-table').style.minWidth = `${310 + state.columns.reduce((a, k) => a + colWidth(fields[k]), 0)}px`;
+  $('stock-table').style.minWidth = `${360 + state.columns.reduce((a, k) => a + colWidth(fields[k]), 0)}px`;
   $('empty').hidden = !!rows.length || isLoading;
   $('result-count').textContent = total.toLocaleString('en-GB');
   $('result-label').textContent = ' listings';
