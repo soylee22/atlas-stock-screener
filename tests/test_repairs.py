@@ -23,6 +23,7 @@ def test_empty_profile_response_cannot_erase_verified_growth_history():
 
 def test_primary_view_excludes_investment_trusts_and_split_funds_without_excluding_reits():
     names={'TEM.L':('Templeton Emerging Markets Investment Trust plc',None),
+           'SHORT.L':('Templeton Emerging Mkts Invmt Tr TEMIT',None),
            'IAD.L':('Invesco Asia Dragon Trust plc','Asset Management'),
            'CTY.L':('The City of London Investment Trust plc','Asset Management'),
            'XTD.TO':('TDb Split Corp.',None),
