@@ -23,4 +23,7 @@ const ranked=orderPoints(model.points,options.order);
 const csv=rankedCSV(ranked,options);const lines=csv.trim().split('\r\n');
 assert.equal(lines.length,4);assert.equal(lines[1].split(',')[1],ranked[0].row.symbol);
 assert.match(csv,/balanced_score/);assert.match(csv,/pareto_frontier/);assert.match(csv,/'=bad/);
+const periodCSV=rankedCSV([{...ranked[0],row:{symbol:'PERIOD',income_period:'FY INCOME',cf_period:'TTM CASH',fcf_growth_period:'FY CASH GROWTH'}}],{...options,x:'fcf',y:'fcf_change'});
+assert.match(periodCSV,/TTM CASH/);assert.match(periodCSV,/FY CASH GROWTH/);assert(!periodCSV.includes('FY INCOME'));
+assert(!rankedCSV([{...ranked[0],row:{symbol:'UNKNOWN',income_period:'FY INCOME'}}],{...options,x:'div_yield',y:'pe'}).includes('FY INCOME'));
 console.log('Custom SMA, coverage, filters and ranked export checks passed');

@@ -17,4 +17,13 @@ export function customSMA(row,history,currency,fx,settings) {
     sma_custom_period:mean?`${n} ${settings.interval} closes · ${dates.at(-n)} to ${dates.at(-1)} · ${currency||'currency unknown'} · reference ${history.daily.dates.at(-1)}`:`Needs ${n} completed ${settings.interval} closes. ${values.length} cached.`,
     technical_version:history?1:row.technical_version};
 }
-export const metricPeriodKey=key=>key.replace(/_distance$/,'')+'_period';
+export const metricPeriodKey=key=>{
+  if(key.startsWith('sma_'))return key.replace(/_distance$/,'')+'_period';
+  if(key.includes('_growth_'))return key+'_period';
+  if(['net_income','net_margin','revenue'].includes(key))return 'income_period';
+  if(['capex','fcf','operating_cf','fcf_yield'].includes(key))return 'cf_period';
+  if(['fcf_change','fcf_delta'].includes(key))return 'fcf_growth_period';
+  if(key==='roic_proxy')return 'roic_proxy_period';
+  if(['price','market_cap','volume','change','below_52w_high','low_52w','high_52w','change_52w'].includes(key))return 'quote_time';
+  return key+'_period';
+};
