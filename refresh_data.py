@@ -30,6 +30,13 @@ def restore_verified_repairs(store):
         if old.get('financial_currency_version',0)<2 and incoming.get('financial_currency_version')==2:
             values.update({k:v for k,v in incoming.items() if k in {'financial_currency','financial_currency_version','financial_field_currencies','financial_quality_note','statement_history','statement_version','statement_fetched','statement_errors','income_period','cf_period','fcf_growth_period','net_margin','fcf_change','roic_proxy','roic_proxy_period','roic_proxy_inputs','roic_proxy_reason'} or k in model.MONETARY_FINANCIAL or k.removesuffix('_local') in model.MONETARY_FINANCIAL})
             # Verified currency takes precedence even when quote-only cache merging would retain profile metadata.
+        fresh = incoming.get('annual_income_history',{})
+        cached = old.get('annual_income_history',{})
+        # The old profile refresh may have stamped correct raw amounts with the wrong currency.
+        # Transfer the independently verified FY history and labels without overwriting newer FY observations.
+        newest = lambda h: max([*h.get('revenue',{}),*h.get('net_income',{})],default='')
+        if incoming.get('financial_currency_version')==2 and fresh.get('currency') and fresh.get('currency')!=cached.get('currency') and newest(fresh)>=newest(cached):
+            values.update({k:v for k,v in incoming.items() if k.startswith(('annual_','revenue_growth_','net_income_growth_'))})
         if len(values)>2: store.upsert_many([values])
 
 

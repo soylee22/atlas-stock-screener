@@ -48,3 +48,21 @@ def test_custom_screen_is_packed_and_excludes_private_statement_payload(tmp_path
     assert row['symbol']=='TEST'
     assert 'private_note' not in row and 'statement_history' not in row
     assert data['technicals']['TEST']['daily']['closes']==[10,20]
+
+
+def test_verified_seed_repairs_growth_currency_after_headline_migration(tmp_path,monkeypatch):
+    import json
+    import refresh_data
+    s=model.Store(tmp_path/'s.sqlite')
+    old=dict(symbol='BOB',region_code='kr',financial_currency='KRW',financial_currency_version=2,
+             annual_income_history={'currency':'USD','net_income':{'2025-12-31':100}},net_income_growth_3y_period='USD')
+    s.upsert_many([old])
+    seed={'rows':[dict(old,annual_income_history={'currency':'KRW','net_income':{'2025-12-31':100}},net_income_growth_3y_period='KRW')]}
+    (tmp_path/'seed').mkdir();(tmp_path/'seed'/'verified-repairs.json').write_text(json.dumps(seed))
+    monkeypatch.setattr(model,'ROOT',tmp_path)
+    refresh_data.restore_verified_repairs(s)
+    assert s.get('BOB')['annual_income_history']['currency']=='KRW'
+    assert s.get('BOB')['net_income_growth_3y_period']=='KRW'
+    s.upsert_many([dict(symbol='BOB',region_code='kr',annual_income_history={'currency':'USD','net_income':{'2026-12-31':200}})])
+    refresh_data.restore_verified_repairs(s)
+    assert s.get('BOB')['annual_income_history']['net_income']=={'2026-12-31':200}
