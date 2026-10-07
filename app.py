@@ -1120,8 +1120,11 @@ def technical_screen():
     with store.connect() as conn:
         records = [json.loads(r[0]) for r in conn.execute("SELECT "+projection+" FROM stocks WHERE json_extract(data,'$.active')=1")]
         technicals = [dict(r) for r in conn.execute("SELECT symbol,json_extract(data,'$.technical_history') AS history,json_extract(data,'$.technical_currency') AS currency FROM stocks WHERE json_type(data,'$.technical_history')='object'")]
-    return dict(rows=records,technicals={r['symbol']:json.loads(r['history']) for r in technicals},
-        fx=store.meta('fx',{}),currencies={r['symbol']:r['currency'] for r in technicals})
+    payload = dict(fields=keys,rows=[[row.get(key) for key in keys] for row in records],
+        technicals={r['symbol']:json.loads(r['history']) for r in technicals},fx=store.meta('fx',{}),
+        currencies={r['symbol']:r['currency'] for r in technicals})
+    # Packed keys and direct serialization avoid walking millions of repeated fields in FastAPI.
+    return Response(json.dumps(payload,separators=(',',':'),allow_nan=False),media_type='application/json')
 
 
 @app.get("/api/analysis-peers/{symbol}")

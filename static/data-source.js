@@ -27,7 +27,7 @@ async function customData(params) {
   } else {
     if(!technicalCache||(localTechnicalAt&&Date.now()-localTechnicalAt>15000)) {
       localTechnicalAt=0;
-      technicalCache=Promise.all([fetch('/api/technical-screen').then(r=>r.json()),fetch('/api/schema').then(r=>r.json())]).then(([v,schema])=>{localTechnicalAt=Date.now();return {...v,schema};}).catch(e=>{technicalCache=undefined;throw e;});
+      technicalCache=Promise.all([fetch('/api/technical-screen').then(r=>r.json()),fetch('/api/schema').then(r=>r.json())]).then(([v,schema])=>{localTechnicalAt=Date.now();return {...v,rows:v.fields?v.rows.map(a=>Object.fromEntries(v.fields.map((k,i)=>[k,a[i]]))):v.rows,schema};}).catch(e=>{technicalCache=undefined;throw e;});
     }
     technical=await technicalCache;data={rows:technical.rows,schema:technical.schema,status:{fx:technical.fx}};
   }

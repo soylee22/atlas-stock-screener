@@ -36,3 +36,15 @@ def test_empty_profile_does_not_certify_annual_history_unavailable():
     assert model.dollarise(old,{})['annual_growth_version']==0
     old['annual_growth_status']='no_data'
     assert model.dollarise(old,{})['annual_growth_version']==1
+
+
+def test_custom_screen_is_packed_and_excludes_private_statement_payload(tmp_path,monkeypatch):
+    import json
+    s=model.Store(tmp_path/'s.sqlite')
+    s.upsert_many([dict(symbol='TEST',name='Test',region_code='us',instrument='stock',active=True,exchange='NYSE',private_note='secret',technical_history={'daily':{'closes':[10,20],'dates':['2026-01-01','2026-01-02']}},technical_currency='USD')])
+    monkeypatch.setattr(model,'store',s)
+    data=json.loads(model.technical_screen().body)
+    row=dict(zip(data['fields'],data['rows'][0]))
+    assert row['symbol']=='TEST'
+    assert 'private_note' not in row and 'statement_history' not in row
+    assert data['technicals']['TEST']['daily']['closes']==[10,20]
