@@ -123,7 +123,7 @@ export async function api(input, options) {
       if (!row) return Response.json({ detail: 'Unknown symbol' }, { status: 404 });
       if (!row.detail_key) result = row;
       else {
-        if (!details.has(symbol)) details.set(symbol, fetch(new URL(`data/details/${row.detail_key}.json`, document.baseURI)).then(async r => {
+        if (!details.has(symbol)) details.set(symbol, fetch(new URL(`data/details/${row.detail_key}.json`, document.baseURI), {cache:"no-cache"}).then(async r => {
           if (!r.ok) throw new Error('Company snapshot unavailable');
           return r.json();
         }).catch(error => { details.delete(symbol); throw error; }));
