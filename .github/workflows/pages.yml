@@ -59,6 +59,9 @@ jobs:
           restore-keys: atlas-data-v1-
       - name: Restore initial public snapshot
         run: python refresh_data.py --seed-only
+      - name: Refresh security classifications
+        if: github.event_name != 'push'
+        run: python listing_types.py
       - name: Bootstrap added European markets
         if: github.event_name == 'push'
         run: python refresh_data.py --europe-only --seconds 300 --limit 600

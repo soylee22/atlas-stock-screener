@@ -212,3 +212,13 @@ The main-listing filter prefers Xetra over matching Frankfurt quotes and hides r
 EUR, DKK and SEK amounts use the existing cached Yahoo FX conversion.
 `seed/europe.json` adds the initial public market records without replacing newer cached observations.
 The existing refresh queues progressively load company financials, dividends and annual histories across all twelve markets.
+
+### Security classification
+
+Yahoo can give preferred shares and warrants the parent company name.
+`listing_types.py` applies market-specific ticker rules and cached Nasdaq security descriptions.
+The public seed retains the Nasdaq descriptions and verified issuer classifications for known European preference or savings shares.
+Nasdaq directories refresh daily through the existing scheduled workflow. Failed downloads retain the previous complete catalogue.
+All financial figures and prices still come from Yahoo. Ordinary share classes and operating REIT or partnership units remain eligible.
+Main listings only excludes these securities across table, chart, rankings, peers and exports. Switching it off exposes all cached listings.
+Classification remains practical. Unrecognised share classes and primary venues outside the covered markets remain limitations.
