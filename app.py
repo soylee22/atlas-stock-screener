@@ -122,7 +122,7 @@ def main_listing_flags(rows):
             reason = "OTC, international order book or secondary trading venue"
         elif re.search(r"\b(CDR|GDR|CAD\s+HE|depositary receipt|depository receipt)", (row.get("name") or ""), re.I):
             reason = "Depositary receipt or CAD-hedged wrapper"
-        elif re.search(r"\b(?:preferred (?:stock|equity|shares?|securities)|property preferred|depositary shares?|depository shares?|American depositary|American depository|ADR|ADS)\b", (row.get("name") or ""), re.I) or re.search(r"-(?:P[A-Z]|PR(?:[.-][A-Z])?)\.(?:TO|NE)$", symbol) or (region == "tw" and re.fullmatch(r"\d{4}[A-C]\.TW", symbol)) or (region == "kr" and re.fullmatch(r"\d{5}[5-9]\.KS", symbol)):
+        elif re.search(r"\b(?:preferred (?:stock|equity|shares?|securities)|property preferred|depositary shares?|depository shares?|American depositary|American depository|ADR|ADS|warrants?|subscription rights?)\b", (row.get("name") or ""), re.I) or re.search(r"-(?:P[A-Z]|PR(?:[.-][A-Z])?)\.(?:TO|NE)$", symbol) or (region == "tw" and re.fullmatch(r"\d{4}[A-C]\.TW", symbol)) or (region == "kr" and re.fullmatch(r"\d{5}[5-9]\.KS", symbol)):
             reason = "Preferred security or depositary instrument"
         elif re.search(r"\bphysical (?:gold|silver|platinum|palladium|uranium)\b|\binvestment trust\b|\b(?:invmt|invt) tr\b|\bsplit corp\b|\b(?:income|investment|bond|equity|mutual|closed.end).*\bfund\b", (row.get("name") or ""), re.I) or (row.get('industry') == 'Asset Management' and re.search(r"\b(?:trust|fund)\b", (row.get('name') or ''), re.I)):
             reason = "Investment fund or commodity trust"
@@ -698,7 +698,7 @@ class Store:
     def classify_listings(self, force=False):
         # Refresh the classification as home-country profiles become available.
         with self.listing_lock:
-            if not force and self.meta("listing_policy_version", 0) == 7 and time.time() - self.meta("listing_classified", 0) < 300:
+            if not force and self.meta("listing_policy_version", 0) == 8 and time.time() - self.meta("listing_classified", 0) < 300:
                 return
             with self.connect() as conn:
                 keys = ['symbol','name','region_code','exchange','domicile','instrument','active','price','volume','avg_volume','main_listing','listing_reason','industry']
@@ -709,7 +709,7 @@ class Store:
                     if r.get('main_listing') != flags[r['symbol']]['main_listing'] or r.get('listing_reason') != flags[r['symbol']]['listing_reason']]
                 conn.executemany("UPDATE stocks SET data=json_set(data,'$.main_listing',json(?),'$.listing_reason',?) WHERE symbol=?", changes)
             self.set_meta("listing_classified", time.time())
-            self.set_meta("listing_policy_version", 7)
+            self.set_meta("listing_policy_version", 8)
 
 
 def query_sql(search="", regions="", filters="[]", sort="market_cap", direction="desc", include_other=False, only_symbols="", main_only=False):

@@ -8,6 +8,7 @@ import app as model
 
 def test_main_listings_exclude_receipts_preferred_and_bullion_but_keep_reits_and_classes():
     names={'PHYS':'Sprott Physical Gold Trust','PSLV':'Sprott Physical Silver Trust','GOOGM':'Alphabet Inc. Depositary Shares representing Preferred Stock','BRF-PA.TO':'Brookfield Renewable Power Preferred Equity Inc.','PFBC':'Preferred Bank','O':'Realty Income Corporation','GOOG':'Alphabet Inc. Class C','GOOGL':'Alphabet Inc. Class A','MSFT.NE':'MICROSOFT CORP CDR CAD HEDGED'}
+    names['NSAIW']='NorthStrive Acquisition Corp I. Warrants'
     rows=[dict(symbol=s,name=n,region_code='ca' if s.endswith(('.TO','.NE')) else 'us',exchange='Toronto' if s.endswith('.TO') else 'Cboe CA' if s.endswith('.NE') else 'NasdaqGS',instrument='stock',active=True) for s,n in names.items()]
     kept={s for s,v in model.main_listing_flags(rows).items() if v['main_listing']}
     assert kept=={'PFBC','O','GOOG','GOOGL'}
