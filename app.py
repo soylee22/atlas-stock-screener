@@ -124,7 +124,7 @@ def main_listing_flags(rows):
             reason = "Depositary receipt or CAD-hedged wrapper"
         elif re.search(r"\b(?:preferred (?:stock|equity|shares?|securities)|property preferred|depositary shares?|depository shares?|American depositary|American depository|ADR|ADS)\b", (row.get("name") or ""), re.I) or re.search(r"-(?:P[A-Z]|PR(?:[.-][A-Z])?)\.(?:TO|NE)$", symbol) or (region == "tw" and re.fullmatch(r"\d{4}[A-C]\.TW", symbol)) or (region == "kr" and re.fullmatch(r"\d{5}[5-9]\.KS", symbol)):
             reason = "Preferred security or depositary instrument"
-        elif re.search(r"\bphysical (?:gold|silver|platinum|palladium)\b|\b(?:income|investment|bond|equity|mutual|closed.end).*\bfund\b", (row.get("name") or ""), re.I):
+        elif re.search(r"\bphysical (?:gold|silver|platinum|palladium|uranium)\b|\binvestment trust\b|\bsplit corp\b|\b(?:income|investment|bond|equity|mutual|closed.end).*\bfund\b", (row.get("name") or ""), re.I) or (row.get('industry') == 'Asset Management' and re.search(r"\b(?:trust|fund)\b", (row.get('name') or ''), re.I)):
             reason = "Investment fund or commodity trust"
         elif region == "gb" and re.fullmatch(r"0[A-Z0-9]+\.L", symbol):
             reason = "London international or secondary quote"
@@ -696,10 +696,10 @@ class Store:
     def classify_listings(self, force=False):
         # Refresh the classification as home-country profiles become available.
         with self.listing_lock:
-            if not force and self.meta("listing_policy_version", 0) == 4 and time.time() - self.meta("listing_classified", 0) < 300:
+            if not force and self.meta("listing_policy_version", 0) == 5 and time.time() - self.meta("listing_classified", 0) < 300:
                 return
             with self.connect() as conn:
-                keys = ['symbol','name','region_code','exchange','domicile','instrument','active','price','volume','avg_volume','main_listing','listing_reason']
+                keys = ['symbol','name','region_code','exchange','domicile','instrument','active','price','volume','avg_volume','main_listing','listing_reason','industry']
                 projection = "json_object("+','.join(f"'{key}',json_extract(data,'$.{key}')" for key in keys)+")"
                 rows = [json.loads(r[0]) for r in conn.execute("SELECT "+projection+" FROM stocks")]
                 flags = main_listing_flags(rows)
@@ -707,7 +707,7 @@ class Store:
                     if r.get('main_listing') != flags[r['symbol']]['main_listing'] or r.get('listing_reason') != flags[r['symbol']]['listing_reason']]
                 conn.executemany("UPDATE stocks SET data=json_set(data,'$.main_listing',json(?),'$.listing_reason',?) WHERE symbol=?", changes)
             self.set_meta("listing_classified", time.time())
-            self.set_meta("listing_policy_version", 4)
+            self.set_meta("listing_policy_version", 5)
 
 
 def query_sql(search="", regions="", filters="[]", sort="market_cap", direction="desc", include_other=False, only_symbols="", main_only=False):

@@ -21,6 +21,18 @@ def test_empty_profile_response_cannot_erase_verified_growth_history():
     assert new['annual_income_history']==old['annual_income_history']
 
 
+def test_primary_view_excludes_investment_trusts_and_split_funds_without_excluding_reits():
+    names={'TEM.L':('Templeton Emerging Markets Investment Trust plc',None),
+           'IAD.L':('Invesco Asia Dragon Trust plc','Asset Management'),
+           'CTY.L':('The City of London Investment Trust plc','Asset Management'),
+           'XTD.TO':('TDb Split Corp.',None),
+           'TRUST.L':('Trust Software plc','Software - Application'),
+           'REIT.L':('Regional REIT Limited','REIT - Office')}
+    rows=[dict(symbol=s,name=n,industry=i,region_code='ca' if s.endswith('.TO') else 'gb',exchange='Toronto' if s.endswith('.TO') else 'LSE',instrument='stock',active=True) for s,(n,i) in names.items()]
+    kept={s for s,v in model.main_listing_flags(rows).items() if v['main_listing']}
+    assert kept=={'TRUST.L','REIT.L'}
+
+
 def test_conflicting_currency_is_withheld_from_rankings_until_verified():
     row=dict(symbol='241560.KS',financial_currency='USD',quote_currency='KRW',net_income_local=498988734000,
              annual_income_history={'currency':'KRW','net_income':{'2025-12-31':402344616000}})
