@@ -135,3 +135,20 @@ def test_deployments_version_modules_and_retain_previous_bundle(tmp_path, monkey
     assert (output / new_script).is_file()
     assert 'New calculation helper revision' not in (output / old_script).parent.joinpath('format.js').read_text()
     assert 'New calculation helper revision' in (output / new_script).parent.joinpath('format.js').read_text()
+
+
+def test_complete_statement_history_survives_publication_and_seed(tmp_path):
+    store=seeded_store(tmp_path)
+    history={'balance_annual':{'currency':'USD','frequency':'annual','units':{'Total Assets':'currency','Share Issued':'shares'},'periods':[{'end_date':'2026-06-30','values':{'Total Assets':1000,'Share Issued':100}}]}}
+    store.upsert_many([dict(symbol='TEST.US',region_code='us',statement_history=history,statement_version=1,roic_proxy=20,roic_proxy_inputs={'opening_capital':100,'closing_capital':120})])
+    output,seed=tmp_path/'site',tmp_path/'seed.tar.gz'
+    build_site.build_site(store.path,output,seed)
+    details=[json.loads(p.read_text()) for p in (output/'data'/'details').glob('*.json')]
+    row=next(r for r in details if r['symbol']=='TEST.US')
+    assert row['statement_history']==history and row['roic_proxy']==20
+    snapshot=json.loads((output/'data'/'stocks.json').read_text())
+    assert 'statement_history' not in snapshot['fields'],'full statements load only with a company detail'
+    assert 'roic_proxy' in snapshot['fields'] and 'statement_version' in snapshot['fields']
+    restored=model.Store(tmp_path/'restored'/'test.sqlite')
+    refresh_data.restore_seed(restored,seed)
+    assert restored.get('TEST.US')['statement_history']==history

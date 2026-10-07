@@ -20,14 +20,15 @@ EXTRA_FIELDS = {
     "price_local", "market_cap_local", "low_52w_local", "high_52w_local",
     "annual_income_history", "annual_growth_version", "annual_growth_fetched", "annual_growth_missing",
     "annual_growth_status", "income_fetched",
+    "statement_history", "statement_errors", "statement_version", "statement_fetched", "roic_proxy_inputs", "roic_proxy_reason",
     *(key + "_local" for key in model.MONETARY_FINANCIAL),
 }
 PUBLIC_FIELDS = EXTRA_FIELDS | set(model.FIELDS)
 INDEX_FIELDS = list(dict.fromkeys([
     "symbol", "name", "region_code", "instrument", "active", "main_listing", "listing_reason",
-    "financial_error", "detail_key", "logo_url", "annual_growth_missing", "annual_growth_version", "income_fetched", *[field["key"] for field in model.COLUMNS],
+    "financial_error", "detail_key", "logo_url", "annual_growth_missing", "annual_growth_version", "income_fetched", "statement_version", *[field["key"] for field in model.COLUMNS],
 ]))
-META_KEYS = ["coverage", "fx", "quote_completed", "last_quote_run", "quote_error", "last_financial", "refresh_health", "annual_growth_backfill"]
+META_KEYS = ["coverage", "fx", "quote_completed", "last_quote_run", "quote_error", "last_financial", "refresh_health", "annual_growth_backfill", "statement_backfill"]
 ICON_FILE = re.compile(r"[a-f0-9]{64}\.(png|jpg|gif|webp|ico)")
 
 
@@ -160,7 +161,7 @@ def build_site(database, output, seed=None):
     for row in active:
         asset = by_domain.get(model.company_domain(row.get("website")))
         row["logo_url"] = "logos/" + asset["filename"] if asset else None
-        has_details = bool(row.get("financial_fetched") or row.get("annual_growth_version") or row.get("dividend_events") or row.get("description"))
+        has_details = bool(row.get("financial_fetched") or row.get("statement_history") or row.get("annual_growth_version") or row.get("dividend_events") or row.get("description"))
         row["detail_key"] = hashlib.sha256(row["symbol"].encode()).hexdigest() if has_details else None
         if has_details:
             detail = dict(row)

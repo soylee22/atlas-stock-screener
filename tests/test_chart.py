@@ -57,3 +57,15 @@ def test_chart_income_fetch_does_not_pretend_full_profile_loaded(tmp_path, monke
     monkeypatch.setattr(model,'store',store)
     assert model.chart(x='revenue',y='net_income',main_only=False)['coverage'] == dict(awaiting=1,unavailable=1)
     assert model.chart(x='revenue',y='fcf',main_only=False)['coverage'] == dict(awaiting=2,unavailable=0)
+
+
+def test_analysis_peers_are_global_compact_and_exclude_wrappers(tmp_path,monkeypatch):
+    store=model.Store(tmp_path/'peers.sqlite')
+    shared=dict(region_code='us',active=True,instrument='stock',exchange='NYSE',sector='Technology',industry='Software')
+    store.upsert_many([dict(shared,symbol='TARGET',name='Target'),dict(shared,symbol='PEER',name='Peer',private_note='secret',dividend_events=[{'date':'2025-01-01','amount':1}]),dict(shared,symbol='PEER.OTC',name='Peer',exchange='PNK'),dict(shared,symbol='OTHER',sector='Energy',industry='Oil')])
+    monkeypatch.setattr(model,'store',store)
+    result=model.analysis_peers('TARGET')
+    assert {r['symbol'] for r in result['rows']}=={'TARGET','PEER'}
+    assert result['population']['total']==3
+    assert all('private_note' not in r and 'dividend_events' not in r for r in result['rows'])
+    with pytest.raises(HTTPException):model.analysis_peers('UNKNOWN')

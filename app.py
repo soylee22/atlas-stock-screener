@@ -72,6 +72,8 @@ COLUMNS = [
     col("pe", "P/E", group="Valuation"), col("forward_pe", "Forward P/E", group="Valuation"),
     col("price_book", "Price / book", group="Valuation"),
     col("roe", "Return on equity", "percent", group="Financials"),
+    col("roic_proxy", "ROIC proxy", "percent", group="Financials", description="FY after-tax operating income proxy / average book debt plus equity less cash. Uses effective tax, excludes missing/invalid inputs and makes no lease, R&D or goodwill adjustments. Compare operating businesses with consistent methods."),
+    col("roic_proxy_period", "ROIC proxy period", "text", group="Financials"),
     col("debt", "Total debt", "usd", group="Financials"), col("cash", "Cash", "usd", group="Financials"),
     col("beta", "Beta", group="Performance"),
     col("avg_volume", "Avg volume 3M", group="Overview"),
@@ -900,6 +902,11 @@ class Pipeline:
         row = self.store.get(symbol)
         annual_income = ticker.income_stmt
         values = financial_values(ticker.quarterly_income_stmt, annual_income, ticker.quarterly_cashflow, ticker.cashflow)
+        from statements import capture_statements
+        statement_values, _ = capture_statements(ticker, info.get("financialCurrency"), row,
+            dict(income_annual=annual_income,income_quarterly=ticker.quarterly_income_stmt,
+                 cashflow_annual=ticker.cashflow,cashflow_quarterly=ticker.quarterly_cashflow))
+        values.update(statement_values)
         values.update(annual_growth_values(annual_income, info.get("financialCurrency"), row))
         try:
             # Explicit start avoids invalid 'max' ranges on some secondary listings.
@@ -1044,6 +1051,8 @@ def chart(x: str = "net_income", y: str = "div_years", search: str = "", regions
         missing = f"COALESCE(json_type(data,'$.{key}') IN ('integer','real'),0)=0"
         if key in GROWTH_KEYS:
             source = "COALESCE(json_extract(data,'$.annual_growth_version'),0)<1"
+        elif key == "roic_proxy":
+            source = "COALESCE(json_extract(data,'$.statement_version'),0)<1"
         elif key in {"net_income", "revenue", "net_margin"}:
             source = "json_extract(data,'$.financial_fetched') IS NULL AND json_extract(data,'$.income_fetched') IS NULL"
         elif (FIELDS[key].get("group") in {"Financials", "Cash flow", "Dividends"} and key != "div_yield") or key == "beta":
@@ -1059,6 +1068,29 @@ def chart(x: str = "net_income", y: str = "div_years", search: str = "", regions
         records = conn.execute("SELECT " + projection + " FROM stocks WHERE " + where + " AND " + paired, args).fetchall()
     return dict(rows=[json.loads(row[0]) for row in records], total=total,
                 coverage=dict(awaiting=awaiting, unavailable=total-plotted-awaiting))
+
+
+@app.get("/api/analysis-peers/{symbol}")
+def analysis_peers(symbol: str):
+    row = store.get(symbol)
+    if row is None:
+        raise HTTPException(404, "Unknown symbol")
+    store.classify_listings()
+    keys = sorted({"symbol", "name", "main_listing", "instrument", "active", "region_code", "website", "domicile", "income_fetched", "statement_version", *FIELDS})
+    objects = ["json_object(" + ",".join(f"'{key}',json_extract(data,'$.{key}')" for key in keys[i:i+40]) + ")" for i in range(0,len(keys),40)]
+    projection = objects[0]
+    for obj in objects[1:]:
+        projection = f"json_patch({projection},{obj})"
+    where = "json_extract(data,'$.active')=1 AND json_extract(data,'$.instrument')='stock' AND json_extract(data,'$.main_listing')=1"
+    with store.connect() as conn:
+        total, classified = conn.execute("SELECT COUNT(*),SUM(json_extract(data,'$.sector') IS NOT NULL) FROM stocks WHERE " + where).fetchone()
+        records = conn.execute("SELECT " + projection + " FROM stocks WHERE " + where + " AND (json_extract(data,'$.sector')=? OR json_extract(data,'$.industry')=?)", (row.get('sector'),row.get('industry'))).fetchall()
+    return dict(rows=[json.loads(r[0]) for r in records],population=dict(total=total,sector_classified=classified or 0))
+
+
+@app.get("/export-worker.js")
+def export_worker():
+    return FileResponse(ROOT / "static" / "export-worker.js", media_type="application/javascript")
 
 
 @app.get("/api/dividends/{symbol}/export")

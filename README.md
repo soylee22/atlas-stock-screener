@@ -169,3 +169,28 @@ A positive starting value is required for percentage growth. One-year net income
 Below 52W high is 100 × (high − latest price) / high in matching local quote units. Zero means at the high. Lower values mean closer. A negative value means above the provider's quoted high. This differs from the existing 52-week price change.
 Annual statements load independently of full company profiles across the main-listing universe. Each publication allows a 20-minute batch with four concurrent requests, balanced across all six markets. Run `python refresh_data.py --growth-only --seconds 1200 --limit 30000 --workers 4` to advance the queue. Provider failures remain pending and retry after a cooldown. A rate limit stops the batch. Full profile refreshes update and retain the same annual history.
 The chart separates awaiting source fetches from unavailable or undefined values. All zone statistics describe the plotted population. Source gaps and invalid growth bases do not become zeroes.
+
+## Stock AI analysis pack
+
+Open a company deep dive and select Create AI analysis pack.
+Copy prompt + data for AI puts the full instructions and structured observations on the clipboard.
+Copy JSON provides the same pack as JSON. Download JSON and Download CSV provide files.
+The preview offers the complete pack, JSON, CSV or the prompt alone.
+Use the copy buttons if an embedded browser blocks generated downloads.
+
+The detailed prompt centres analysis on net income, earnings direction, profitability and cash conversion.
+It requests dividend history and cover, balance-sheet trends, industry and sector comparisons, valuation scenarios and plots.
+Every available cached income statement, balance sheet and cash-flow row is included, annually and quarterly.
+Reporting-currency values remain intact. USD values use current cached FX.
+Share counts, ratios and per-share figures have separate units.
+Missing data, reporting dates, fetch dates and unavailable growth horizons are explicit.
+
+Peer summaries use complete known industry and sector cohorts, independent of active screen filters.
+Each metric reports its own coverage. Up to 24 companies nearest by market cap supply individual peer rows.
+The labelled ROIC proxy uses after-tax operating income and average book debt plus equity less cash.
+It is withheld for financial-sector businesses or invalid inputs. It is distinct from ROE.
+
+Full statement histories load progressively during existing scheduled refreshes.
+A three-minute batch retains them across the six markets, with a cooldown after provider failures.
+Run `python refresh_data.py --statements-only --seconds 180 --limit 60` to advance this queue.
+The pack is prepared in the browser. No AI service receives it automatically.

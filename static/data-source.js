@@ -30,6 +30,43 @@ export async function chartRows(params, x, y) {
   if (!response.ok) throw new Error(data.detail || 'Chart data unavailable');
   return data;
 }
+export async function analysisUniverse(symbol) {
+  if (isPublished) {
+    const data = await snapshot();
+    return { rows:data.rows, schema:data.schema, status:data.status };
+  }
+  const response = await fetch('/api/analysis-peers/'+encodeURIComponent(symbol));
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.detail||'Peer data unavailable');
+  return data;
+}
+
+export async function prepareTextDownload(content,filename,mime) {
+  if ('serviceWorker' in navigator) try {
+    const registration=await navigator.serviceWorker.register(new URL('export-worker.js',document.baseURI));
+    const incoming=registration.installing||registration.waiting;
+    if(incoming&&incoming.state!=='activated')await new Promise((resolve,reject)=>{
+      const timer=setTimeout(()=>reject(new Error('Download service update timed out')),10000);
+      incoming.addEventListener('statechange',()=>{
+        if(incoming.state==='activated'){clearTimeout(timer);resolve();}
+        if(incoming.state==='redundant'){clearTimeout(timer);reject(new Error('Download service update failed'));}
+      });
+    });
+    await navigator.serviceWorker.ready;
+    if(!navigator.serviceWorker.controller)await new Promise((resolve,reject)=>{
+      const timeout=setTimeout(()=>reject(new Error('Download service did not start')),10000);
+      navigator.serviceWorker.addEventListener('controllerchange',()=>{clearTimeout(timeout);resolve();},{once:true});
+    });
+    const token=crypto.randomUUID(),channel=new MessageChannel();
+    await new Promise((resolve,reject)=>{const timeout=setTimeout(()=>reject(new Error('Download preparation failed')),10000);
+      channel.port1.onmessage=()=>{clearTimeout(timeout);channel.port1.close();resolve();};
+      registration.active.postMessage({token,content,filename,mime},[channel.port2]);
+    });
+    return {url:new URL(`atlas-download?token=${token}`,document.baseURI).href,dispose(){}};
+  } catch { /* The clipboard, preview and ordinary file download remain available. */ }
+  const url=URL.createObjectURL(new Blob([content],{type:mime+';charset=utf-8'}));
+  return {url,dispose(){URL.revokeObjectURL(url);}};
+}
 export async function api(input, options) {
   if (!isPublished) return fetch(input, options);
   try {

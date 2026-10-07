@@ -209,6 +209,50 @@ def backfill_growth(store, seconds=1200, limit=30000, workers=4):
     return result
 
 
+def backfill_statements(store, seconds=180, limit=60):
+    """Retain complete statement sets for existing verified reporting currencies."""
+    from statements import capture_statements
+    deadline = time.monotonic() + seconds
+    counts = dict(attempted=0, succeeded=0, failed=0)
+    with store.connect() as conn:
+        candidates = [json.loads(r[0]) for r in conn.execute("""SELECT data FROM stocks WHERE
+            json_extract(data,'$.active')=1 AND json_extract(data,'$.instrument')='stock'
+            AND json_extract(data,'$.main_listing')=1
+            AND COALESCE(json_extract(data,'$.statement_version'),0)<1
+            AND COALESCE(json_extract(data,'$.statement_attempted'),0)<?
+            AND (json_extract(data,'$.annual_income_history.currency') IS NOT NULL
+                OR json_extract(data,'$.financial_fetched') IS NOT NULL)
+            ORDER BY json_extract(data,'$.market_cap') DESC""",(time.time()-6*3600,))]
+    # Seed familiar companies, then keep each market represented.
+    priority = {'AAPL','MSFT','NVDA','GOOG','KO','PEP','JNJ','PG','O','JPM','HSBA.L','RY.TO','7203.T','005930.KS','2330.TW'}
+    first = [r for r in candidates if r['symbol'] in priority]
+    buckets = {code:[r for r in candidates if r['region_code']==code and r['symbol'] not in priority] for code in model.REGIONS}
+    queue = first + [buckets[code][i] for i in range(max((len(v) for v in buckets.values()),default=0)) for code in model.REGIONS if i<len(buckets[code])]
+    for row in queue[:limit]:
+        if time.monotonic() >= deadline:
+            break
+        currency = row.get('annual_income_history',{}).get('currency') or (row.get('financial_currency') if row.get('financial_fetched') else None)
+        if not currency:
+            continue
+        counts['attempted'] += 1
+        store.upsert_many([dict(symbol=row['symbol'],region_code=row['region_code'],statement_attempted=time.time())])
+        values, frames = capture_statements(model.yf.Ticker(row['symbol']),currency,row)
+        values.update(symbol=row['symbol'],region_code=row['region_code'])
+        if not frames.get('income_annual',model.pd.DataFrame()).empty:
+            values.update(model.annual_growth_values(frames['income_annual'],currency,row))
+        store.upsert_many([values])
+        counts['succeeded' if values['statement_version']==1 else 'failed'] += 1
+        print(json.dumps(dict(statement_progress=counts)),flush=True)
+        # yfinance can convert a rate-limited timeseries request to an empty frame.
+        # Do not hammer further requests after a failed statement set.
+        if values['statement_errors']:
+            break
+    result = dict(statements=counts,finished=model.now_iso())
+    store.set_meta('statement_backfill',result)
+    print(json.dumps(result),flush=True)
+    return result
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--database", type=Path, default=model.DB)
@@ -218,12 +262,16 @@ def main():
     parser.add_argument("--force-quotes", action="store_true")
     parser.add_argument("--seed-only", action="store_true")
     parser.add_argument("--growth-only", action="store_true")
+    parser.add_argument("--statements-only", action="store_true")
     parser.add_argument("--workers", type=int, default=4)
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO)
     store = model.Store(args.database)
     if args.seed_only:
         print(json.dumps(dict(seed_restored=restore_seed(store, args.seed))))
+    elif args.statements_only:
+        restore_seed(store, args.seed)
+        backfill_statements(store,max(1,args.seconds),max(0,args.limit))
     elif args.growth_only:
         restore_seed(store, args.seed)
         backfill_growth(store, max(1, args.seconds), max(0, args.limit), args.workers)

@@ -47,6 +47,7 @@ jobs:
           node --experimental-default-type=module tests/test_format.mjs
           node --experimental-default-type=module tests/test_snapshot.mjs
           node --experimental-default-type=module tests/test_quadrant.mjs
+          node --experimental-default-type=module tests/test_analysis.mjs
           node --check static/quadrant.js
           node --check static/app.js
       - name: Restore market data cache
@@ -69,6 +70,7 @@ jobs:
       - name: Build public site
         # Populate new growth fields even when a push skips the full provider scan.
         run: |
+          python refresh_data.py --statements-only --seconds 180 --limit 60
           python refresh_data.py --growth-only --seconds 1200 --limit 30000 --workers 4
           python build_site.py --output public
       - name: Preserve refreshed data
