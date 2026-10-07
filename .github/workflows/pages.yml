@@ -68,12 +68,14 @@ jobs:
           args=(--seconds 720 --limit "$ENRICH_LIMIT")
           if [ "$FORCE_QUOTES" = true ]; then args+=(--force-quotes); fi
           python refresh_data.py "${args[@]}"
-      - name: Build public site
-        # Populate new growth fields even when a push skips the full provider scan.
+      - name: Backfill financial and price history
+        if: github.event_name != 'push'
         run: |
           python refresh_data.py --statements-only --seconds 180 --limit 60
           python refresh_data.py --technicals-only --seconds 180 --limit 120
           python refresh_data.py --growth-only --seconds 1200 --limit 30000 --workers 4
+      - name: Build public site
+        run: |
           python build_site.py --output public
       - name: Preserve refreshed data
         uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25 # v5
