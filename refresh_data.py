@@ -303,7 +303,16 @@ def backfill_technicals(store,seconds=180,limit=120):
     priority={'AAPL','MSFT','NVDA','GOOG','KO','PEP','JNJ','PG','O','JPM','HSBA.L','RY.TO','7203.T','005930.KS','2330.TW','241560.KS'}
     queue=[r for r in rows if r['symbol'] in priority]
     buckets={c:[r for r in rows if r['region_code']==c and r['symbol'] not in priority] for c in model.REGIONS}
-    queue += [buckets[c][i] for i in range(max((len(v) for v in buckets.values()),default=0)) for c in model.REGIONS if i<len(buckets[c])]
+    balanced=[buckets[c][i] for i in range(max((len(v) for v in buckets.values()),default=0)) for c in model.REGIONS if i<len(buckets[c])]
+    from collections import deque
+    missing=deque(r for r in balanced if not r.get('technical_version'))
+    stale=deque(r for r in balanced if r.get('technical_version'))
+    # Reserve three slots for first fetches and one for refreshing cached histories.
+    # Otherwise the largest stale stocks can consume every daily batch indefinitely.
+    step=0
+    while missing or stale:
+        chosen=stale if step%4==3 and stale else missing if missing else stale
+        queue.append(chosen.popleft());step+=1
     counts=dict(attempted=0,succeeded=0,failed=0)
     for row in queue[:limit]:
         if time.monotonic()>deadline: break

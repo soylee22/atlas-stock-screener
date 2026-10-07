@@ -44,3 +44,20 @@ def test_verified_currency_survives_store_merge_without_aging_profile(tmp_path):
     store.upsert_many([dict(symbol='BOB',region_code='kr',financial_currency='USD',financial_fetched='2026-10-01')],enriched=True)
     store.upsert_many([dict(symbol='BOB',region_code='kr',financial_currency='KRW',financial_currency_version=2)])
     assert store.get('BOB')['financial_currency']=='KRW'
+
+
+def test_rolling_technical_queue_advances_missing_data_and_refreshes_stale(tmp_path,monkeypatch):
+    import refresh_data
+    store=app.Store(tmp_path/'queue.sqlite')
+    for i in range(6):
+        store.upsert_many([dict(symbol=f'T{i}',name=f'Test {i}',region_code='us',exchange='NYSE',instrument='stock',active=True,
+             quote_currency='USD',market_cap_local=(100-i)*1e9,technical_version=1 if i<3 else 0,technical_fetched='2000-01-01')])
+    requested=[]
+    class Ticker:
+        def __init__(self,symbol):requested.append(symbol)
+        def history(self,**kwargs):return pd.DataFrame({'Close':[10]*250},index=pd.bdate_range('2025-01-01',periods=250))
+        def get_history_metadata(self):return {'currency':'USD'}
+    monkeypatch.setattr(app.yf,'Ticker',Ticker)
+    refresh_data.backfill_technicals(store,seconds=10,limit=4)
+    assert {'T3','T4','T5'}.issubset(requested)
+    assert any(symbol in {'T0','T1','T2'} for symbol in requested)
