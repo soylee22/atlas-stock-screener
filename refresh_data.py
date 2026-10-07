@@ -14,6 +14,7 @@ from pathlib import Path
 
 import app as model
 from build_site import ICON_FILE
+EUROPE_SEED = model.ROOT / 'seed' / 'europe.json'
 
 
 def restore_verified_repairs(store):
@@ -40,10 +41,37 @@ def restore_verified_repairs(store):
         if len(values)>2: store.upsert_many([values])
 
 
+def restore_market_extension(store):
+    path = EUROPE_SEED
+    if not path.is_file():
+        return
+    payload = json.loads(path.read_text())
+    with store.connect() as conn:
+        existing = {r[0] for r in conn.execute('SELECT symbol FROM stocks')}
+    incoming = [r for r in payload.get('rows', []) if r['symbol'] not in existing]
+    if incoming:
+        store.upsert_many(incoming)
+        store.set_meta('europe_bootstrap_pending', True)
+        with store.connect() as conn:
+            conn.executemany('UPDATE stocks SET enriched=?,attempted=? WHERE symbol=?',
+                [(datetime.fromisoformat(r['financial_fetched']).timestamp(),datetime.fromisoformat(r['financial_fetched']).timestamp(),r['symbol']) for r in incoming if r.get('financial_fetched')])
+    coverage = store.meta('coverage', {})
+    for region, value in payload.get('coverage', {}).items():
+        if region not in coverage:
+            coverage[region] = value
+    store.set_meta('coverage', coverage)
+    fx = store.meta('fx', {})
+    for currency, value in payload.get('fx', {}).items():
+        if currency not in fx or value.get('fetched', '') > fx[currency].get('fetched', ''):
+            fx[currency] = value
+    store.set_meta('fx', fx)
+
+
 def restore_seed(store, seed):
     with store.connect() as conn:
         if conn.execute("SELECT COUNT(*) FROM stocks").fetchone()[0]:
             restore_verified_repairs(store)
+            restore_market_extension(store)
             return False
     logos = model.LogoCache(store)
     with tarfile.open(seed, "r:gz") as archive:
@@ -70,6 +98,7 @@ def restore_seed(store, seed):
                 conn.execute("INSERT OR REPLACE INTO logo_assets VALUES(?,?,?,?,?,?)",
                     (asset["domain"], filename, asset["source_url"], asset["fetched"], asset["attempted"], None))
     restore_verified_repairs(store)
+    restore_market_extension(store)
     return True
 
 
@@ -166,12 +195,19 @@ def refresh(store, seed, seconds=720, limit=400, force_quotes=False):
     return result
 
 
-def backfill_growth(store, seconds=1200, limit=30000, workers=4):
+def backfill_growth(store, seconds=1200, limit=30000, workers=4, regions=None):
     """Fetch annual statements across all main listings without full profiles."""
     deadline = time.monotonic() + seconds
     counts = dict(attempted=0, succeeded=0, failed=0, no_data=0)
     lock, stop = threading.Lock(), threading.Event()
-    candidates = iter(store.growth_candidates())
+    queue = store.growth_candidates()
+    if regions is not None:
+        if not regions or any(region not in model.REGIONS for region in regions):
+            raise ValueError('Choose configured listing markets')
+        with store.connect() as conn:
+            allowed = {r[0] for r in conn.execute('SELECT symbol FROM stocks WHERE region IN ('+','.join('?' for _ in regions)+')',list(regions))}
+        queue = [symbol for symbol in queue if symbol in allowed]
+    candidates = iter(queue)
     heartbeat = time.monotonic()
 
     def worker():
@@ -336,6 +372,34 @@ def backfill_technicals(store,seconds=180,limit=120):
     return result
 
 
+
+def bootstrap_europe(store, seconds=300, limit=600):
+    if not store.meta('europe_bootstrap_pending', False):
+        print(json.dumps({'europe_bootstrap': 'Already imported'}), flush=True)
+        return
+    started = time.monotonic()
+    profiles, rate_limited = [], False
+    pipeline = model.Pipeline(store)
+    for symbol in ['SAP.DE','ITX.MC','ENI.MI','ASML.AS','NOVO-B.CO','VOLV-B.ST']:
+        if time.monotonic()-started >= seconds:
+            break
+        row = store.get(symbol)
+        if not row or row.get('financial_fetched'):
+            continue
+        try:
+            pipeline.enrich(symbol)
+            profiles.append(symbol)
+        except Exception as error:
+            store.failed_enrichment(symbol, error)
+            if '429' in str(error) or 'rate' in str(error).lower():
+                rate_limited = True
+                break
+    remaining = seconds-(time.monotonic()-started)
+    result = backfill_growth(store, seconds=remaining, limit=limit, workers=4, regions=sorted(model.EUROPE_REGIONS)) if remaining>0 and not rate_limited else {'source_pending':True}
+    store.set_meta('europe_bootstrap_pending', False)
+    print(json.dumps({'europe_bootstrap':result, 'profiles':profiles}), flush=True)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--database", type=Path, default=model.DB)
@@ -345,6 +409,7 @@ def main():
     parser.add_argument("--force-quotes", action="store_true")
     parser.add_argument("--seed-only", action="store_true")
     parser.add_argument("--growth-only", action="store_true")
+    parser.add_argument("--europe-only", action="store_true")
     parser.add_argument("--statements-only", action="store_true")
     parser.add_argument("--technicals-only", action="store_true")
     parser.add_argument("--workers", type=int, default=4)
@@ -353,6 +418,9 @@ def main():
     store = model.Store(args.database)
     if args.seed_only:
         print(json.dumps(dict(seed_restored=restore_seed(store, args.seed))))
+    elif args.europe_only:
+        restore_seed(store,args.seed)
+        bootstrap_europe(store,max(1,args.seconds),max(0,args.limit))
     elif args.technicals_only:
         restore_seed(store,args.seed)
         backfill_technicals(store,max(1,args.seconds),max(0,args.limit))

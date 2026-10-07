@@ -5,8 +5,8 @@ import { createQuadrant, quadrantDefaults } from './quadrant.js';
 import { parseNumber, compact, escapeHtml as esc, annualDividends } from './format.js';
 
 const $ = id => document.getElementById(id);
-const FLAGS = { us: '🇺🇸', gb: '🇬🇧', ca: '🇨🇦', jp: '🇯🇵', kr: '🇰🇷', tw: '🇹🇼' };
-const SHORT = { us: 'US', gb: 'UK', ca: 'Canada', jp: 'Japan', kr: 'South Korea', tw: 'Taiwan' };
+const FLAGS = { us: '🇺🇸', gb: '🇬🇧', ca: '🇨🇦', jp: '🇯🇵', kr: '🇰🇷', tw: '🇹🇼', de: '🇩🇪', es: '🇪🇸', it: '🇮🇹', nl: '🇳🇱', dk: '🇩🇰', se: '🇸🇪' };
+const SHORT = { us: 'US', gb: 'UK', ca: 'Canada', jp: 'Japan', kr: 'South Korea', tw: 'Taiwan', de: 'Germany', es: 'Spain', it: 'Italy', nl: 'Netherlands', dk: 'Denmark', se: 'Sweden' };
 function readStorage(key, fallback) { try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; } }
 const state = { regions: [], search: '', filters: [], sort: 'market_cap', direction: 'desc', columns: [], page: 0, pageSize: 100, includeOther: false, mainOnly: true, preset: 'all', watchOnly: false, view: '', section:'table', sma:{window:200,interval:'daily'}, quadrant:{...quadrantDefaults} };
 let quadrant, chartRefreshed = 0;

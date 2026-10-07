@@ -23,10 +23,10 @@ The optional local service supports immediate refreshes and priority company loa
 
 ## Use the table
 
-Select market cards to combine the UK, US, Canada, Japan, South Korea and Taiwan.
+Select market cards to combine the UK, US, Canada, Japan, South Korea, Taiwan, Germany, Spain, Italy, the Netherlands, Denmark and Sweden.
 Main listings only is enabled by default.
 It hides OTC quotes, London secondary venues, recognised depositary wrappers, funds and leveraged products.
-Matching company names prefer a home-market counterpart across the complete six-market universe.
+Matching company names prefer a home-market counterpart across the complete twelve-market universe.
 When Yahoo home-country data is absent, the busiest recognised exchange listing is retained.
 Separate share classes in the chosen market remain visible.
 The classification is practical and does not certify an exchange's primary-listing register.
@@ -53,7 +53,7 @@ Export history downloads annual totals or ex-dividend events.
 
 ## Data method
 
-The universe comes from Yahoo's six regional screeners.
+The universe comes from Yahoo's twelve regional screeners.
 Listings are separate from issuers and can include secondary listings and depositary receipts.
 Recognised ETFs, warrants and other instruments are excluded from the default stock view.
 The coverage panel provides an option to include those records.
@@ -122,7 +122,7 @@ No login service or system startup job was installed.
 
 The workflow `.github/workflows/pages.yml` deploys the generated `public/` directory.
 Enable GitHub Pages with GitHub Actions as the source.
-A push to main deploys the cached data without waiting for Yahoo.
+A push to main deploys the cached data. The first European import runs a bounded financial bootstrap before publishing.
 Scheduled and manual runs refresh Yahoo within a twelve-minute budget.
 Use Run workflow to request an immediate quote scan or change the company batch limit.
 
@@ -167,7 +167,7 @@ Revenue and net income offer 1-year fiscal-year growth and 3-year, 5-year and 10
 Yahoo usually returns four annual statements. These support 1-year growth and 3-year CAGR. Longer horizons remain unavailable until the cache holds consecutive years. The cache retains older annual observations as Yahoo windows advance. Changing reporting currency clears incompatible observations. No SEC or other source supplements this history.
 A positive starting value is required for percentage growth. One-year net income growth can include a move from profit to loss. Multi-year CAGR requires a non-negative endpoint. Missing years and irregular fiscal spans remain unavailable.
 Below 52W high is 100 × (high − latest price) / high in matching local quote units. Zero means at the high. Lower values mean closer. A negative value means above the provider's quoted high. This differs from the existing 52-week price change.
-Annual statements load independently of full company profiles across the main-listing universe. Each publication allows a 20-minute batch with four concurrent requests, balanced across all six markets. Run `python refresh_data.py --growth-only --seconds 1200 --limit 30000 --workers 4` to advance the queue. Provider failures remain pending and retry after a cooldown. A rate limit stops the batch. Full profile refreshes update and retain the same annual history.
+Annual statements load independently of full company profiles across the main-listing universe. Each publication allows a 20-minute batch with four concurrent requests, balanced across all twelve markets. Run `python refresh_data.py --growth-only --seconds 1200 --limit 30000 --workers 4` to advance the queue. Provider failures remain pending and retry after a cooldown. A rate limit stops the batch. Full profile refreshes update and retain the same annual history.
 The chart separates awaiting source fetches from unavailable or undefined values. All zone statistics describe the plotted population. Source gaps and invalid growth bases do not become zeroes.
 
 ## Stock AI analysis pack
@@ -191,7 +191,7 @@ The labelled ROIC proxy uses after-tax operating income and average book debt pl
 It is withheld for financial-sector businesses or invalid inputs. It is distinct from ROE.
 
 Full statement histories load progressively during existing scheduled refreshes.
-A three-minute batch retains them across the six markets, with a cooldown after provider failures.
+A three-minute batch retains them across the twelve markets, with a cooldown after provider failures.
 Run `python refresh_data.py --statements-only --seconds 180 --limit 60` to advance this queue.
 The pack is prepared in the browser. No AI service receives it automatically.
 
@@ -202,3 +202,13 @@ Use **Moving averages** to set the custom window across columns, filters, quadra
 The quadrant list has its own **Export top list** button. Export the displayed top 100 or all ranked results. The CSV keeps the current ordering, selected zones and frontier restriction. It includes raw values, score, frontier membership and periods. The chart viewport does not restrict this list.
 
 Statement currency verification uses matching dated raw Yahoo timeseries records. Profile currency metadata can differ from statement currency. Conflicting legacy financial totals are withheld until verified. Annual history survives empty profile responses. Empty profile frames do not certify that annual history is unavailable. Annual-only source checks retry stale observations after seven days.
+
+## European markets
+
+Germany, Spain, Italy, the Netherlands, Denmark and Sweden extend the original six markets.
+Their Yahoo queries filter equities by positive market cap to reduce secondary-product feeds.
+The returned quote can still omit its market cap. These imported universes are not full exchange inventories.
+The main-listing filter prefers Xetra over matching Frankfurt quotes and hides recognised Italian foreign-equity tickers.
+EUR, DKK and SEK amounts use the existing cached Yahoo FX conversion.
+`seed/europe.json` adds the initial public market records without replacing newer cached observations.
+The existing refresh queues progressively load company financials, dividends and annual histories across all twelve markets.

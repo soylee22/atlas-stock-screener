@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       force_quotes:
-        description: Refresh all six markets now
+        description: Refresh all twelve markets now
         type: boolean
         default: false
       enrich_limit:
@@ -59,6 +59,9 @@ jobs:
           restore-keys: atlas-data-v1-
       - name: Restore initial public snapshot
         run: python refresh_data.py --seed-only
+      - name: Bootstrap added European markets
+        if: github.event_name == 'push'
+        run: python refresh_data.py --europe-only --seconds 300 --limit 600
       - name: Refresh Yahoo data
         if: github.event_name != 'push'
         env:

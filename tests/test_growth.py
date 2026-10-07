@@ -160,13 +160,14 @@ def test_whole_universe_queue_balances_unprofiled_stocks_and_skips_secondary(tmp
                 quote_currency='USD',market_cap_local=(3-i)*1e9)])
     store.upsert_many([dict(symbol='WRAPPER',region_code='ca',instrument='stock',active=True,main_listing=False)])
     queue=store.growth_candidates()
-    assert queue[:6] == [region+'0' for region in model.REGIONS]
-    assert 'WRAPPER' not in queue and len(queue)==18
+    assert queue[:len(model.REGIONS)] == [region+'0' for region in model.REGIONS]
+    assert 'WRAPPER' not in queue and len(queue)==3*len(model.REGIONS)
     income=annual([120,100])
     income.loc['Net Income']=[12,10]
     monkeypatch.setattr(model,'fetch_annual_income',lambda symbol:(income,'JPY'))
-    result=refresh_data.backfill_growth(store,seconds=10,limit=18)
-    assert result['annual_growth']==dict(attempted=18,succeeded=18,failed=0,no_data=0)
+    total=3*len(model.REGIONS)
+    result=refresh_data.backfill_growth(store,seconds=10,limit=total)
+    assert result['annual_growth']==dict(attempted=total,succeeded=total,failed=0,no_data=0)
     assert not store.growth_candidates()
     row=store.get('jp0')
     assert row['revenue_growth_1y']==pytest.approx(20)

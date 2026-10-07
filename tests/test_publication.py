@@ -28,11 +28,12 @@ def seeded_store(tmp_path):
     return store
 
 
-def test_public_build_and_seed_only_publish_allowed_data(tmp_path):
+def test_public_build_and_seed_only_publish_allowed_data(tmp_path, monkeypatch):
+    monkeypatch.setattr(refresh_data, 'EUROPE_SEED', tmp_path / 'absent.json')
     store = seeded_store(tmp_path)
     output, seed = tmp_path / 'site', tmp_path / 'seed.tar.gz'
     result = build_site.build_site(store.path, output, seed)
-    assert result['detail_files'] == 6
+    assert result['detail_files'] == len(model.REGIONS)
     html = (output / 'index.html').read_text()
     assert 'content="snapshot"' in html
     script = re.search(r'src="\./(static/[a-f0-9]{16}/app.js)"', html).group(1)
@@ -137,7 +138,8 @@ def test_deployments_version_modules_and_retain_previous_bundle(tmp_path, monkey
     assert 'New calculation helper revision' in (output / new_script).parent.joinpath('format.js').read_text()
 
 
-def test_complete_statement_history_survives_publication_and_seed(tmp_path):
+def test_complete_statement_history_survives_publication_and_seed(tmp_path, monkeypatch):
+    monkeypatch.setattr(refresh_data, 'EUROPE_SEED', tmp_path / 'absent.json')
     store=seeded_store(tmp_path)
     history={'balance_annual':{'currency':'USD','frequency':'annual','units':{'Total Assets':'currency','Share Issued':'shares'},'periods':[{'end_date':'2026-06-30','values':{'Total Assets':1000,'Share Issued':100}}]}}
     store.upsert_many([dict(symbol='TEST.US',region_code='us',statement_history=history,statement_version=1,roic_proxy=20,roic_proxy_inputs={'opening_capital':100,'closing_capital':120})])

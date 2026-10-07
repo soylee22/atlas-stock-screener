@@ -31,8 +31,17 @@ from pydantic import BaseModel, Field
 ROOT = Path(__file__).resolve().parent
 DB = ROOT / "data" / "screener.sqlite"
 REGIONS = {"us": "United States", "gb": "United Kingdom", "ca": "Canada",
-           "jp": "Japan", "kr": "South Korea", "tw": "Taiwan"}
+           "jp": "Japan", "kr": "South Korea", "tw": "Taiwan",
+           "de": "Germany", "es": "Spain", "it": "Italy", "nl": "Netherlands",
+           "dk": "Denmark", "se": "Sweden"}
+EUROPE_REGIONS = {"de", "es", "it", "nl", "dk", "se"}
 LOG = logging.getLogger("screener")
+
+
+def region_query(region):
+    query = yf.EquityQuery("eq", ["region", region])
+    # These feeds contain large securitised-product universes. Require a company market cap.
+    return yf.EquityQuery("and", [query, yf.EquityQuery("gt", ["intradaymarketcap", 0])]) if region in EUROPE_REGIONS else query
 
 
 def col(key, label, kind="number", default=False, group="Overview", description=""):
@@ -105,6 +114,8 @@ MAIN_EXCHANGES = {
     "gb": {"LSE", "Aquis AQSE"},
     "ca": {"Toronto", "TSXV", "Canadian Sec", "Cboe CA"},
     "jp": {"Tokyo"}, "kr": {"KSE", "KOSDAQ"}, "tw": {"Taiwan", "Taipei Exchange"},
+    "de": {"XETRA", "Frankfurt"}, "es": {"MCE", "Madrid"}, "it": {"Milan"},
+    "nl": {"Amsterdam"}, "dk": {"Copenhagen"}, "se": {"Stockholm"},
 }
 
 
@@ -130,6 +141,8 @@ def main_listing_flags(rows):
             reason = "UK listed investment trust"
         elif region == "gb" and re.fullmatch(r"0[A-Z0-9]+\.L", symbol):
             reason = "London international or secondary quote"
+        elif region == "it" and re.match(r"^1[A-Z].*\.MI$", symbol):
+            reason = "Italian quote of a foreign equity"
         flags[symbol] = dict(main_listing=False, listing_reason=reason)
         if reason:
             continue
@@ -153,6 +166,8 @@ def main_listing_flags(rows):
         # Retain different share classes in the selected market. For a repeated
         # ticker on Canadian exchanges, prefer TSX over its Cboe counterpart.
         selected = [r for r in candidates if r["region_code"] == region]
+        if region == 'de' and any(r.get('exchange') == 'XETRA' for r in selected):
+            selected = [r for r in selected if r.get('exchange') == 'XETRA']
         bases = {}
         for row in selected:
             base = row["symbol"].rsplit(".", 1)[0] if region == "ca" else row["symbol"]
@@ -161,6 +176,7 @@ def main_listing_flags(rows):
         for same_ticker in bases.values():
             best = max(same_ticker, key=lambda r: (r.get("exchange") == "Toronto", liquidity(r), r["symbol"]))
             kept.add(best["symbol"])
+        representative = max((r for r in selected if r['symbol'] in kept), key=lambda r: (liquidity(r), r['symbol']))
         for row in candidates:
             main = row["symbol"] in kept
             flags[row["symbol"]] = dict(main_listing=main,
@@ -698,7 +714,7 @@ class Store:
     def classify_listings(self, force=False):
         # Refresh the classification as home-country profiles become available.
         with self.listing_lock:
-            if not force and self.meta("listing_policy_version", 0) == 8 and time.time() - self.meta("listing_classified", 0) < 300:
+            if not force and self.meta("listing_policy_version", 0) == 9 and time.time() - self.meta("listing_classified", 0) < 300:
                 return
             with self.connect() as conn:
                 keys = ['symbol','name','region_code','exchange','domicile','instrument','active','price','volume','avg_volume','main_listing','listing_reason','industry']
@@ -709,7 +725,7 @@ class Store:
                     if r.get('main_listing') != flags[r['symbol']]['main_listing'] or r.get('listing_reason') != flags[r['symbol']]['listing_reason']]
                 conn.executemany("UPDATE stocks SET data=json_set(data,'$.main_listing',json(?),'$.listing_reason',?) WHERE symbol=?", changes)
             self.set_meta("listing_classified", time.time())
-            self.set_meta("listing_policy_version", 8)
+            self.set_meta("listing_policy_version", 9)
 
 
 def query_sql(search="", regions="", filters="[]", sort="market_cap", direction="desc", include_other=False, only_symbols="", main_only=False):
@@ -800,7 +816,7 @@ class Pipeline:
 
     def load_fx(self):
         fx = self.store.meta("fx", {"USD": {"rate": 1, "date": now_iso()}})
-        currencies = {"GBP", "CAD", "JPY", "KRW", "TWD", "EUR", "HKD", "CNY", "CHF", "AUD"}
+        currencies = {"GBP", "CAD", "JPY", "KRW", "TWD", "EUR", "DKK", "SEK", "HKD", "CNY", "CHF", "AUD"}
         with self.store.connect() as conn:
             currencies.update(base_currency(r[0]) for r in conn.execute("SELECT DISTINCT json_extract(data,'$.quote_currency') FROM stocks") if r[0])
             currencies.update(base_currency(r[0]) for r in conn.execute("SELECT DISTINCT json_extract(data,'$.financial_currency') FROM stocks") if r[0])
@@ -840,18 +856,23 @@ class Pipeline:
                     self.store.set_meta("last_quote_run", time.time())
             self.stop.wait(5)
 
-    def ingest(self):
+    def ingest(self, regions=None):
         run_id = now_iso()
-        coverage = {}
+        regions = list(REGIONS) if regions is None else list(regions)
+        if not regions or any(region not in REGIONS for region in regions):
+            raise ValueError("Choose configured listing markets")
+        coverage = self.store.meta("coverage", {})
+        current = {}
         self.store.set_meta("quote_error", None)
         # Seed the first page in every market before filling the entire universe.
-        for region in REGIONS:
+        for region in regions:
             if self.stop.is_set():
                 return
             coverage[region] = self.page(region, 0, run_id, sort="intradaymarketcap")
             coverage[region]["loaded"] = 0
+            current[region] = coverage[region]
             self.store.set_meta("coverage", coverage)
-        for region, progress in coverage.items():
+        for region, progress in current.items():
             if self.stop.is_set():
                 return
             if progress.get("error"):
@@ -864,7 +885,7 @@ class Pipeline:
             except Exception as exc:
                 progress["error"] = str(exc)[:250]
             if not progress.get("error"):
-                latest = yf.screen(yf.EquityQuery("eq", ["region", region]), size=1)
+                latest = yf.screen(region_query(region), size=1)
                 progress["expected"] = latest.get("total", progress["expected"])
                 with self.store.connect() as conn:
                     conn.execute("UPDATE stocks SET data=json_set(data,'$.active',0) WHERE region=? AND json_extract(data,'$.universe_run')!=?", (region, run_id))
@@ -872,6 +893,8 @@ class Pipeline:
                 progress["complete"] = progress["stored"] == progress["expected"]
                 progress["difference"] = progress["stored"] - progress["expected"]
                 progress["finished"] = True
+                if region in EUROPE_REGIONS:
+                    progress["scope"] = "Yahoo regional equities with positive market cap"
             self.store.set_meta("coverage", coverage)
         self.load_fx()
         self.store.set_meta("quote_completed", now_iso())
@@ -882,7 +905,7 @@ class Pipeline:
             return
         if depth > 12:
             raise ValueError("A price partition still exceeds Yahoo's pagination limit")
-        conditions = [yf.EquityQuery("eq", ["region", region])]
+        conditions = [region_query(region)]
         if lower is not None:
             conditions.append(yf.EquityQuery("gt", ["intradayprice", lower]))
         if upper is not None:
@@ -914,7 +937,7 @@ class Pipeline:
         last_error = "Unknown Yahoo error"
         for attempt in range(3):
             try:
-                data = yf.screen(query or yf.EquityQuery("eq", ["region", region]), size=250, offset=offset,
+                data = yf.screen(query or region_query(region), size=250, offset=offset,
                                  sortField=sort, sortAsc=sort == "ticker")
                 quotes = data.get("quotes", [])
                 if not quotes and data.get("total", 0) > offset:

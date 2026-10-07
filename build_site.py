@@ -102,7 +102,7 @@ def build_site(database, output, seed=None):
     metadata = clean_metadata({key: store.meta(key) for key in META_KEYS})
     active = [r for r in rows if r.get("active")]
     if not active or not all(any(r["region_code"] == code for r in active) for code in model.REGIONS):
-        raise ValueError("Publish only a snapshot containing all six markets")
+        raise ValueError("Publish only a snapshot containing every configured market")
     output = Path(output).resolve()
     protected = [model.ROOT.resolve(), store.path.parent.resolve()]
     if any(output == path or output in path.parents for path in protected):
