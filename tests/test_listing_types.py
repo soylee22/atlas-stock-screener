@@ -21,7 +21,7 @@ def test_parent_labels_across_markets_preserve_ordinary_classes_and_reit_units()
            ('AGMR-WTB.TO','ca','Toronto',False),('REAL-UN.TO','ca','Toronto',True),('AGF-B.TO','ca','Toronto',True),
            ('VOW3.DE','de','XETRA',False),('VOW.DE','de','XETRA',True),('HEN3.DE','de','XETRA',False),
            ('FPE3.DE','de','XETRA',False),('SRT3.DE','de','XETRA',False),('SIX3.DE','de','XETRA',False),
-           ('P911.DE','de','XETRA',False),('PAH3.DE','de','XETRA',False),('EDNR.MI','it','Milan',False),
+           ('P91A.F','de','Frankfurt',False),('PAHA.F','de','Frankfurt',False),('P911.DE','de','XETRA',False),('PAH3.DE','de','XETRA',False),('EDNR.MI','it','Milan',False),
            ('ALM-PREF.ST','se','Stockholm',False),('INVE-A.ST','se','Stockholm',True),('INVE-B.ST','se','Stockholm',True),
            ('NOVO-B.CO','dk','Copenhagen',True),('ASML.AS','nl','Amsterdam',True),('ENI.MI','it','Milan',True),
            ('SAN.MC','es','MCE',True),('007330.KQ','kr','KOSDAQ',True),('005935.KS','kr','KSE',False),
