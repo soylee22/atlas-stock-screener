@@ -1,5 +1,6 @@
+import { rankedCSV } from './ranked-export.js';
 import { openAnalysisPack } from './analysis-ui.js';
-import { api, isPublished, reloadSnapshot, exportSnapshot, chartRows } from './data-source.js';
+import { api, isPublished, reloadSnapshot, exportSnapshot, chartRows, prepareTextDownload, customDetail } from './data-source.js';
 import { createQuadrant, quadrantDefaults } from './quadrant.js';
 import { parseNumber, compact, escapeHtml as esc, annualDividends } from './format.js';
 
@@ -7,7 +8,7 @@ const $ = id => document.getElementById(id);
 const FLAGS = { us: '🇺🇸', gb: '🇬🇧', ca: '🇨🇦', jp: '🇯🇵', kr: '🇰🇷', tw: '🇹🇼' };
 const SHORT = { us: 'US', gb: 'UK', ca: 'Canada', jp: 'Japan', kr: 'South Korea', tw: 'Taiwan' };
 function readStorage(key, fallback) { try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; } }
-const state = { regions: [], search: '', filters: [], sort: 'market_cap', direction: 'desc', columns: [], page: 0, pageSize: 100, includeOther: false, mainOnly: true, preset: 'all', watchOnly: false, view: '', section:'table', quadrant:{...quadrantDefaults} };
+const state = { regions: [], search: '', filters: [], sort: 'market_cap', direction: 'desc', columns: [], page: 0, pageSize: 100, includeOther: false, mainOnly: true, preset: 'all', watchOnly: false, view: '', section:'table', sma:{window:200,interval:'daily'}, quadrant:{...quadrantDefaults} };
 let quadrant, chartRefreshed = 0;
 let schema, fields, defaults, rows = [], total = 0, status = {}, saved = readStorage('atlas.views.v1', {}), watched = readStorage('atlas.watch.v1', []);
 let requestSeq = 0, selectedSymbol = null, dividendSymbol = null, filterIndex = -1, toastTimeout, refreshTimer, isLoading = false;
@@ -15,14 +16,14 @@ let requestSeq = 0, selectedSymbol = null, dividendSymbol = null, filterIndex = 
 function toast(message) { $('toast').textContent = message; $('toast').hidden = false; clearTimeout(toastTimeout); toastTimeout = setTimeout(() => $('toast').hidden = true, 4200); }
 function persist(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); } catch { toast('Browser storage is unavailable. Changes last for this session.'); } }
 function params() {
-  return new URLSearchParams({ search: state.search, regions: state.regions.join(','), filters: JSON.stringify(state.filters), sort: state.sort, direction: state.direction, include_other: state.includeOther, main_only: state.mainOnly, only_symbols: state.watchOnly ? watched.join(',') || '__empty_watchlist__' : '' });
+  return new URLSearchParams({ search: state.search, regions: state.regions.join(','), filters: JSON.stringify(state.filters), sort: state.sort, direction: state.direction, include_other: state.includeOther, main_only: state.mainOnly, sma_window:state.sma.window, sma_interval:state.sma.interval, columns:state.columns.join(','), only_symbols: state.watchOnly ? watched.join(',') || '__empty_watchlist__' : '' });
 }
 function fmt(value, field, plain = false) {
   if (value === null || value === undefined || value === '') return plain ? '' : '<span class="missing" title="Unavailable or awaiting retrieval">—</span>';
   if (field.kind === 'text') return esc(value);
   if (!Number.isFinite(Number(value))) return '<span class="missing">—</span>';
   if (field.kind === 'percent') {
-    const sign = (['change', 'change_52w', 'fcf_change', 'div_growth'].includes(field.key) || /_growth_(1|3|5|10)y$/.test(field.key)) && value > 0 ? '+' : '';
+    const sign = (['change', 'change_52w', 'fcf_change', 'div_growth'].includes(field.key) || (/_growth_(1|3|5|10)y$/.test(field.key)||/^sma_.*_distance$/.test(field.key))) && value > 0 ? '+' : '';
     return `${sign}${Number(value).toFixed(2)}%`;
   }
   if (field.kind === 'integer') return Math.round(value).toLocaleString('en-GB');
@@ -35,7 +36,7 @@ function fmt(value, field, plain = false) {
 }
 function valueClass(value, key) {
   if (value == null) return '';
-  if ((['change', 'change_52w', 'fcf_change', 'div_growth', 'net_margin', 'fcf_yield'].includes(key) || /_growth_(1|3|5|10)y$/.test(key))) return value > 0 ? 'positive' : value < 0 ? 'negative' : '';
+  if ((['change', 'change_52w', 'fcf_change', 'div_growth', 'net_margin', 'fcf_yield'].includes(key) || /_growth_(1|3|5|10)y$/.test(key)||/^sma_.*_distance$/.test(key))) return value > 0 ? 'positive' : value < 0 ? 'negative' : '';
   return value < 0 ? 'negative' : '';
 }
 function companyIcon(row, color = '#385943') {
@@ -65,6 +66,7 @@ function renderMarkets() {
   }).join('') + '<span class="market-caption">Click markets to combine them</span>';
 }
 function renderControls() {
+  $('sma-setting-note').textContent=`Custom SMA: ${state.sma.window} ${state.sma.interval==='daily'?'days':'weeks'}`;
   renderMarkets();
   $('search').value = state.search;
   $('column-count').textContent = state.columns.length;
@@ -106,6 +108,7 @@ function renderTable() {
   $('next-page').disabled = $('last-page').disabled = (state.page + 1) * state.pageSize >= total;
 }
 async function loadRows(quiet = false) {
+  if(quiet && isLoading)return;
   const seq = ++requestSeq; isLoading = true;
   if (!quiet) $('loading-dot').classList.add('pulse');
   const query = params(); query.set('limit', state.pageSize); query.set('offset', state.page * state.pageSize);
@@ -177,15 +180,26 @@ function renderCoverage() {
   const refreshInfo = isPublished ? `<p>Quotes last fetched ${esc(status.completed ? new Date(status.completed).toLocaleString('en-GB') : 'unknown')}. Snapshots update every four hours. ${status.error ? esc(status.error) : ''}</p>${status.refresh_health ? `<p>Latest cloud batch: ${status.refresh_health.financials?.succeeded || 0} company profiles added or refreshed, ${status.refresh_health.financials?.failed || 0} unsuccessful attempts.</p>` : ''}` : '';
   $('fx-rates').innerHTML = refreshInfo + '<h3>Cached currency rates</h3><table class="fx-table"><tbody>' + Object.entries(status.fx || {}).sort().map(([currency, fx]) => `<tr><td>${esc(currency)}</td><td>1 ${esc(currency)} = $${Number(fx.rate).toFixed(6)}</td><td>${esc(fx.date)}</td></tr>`).join('') + '</tbody></table>' + (status.missing_fx ? `<p>${status.missing_fx} market caps have no cached conversion rate.</p>` : '');
 }
+async function exportRanked(points,options) {
+  const csv=rankedCSV(points,options);
+  $('export-dialog').showModal();$('export-title').textContent='Export ranked stock list';
+  $('export-description').textContent='Ranks match the selected zones, frontier filter and list order. Includes raw axis values, score, frontier membership and reporting dates. Balanced score is a relative rank, not an investment recommendation.';
+  $('export-summary').textContent=`${points.length.toLocaleString('en-GB')} ranked listings ready to export.`;
+  $('download-csv').hidden=true;$('copy-csv').disabled=false;
+  $('copy-csv').onclick=async()=>{try{await navigator.clipboard.writeText(csv);toast('Ranked CSV copied');}catch{toast('Clipboard unavailable. Use Download CSV.');}};
+  const prepared=await prepareTextDownload(csv,'atlas-ranked-stocks.csv','text/csv');
+  $('download-csv').href=prepared.url;$('download-csv').download='atlas-ranked-stocks.csv';$('download-csv').hidden=false;$('export-dialog').onclose=prepared.dispose;
+}
 async function openDetail(symbol) {
   selectedSymbol = symbol; $('detail').hidden = false;
-  const row = await api('/api/stock/' + encodeURIComponent(symbol)).then(r => r.json());
+  let row = await api('/api/stock/' + encodeURIComponent(symbol)).then(r => r.json());
+  row=await customDetail(row,params());
   if (!row.symbol) { toast(row.detail || 'Company data unavailable'); return; }
   if (symbol !== selectedSymbol) return;
-  const metrics = ['market_cap', 'div_yield', 'net_income', 'net_margin', 'fcf', 'capex', 'fcf_change', 'div_years', 'div_growth', 'pe', 'below_52w_high'];
+  const metrics = ['sma_200d_distance','sma_200w_distance','sma_custom_distance','market_cap', 'div_yield', 'net_income', 'net_margin', 'fcf', 'capex', 'fcf_change', 'div_years', 'div_growth', 'pe', 'below_52w_high'];
   const growthKeys = schema.columns.filter(f => /^(revenue|net_income)_growth_(1|3|5|10)y$/.test(f.key)).map(f => f.key);
   const growthDetails = `<h3>Annual revenue &amp; income growth</h3><p class="detail-description">Completed fiscal years in reporting currency. 1Y compares consecutive years. Longer horizons are annualised CAGR. Yahoo usually supplies four annual records. Older records are retained as its window advances. Loss or zero starting income has no meaningful percentage growth.</p><div class="detail-metrics">${growthKeys.map(k => `<div class="detail-metric"><label>${esc(fields[k].label)}</label><strong class="${valueClass(row[k], k)}">${fmt(row[k], fields[k])}</strong><small>${esc(row[k + '_period'] || '')}${row[k] == null ? '<br>' + esc(row.annual_growth_missing?.[k] || 'Awaiting annual statements') : ''}</small></div>`).join('')}</div><p class="detail-period">Annual statements fetched: ${esc(row.annual_growth_fetched ? new Date(row.annual_growth_fetched).toLocaleString('en-GB') : 'Awaiting retrieval')}</p>`;
-  $('detail-content').innerHTML = `<div class="detail-top"><span>${FLAGS[row.region_code]} ${esc(row.exchange)} · ${esc(row.quote_currency)}</span><button class="close" id="close-detail" aria-label="Close company details">×</button></div><div class="detail-identity">${companyIcon(row)}<h2>${esc(symbol)}</h2></div><p class="detail-name">${esc(row.name)}</p><div class="detail-tags"><span>${esc(row.sector || 'Sector awaiting data')}</span><span>${esc(row.industry || 'Industry awaiting data')}</span></div><div class="detail-price">${fmt(row.price, fields.price)}<span class="${valueClass(row.change, 'change')}">${fmt(row.change, fields.change)}</span></div><div class="detail-metrics">${metrics.map(k => `<div class="detail-metric"><label>${esc(fields[k].label)}</label><strong class="${valueClass(row[k], k)}">${fmt(row[k], fields[k])}</strong></div>`).join('')}</div><p class="detail-period">Income: ${esc(row.income_period || 'Awaiting data')}<br>Cash flow: ${esc(row.cf_period || 'Awaiting data')}<br>FCF growth: ${esc(row.fcf_growth_period || 'Awaiting data')}<br>Quote: ${esc(row.quote_time ? new Date(row.quote_time).toLocaleString('en-GB') : 'Unavailable')} · ${row.delay ?? 'Unknown'} min provider delay</p>${growthDetails}<div class="analysis-card"><span class="eyebrow">TAKE IT TO YOUR AI</span><h3>Analyse the whole business</h3><p>Financial statements, earnings trends, dividends and peer comparisons, with a detailed analysis prompt.</p><button id="open-ai-analysis" class="button primary">Create AI analysis pack ↗</button></div><h3>Dividend history</h3><p class="detail-description">Annual dividends per share, individual payments and growth from Yahoo’s earliest available record.</p><button id="open-dividends" class="button primary">Explore dividend history ↗</button><button id="refresh-profile" class="button secondary">↻ Refresh company data</button>${row.financial_error ? `<p class="detail-period negative">${esc(row.financial_error)}</p>` : !row.financial_fetched ? `<p class="detail-period">${isPublished ? 'Financial profile is not in this snapshot yet. Scheduled refreshes add more company data.' : 'Financial profile queued. It will update as data arrives.'}</p>` : `<p class="detail-period">Financials fetched ${esc(new Date(row.financial_fetched).toLocaleString('en-GB'))}</p>`}${row.description ? '<h3>About the business</h3><p class="detail-description">' + esc(row.description) + '</p>' : ''}<p class="detail-period"><a href="https://finance.yahoo.com/quote/${encodeURIComponent(symbol)}/" target="_blank" rel="noopener">View source on Yahoo Finance ↗</a></p>`;
+  $('detail-content').innerHTML = `<div class="detail-top"><span>${FLAGS[row.region_code]} ${esc(row.exchange)} · ${esc(row.quote_currency)}</span><button class="close" id="close-detail" aria-label="Close company details">×</button></div><div class="detail-identity">${companyIcon(row)}<h2>${esc(symbol)}</h2></div><p class="detail-name">${esc(row.name)}</p><div class="detail-tags"><span>${esc(row.sector || 'Sector awaiting data')}</span><span>${esc(row.industry || 'Industry awaiting data')}</span></div><div class="detail-price">${fmt(row.price, fields.price)}<span class="${valueClass(row.change, 'change')}">${fmt(row.change, fields.change)}</span></div><div class="detail-metrics">${metrics.map(k => `<div class="detail-metric"><label>${esc(fields[k].label)}</label><strong class="${valueClass(row[k], k)}">${fmt(row[k], fields[k])}</strong></div>`).join('')}</div><p class="detail-period">Income: ${esc(row.income_period || 'Awaiting data')}<br>Cash flow: ${esc(row.cf_period || 'Awaiting data')}<br>FCF growth: ${esc(row.fcf_growth_period || 'Awaiting data')}<br>Quote: ${esc(row.quote_time ? new Date(row.quote_time).toLocaleString('en-GB') : 'Unavailable')} · ${row.delay ?? 'Unknown'} min provider delay</p>${row.financial_quality_note?'<p class="detail-period negative">'+esc(row.financial_quality_note)+'</p>':''}<h3>Moving averages</h3><p class="detail-description">${esc(row.technical_basis||'Cached Yahoo close history is awaiting retrieval.')} Reference close: ${esc(row.technical_asof||'Pending')}. Positive distance means above the average.</p><p class="detail-period">200-day: ${esc(row.sma_200d_period||'Pending')}<br>200-week: ${esc(row.sma_200w_period||'Pending')}<br>Custom: ${esc(row.sma_custom_period||'Pending')}</p>${growthDetails}<div class="analysis-card"><span class="eyebrow">TAKE IT TO YOUR AI</span><h3>Analyse the whole business</h3><p>Financial statements, earnings trends, dividends and peer comparisons, with a detailed analysis prompt.</p><button id="open-ai-analysis" class="button primary">Create AI analysis pack ↗</button></div><h3>Dividend history</h3><p class="detail-description">Annual dividends per share, individual payments and growth from Yahoo’s earliest available record.</p><button id="open-dividends" class="button primary">Explore dividend history ↗</button><button id="refresh-profile" class="button secondary">↻ Refresh company data</button>${row.financial_error ? `<p class="detail-period negative">${esc(row.financial_error)}</p>` : !row.financial_fetched ? `<p class="detail-period">${isPublished ? 'Financial profile is not in this snapshot yet. Scheduled refreshes add more company data.' : 'Financial profile queued. It will update as data arrives.'}</p>` : `<p class="detail-period">Financials fetched ${esc(new Date(row.financial_fetched).toLocaleString('en-GB'))}</p>`}${row.description ? '<h3>About the business</h3><p class="detail-description">' + esc(row.description) + '</p>' : ''}<p class="detail-period"><a href="https://finance.yahoo.com/quote/${encodeURIComponent(symbol)}/" target="_blank" rel="noopener">View source on Yahoo Finance ↗</a></p>`;
   $('close-detail').onclick = () => { $('detail').hidden = true; selectedSymbol = null; };
   $('open-ai-analysis').onclick = () => openAnalysisPack(row, {columns:Object.values(fields)}, status, toast);
   $('open-dividends').onclick = () => openDividends(symbol);
@@ -269,7 +283,7 @@ function bindEvents() {
   $('save-form').onsubmit = e => { e.preventDefault(); const name = $('view-name').value.trim(); if (!name) return; state.view = name; saved[name] = JSON.parse(JSON.stringify(state)); persist('atlas.views.v1', saved); persist('atlas.last.v1', state); renderSaved(); $('unsaved').hidden = true; $('save-dialog').close(); toast('Screen saved in this browser'); };
   $('delete-view').onclick = () => { delete saved[state.view]; state.view = ''; persist('atlas.views.v1', saved); renderSaved(); $('save-dialog').close(); toast('Saved screen removed'); };
   $('saved-views').onchange = e => { const name = e.target.value; if (name && saved[name]) { Object.assign(state, { mainOnly: true, section:'table', quadrant:{...quadrantDefaults} }, saved[name], { page: 0, view: name }); $('page-size').value = state.pageSize; } else Object.assign(state, { view: '', columns: [...defaults], filters: [], search: '', regions: [], preset: 'all', watchOnly: false, mainOnly: true, sort: 'market_cap', direction: 'desc', page: 0, section:'table', quadrant:{...quadrantDefaults} }); showSection(state.section,false); $('unsaved').hidden = true; renderControls(); loadRows(); persist('atlas.last.v1', state); };
-  $('export').onclick = async () => { const p = params(); p.set('columns', [...new Set([...state.columns, ...(state.section === 'quadrant' ? [state.quadrant.x,state.quadrant.y] : [])])].join(',')); if (isPublished) {
+  $('export').onclick = async () => { $('export-title').textContent='Export matching companies';$('export-description').textContent='All matching rows, your selected columns and reporting periods. Numbers use raw USD values.';$('download-csv').download='atlas-stocks-usd.csv';const p = params(); p.set('columns', [...new Set([...state.columns, ...(state.section === 'quadrant' ? [state.quadrant.x,state.quadrant.y] : [])])].join(',')); if (isPublished || [...state.columns,state.sort,...state.filters.map(f=>f.field),...(state.section==='quadrant'?[state.quadrant.x,state.quadrant.y]:[])].some(k=>k.startsWith('sma_custom'))) {
       $('export-dialog').showModal(); $('export-summary').textContent = 'Preparing your CSV…';
       $('download-csv').hidden = true; $('copy-csv').disabled = true;
       try {
@@ -284,6 +298,9 @@ function bindEvents() {
   $('refresh').onclick = async () => { if (isPublished) { await reloadSnapshot(); await Promise.all([loadRows(), loadStatus()]); toast('Latest published snapshot loaded'); return; } await api('/api/refresh', { method: 'POST' }); toast('Quote and FX refresh queued'); setTimeout(loadStatus, 800); };
   $('data-button').onclick = $('method-button').onclick = () => { renderCoverage(); $('data-dialog').showModal(); };
   $('include-other').onchange = e => update({ includeOther: e.target.checked });
+  $('moving-averages').onclick=()=>{$('sma-window').value=state.sma.window;$('sma-interval').value=state.sma.interval;$('sma-window').max=state.sma.interval==='daily'?500:260;$('sma-dialog').showModal();};
+  $('sma-interval').onchange=()=>{$('sma-window').max=$('sma-interval').value==='daily'?500:260;};
+  $('sma-form').onsubmit=e=>{e.preventDefault();state.sma={window:Number($('sma-window').value),interval:$('sma-interval').value};$('sma-setting-note').textContent=`Custom SMA: ${state.sma.window} ${state.sma.interval==='daily'?'days':'weeks'}`;$('sma-dialog').close();update({sma:state.sma});if(selectedSymbol)openDetail(selectedSymbol);};
   $('main-only').onchange = e => { update({ mainOnly: e.target.checked }); loadStatus(); };
   $('page-size').onchange = e => update({ pageSize: Number(e.target.value) });
   const goPage = p => { state.page = p; loadRows(); $('table-scroll').scrollTop = 0; };
@@ -295,10 +312,14 @@ function bindEvents() {
 async function boot() {
   schema = await api('/api/schema').then(r => r.json()); fields = Object.fromEntries(schema.columns.map(f => [f.key, f])); fields.symbol = { key: 'symbol', kind: 'text', label: 'Company' }; defaults = schema.columns.filter(f => f.default).map(f => f.key);
   const last = readStorage('atlas.last.v1', null); if (last) Object.assign(state, last, { page: 0 });
+  state.sma={window:200,interval:'daily',...state.sma};
+  if(!['daily','weekly'].includes(state.sma.interval)||!Number.isInteger(state.sma.window)||state.sma.window<2||state.sma.window>(state.sma.interval==='daily'?500:260))state.sma={window:200,interval:'daily'};
+  if(!readStorage('atlas.listing-policy.v4',false)){state.mainOnly=true;persist('atlas.listing-policy.v4',true);}
+  $('sma-setting-note').textContent=`Custom SMA: ${state.sma.window} ${state.sma.interval==='daily'?'days':'weeks'}`;
   state.columns = state.columns.length ? state.columns.filter(k => fields[k]) : [...defaults];
   state.filters = state.filters.filter(f => fields[f.field]);
   state.regions = state.regions.filter(r => FLAGS[r]); if (!fields[state.sort]) state.sort = 'market_cap';
-  quadrant = createQuadrant($('quadrant-view'), { fields, settings:state.quadrant, loadData: settings => chartRows(params(),settings.x,settings.y), format:fmt, onDetail:openDetail, onChange:settings=>{state.quadrant=settings;markEdited();persist('atlas.last.v1',state);} });
+  quadrant = createQuadrant($('quadrant-view'), { fields, settings:state.quadrant, loadData: settings => chartRows(params(),settings.x,settings.y), format:fmt, onDetail:openDetail, onExport:exportRanked, onChange:settings=>{state.quadrant=settings;markEdited();persist('atlas.last.v1',state);} });
   state.quadrant = quadrant.settings(); showSection(state.section,false);
   $('page-size').value = state.pageSize; renderSaved(); bindEvents(); renderControls(); await Promise.all([loadRows(), loadStatus()]);
   refreshTimer = setInterval(async () => { if (document.hidden) return; await loadStatus(); await loadRows(true); if (selectedSymbol && !$('dividend-dialog').open) openDetail(selectedSymbol); if ($('dividend-dialog').open && dividendSymbol) { const row = await api('/api/stock/' + encodeURIComponent(dividendSymbol)).then(r => r.json()); if (row.financial_fetched !== dividendRow?.financial_fetched) { dividendRow = row; renderDividends(); } } }, isPublished ? 60000 : 12000);

@@ -194,3 +194,11 @@ Full statement histories load progressively during existing scheduled refreshes.
 A three-minute batch retains them across the six markets, with a cooldown after provider failures.
 Run `python refresh_data.py --statements-only --seconds 180 --limit 60` to advance this queue.
 The pack is prepared in the browser. No AI service receives it automatically.
+
+Moving averages use completed Yahoo Close observations, adjusted for share splits but not dividends. Add `200-day SMA distance` or `200-week SMA distance` as a column, filter or quadrant axis. Positive means above the average. Negative means below. Weekly averages use completed weekly closes rather than an approximation from daily averages.
+
+Use **Moving averages** to set the custom window across columns, filters, quadrant axes and exports. Supported windows are 2 to 500 trading sessions or 2 to 260 completed weeks. Price histories load in scheduled batches, so missing history stays unavailable. Custom histories load separately when needed. Standard 200-day and 200-week windows stay fixed.
+
+The quadrant list has its own **Export top list** button. Export the displayed top 100 or all ranked results. The CSV keeps the current ordering, selected zones and frontier restriction. It includes raw values, score, frontier membership and periods. The chart viewport does not restrict this list.
+
+Statement currency verification uses matching dated raw Yahoo timeseries records. Profile currency metadata can differ from statement currency. Conflicting legacy financial totals are withheld until verified. Annual history survives empty profile responses. Empty profile frames do not certify that annual history is unavailable. Annual-only source checks retry stale observations after seven days.

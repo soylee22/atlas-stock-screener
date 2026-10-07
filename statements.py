@@ -26,6 +26,8 @@ def line_unit(label):
 def retain_statement(frame, currency, frequency, previous=None, fetched=None):
     fetched = fetched or datetime.now(timezone.utc).isoformat(timespec='seconds')
     previous = previous or {}
+    if frame.empty and not currency and previous.get('currency'):
+        return {**previous,'fetched_at':fetched}
     old = previous if currency and previous.get('currency') == currency else {}
     periods = {p['end_date']: p for p in old.get('periods', [])}
     units = dict(old.get('units', {}))
@@ -70,7 +72,7 @@ def roic_proxy(history):
                 roic_proxy_reason='Latest FY needs matched income and two positive capital balances with a valid effective tax rate')
 
 
-def capture_statements(ticker, currency, previous=None, frames=None):
+def capture_statements(ticker, currency, previous=None, frames=None, currencies=None):
     previous = previous or {}
     old = previous.get('statement_history', {})
     frames = dict(frames or {})
@@ -83,7 +85,7 @@ def capture_statements(ticker, currency, previous=None, frames=None):
                 if frame is None:
                     frame = getattr(ticker, method)(pretty=True, freq=freq)
                     frames[key] = frame
-                history[key] = retain_statement(frame,currency,frequency,old.get(key))
+                history[key] = retain_statement(frame,(currencies or {}).get(key,currency),frequency,old.get(key))
                 history[key]['status'] = 'available' if not frame.empty else 'no_data'
             except Exception:
                 # Preserve cached values without publishing provider errors or local paths.

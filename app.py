@@ -81,6 +81,10 @@ COLUMNS = [
     col("high_52w", "52W high", "price", group="Performance"),
     col("below_52w_high", "Below 52W high", "percent", group="Performance", description="100 × (52-week high − latest price) / high, using matching quote units. 0% is at the high. Lower values are closer to the high. Negative values indicate a price above the quoted high."),
     col("change_52w", "52W change", "percent", group="Performance"),
+    *[col("sma_"+suffix+"_distance",label+" distance","percent",group="Technicals",description="Completed-session close / SMA minus one, as a percentage. Positive above, negative below. Weekly SMA uses completed weekly closes. See source dates.") for suffix,label in [("200d","200-day SMA"),("200w","200-week SMA"),("custom","Custom SMA")]],
+    *[col("sma_"+suffix,label,"price",group="Technicals") for suffix,label in [("200d","200-day SMA"),("200w","200-week SMA"),("custom","Custom SMA")]],
+    *[col("sma_"+suffix+"_period",label+" period","text",group="Technicals") for suffix,label in [("200d","200-day SMA"),("200w","200-week SMA"),("custom","Custom SMA")]],
+    col("technical_asof","SMA reference close date","text",group="Technicals"),
     col("quote_currency", "Quote currency", "text"),
     col("financial_currency", "Reporting currency", "text", group="Financials"),
     col("income_period", "Income period", "text", group="Financials"),
@@ -112,19 +116,23 @@ def main_listing_flags(rows):
         reason = None
         if row.get("instrument") != "stock" or not row.get("active"):
             reason = "Not an active stock listing"
-        elif re.search(r"\b(ETF|ETN|ETP|ETC|[2-5](?:\.\d+)?x|daily leveraged|daily short)\b|\bLeverage Shares\b", row.get("name", ""), re.I):
+        elif re.search(r"\b(ETF|ETN|ETP|ETC|[2-5](?:\.\d+)?x|daily leveraged|daily short)\b|\bLeverage Shares\b", (row.get("name") or ""), re.I):
             reason = "Exchange-traded or leveraged product mislabelled by Yahoo"
         elif row.get("exchange") not in MAIN_EXCHANGES.get(region, set()):
             reason = "OTC, international order book or secondary trading venue"
-        elif re.search(r"\b(CDR|GDR|CAD\s+HE|depositary receipt|depository receipt)", row.get("name", ""), re.I):
+        elif re.search(r"\b(CDR|GDR|CAD\s+HE|depositary receipt|depository receipt)", (row.get("name") or ""), re.I):
             reason = "Depositary receipt or CAD-hedged wrapper"
+        elif re.search(r"\b(?:preferred (?:stock|equity|shares?|securities)|property preferred|depositary shares?|depository shares?|American depositary|American depository|ADR|ADS)\b", (row.get("name") or ""), re.I) or re.search(r"-(?:P[A-Z]|PR(?:[.-][A-Z])?)\.(?:TO|NE)$", symbol) or (region == "tw" and re.fullmatch(r"\d{4}[A-C]\.TW", symbol)) or (region == "kr" and re.fullmatch(r"\d{5}[5-9]\.KS", symbol)):
+            reason = "Preferred security or depositary instrument"
+        elif re.search(r"\bphysical (?:gold|silver|platinum|palladium)\b|\b(?:income|investment|bond|equity|mutual|closed.end).*\bfund\b", (row.get("name") or ""), re.I):
+            reason = "Investment fund or commodity trust"
         elif region == "gb" and re.fullmatch(r"0[A-Z0-9]+\.L", symbol):
             reason = "London international or secondary quote"
         flags[symbol] = dict(main_listing=False, listing_reason=reason)
         if reason:
             continue
         # Keep legal names and share-class labels. Avoid merging unrelated issuers.
-        name = re.sub(r"[^\w]", "", row.get("name", symbol).casefold()) or symbol
+        name = re.sub(r"[^\w]", "", (row.get("name") or symbol).casefold()) or symbol
         groups.setdefault(name, []).append(row)
 
     country_codes = {name: code for code, name in REGIONS.items()}
@@ -342,8 +350,25 @@ def dollarise(row, fx):
     for key in ["price", "low_52w", "high_52w"]:
         row[key] = usd(row.get(key + "_local"), currency, fx, price=True)
     row["market_cap"] = usd(row.get("market_cap_local"), currency, fx)
+    conflict = row.get("annual_income_history", {}).get("currency")
+    conflict = conflict and row.get("financial_currency") and conflict != row["financial_currency"] and row.get("financial_currency_version", 0) < 2
+    if conflict:
+        row["financial_quality_note"] = "Yahoo profile and annual statement currencies conflict. Dollar financials are withheld pending verification."
+        row["statement_version"] = 0
+        row["roic_proxy"] = None
+        row["roic_proxy_reason"] = "Statement currency conflict requires verification"
+        for statement in row.get("statement_history", {}).values():
+            statement["currency"] = None
+            statement["status"] = "currency_conflict"
     for key in MONETARY_FINANCIAL:
-        row[key] = usd(row.get(key + "_local"), row.get("financial_currency"), fx)
+        currency = row.get("financial_field_currencies", {}).get(key, row.get("financial_currency"))
+        row[key] = None if conflict else usd(row.get(key + "_local"), currency, fx)
+    for key in ["sma_200d", "sma_200w"]:
+        row[key] = usd(row.get(key+"_local"),row.get("technical_currency"),fx,price=True)
+    annual = row.get("annual_income_history", {})
+    if row.get("annual_growth_version") and "annual_income_history" in row and not annual.get("revenue") and not annual.get("net_income") and row.get("annual_growth_status") != "no_data":
+        # yfinance profile requests can silently yield empty frames. They do not prove no source history exists.
+        row["annual_growth_version"] = 0
     cap, fcf = row.get("market_cap"), row.get("fcf")
     row["fcf_yield"] = fcf / cap * 100 if cap and cap > 0 and fcf is not None else None
     price, high = number(row.get("price_local")), number(row.get("high_52w_local"))
@@ -448,6 +473,8 @@ def annual_growth_values(income, currency, previous=None):
     """Retain Yahoo FY observations, never substitute quarterly or TTM totals."""
     previous = previous or {}
     cached = previous.get("annual_income_history", {})
+    if income.empty and not currency and cached.get("currency"):
+        currency = cached["currency"]
     history = dict(currency=currency)
     out = dict(annual_growth_version=1, annual_growth_fetched=now_iso(), annual_growth_missing={})
     for metric, names in [("revenue", ["Total Revenue"]), ("net_income", ["Net Income", "Net Income Common Stockholders"])]:
@@ -489,6 +516,8 @@ def annual_growth_values(income, currency, previous=None):
             if reason:
                 out["annual_growth_missing"][key] = reason
     out["annual_income_history"] = history
+    if not history.get("revenue") and not history.get("net_income"):
+        out["annual_growth_version"] = 0
     return out
 
 
@@ -599,7 +628,8 @@ class Store:
                 # A quote's reporting currency does not override a verified statement currency.
                 if row.get("financial_fetched") and not enriched:
                     incoming = dict(incoming)
-                    incoming.pop("financial_currency", None)
+                    if incoming.get("financial_currency_version", 0) < 2:
+                        incoming.pop("financial_currency", None)
                 row.update(incoming)
                 row = dollarise(row, fx)
                 conn.execute("""INSERT INTO stocks(symbol,region,data,enriched,attempted) VALUES(?,?,?,?,?)
@@ -638,11 +668,11 @@ class Store:
         """Scan once per batch, then alternate markets in market-cap order."""
         with self.connect() as conn:
             rows = conn.execute("""SELECT symbol,region FROM stocks
-                WHERE COALESCE(json_extract(data,'$.annual_growth_version'),0)<1
+                WHERE (COALESCE(json_extract(data,'$.annual_growth_version'),0)<1 OR COALESCE(json_extract(data,'$.annual_growth_fetched'),'') < ?)
                 AND COALESCE(json_extract(data,'$.annual_growth_attempted'),0) < ?
                 AND json_extract(data,'$.instrument')='stock' AND json_extract(data,'$.active')=1
                 AND COALESCE(json_extract(data,'$.main_listing'),1)=1
-                ORDER BY json_extract(data,'$.market_cap') DESC""", (time.time() - 6 * 3600,)).fetchall()
+                ORDER BY json_extract(data,'$.market_cap') DESC""", (datetime.fromtimestamp(time.time()-7*86400,timezone.utc).isoformat(), time.time() - 6 * 3600,)).fetchall()
         buckets = {region: [] for region in REGIONS}
         for row in rows:
             buckets[row['region']].append(row['symbol'])
@@ -652,9 +682,9 @@ class Store:
     def claim_growth(self, symbol):
         with self.connect() as conn:
             cursor = conn.execute("""UPDATE stocks SET data=json_set(data,'$.annual_growth_attempted',?)
-                WHERE symbol=? AND COALESCE(json_extract(data,'$.annual_growth_version'),0)<1
+                WHERE symbol=? AND (COALESCE(json_extract(data,'$.annual_growth_version'),0)<1 OR COALESCE(json_extract(data,'$.annual_growth_fetched'),'') < ?)
                 AND COALESCE(json_extract(data,'$.annual_growth_attempted'),0)<?""",
-                (time.time(), symbol, time.time() - 6 * 3600))
+                (time.time(), symbol, datetime.fromtimestamp(time.time()-7*86400,timezone.utc).isoformat(), time.time() - 6 * 3600))
         return cursor.rowcount == 1
 
     def next_growth_enrichment(self):
@@ -666,15 +696,18 @@ class Store:
     def classify_listings(self, force=False):
         # Refresh the classification as home-country profiles become available.
         with self.listing_lock:
-            if not force and self.meta("listing_policy_version", 0) == 3 and time.time() - self.meta("listing_classified", 0) < 300:
+            if not force and self.meta("listing_policy_version", 0) == 4 and time.time() - self.meta("listing_classified", 0) < 300:
                 return
             with self.connect() as conn:
-                rows = [json.loads(r[0]) for r in conn.execute("SELECT data FROM stocks")]
+                keys = ['symbol','name','region_code','exchange','domicile','instrument','active','price','volume','avg_volume','main_listing','listing_reason']
+                projection = "json_object("+','.join(f"'{key}',json_extract(data,'$.{key}')" for key in keys)+")"
+                rows = [json.loads(r[0]) for r in conn.execute("SELECT "+projection+" FROM stocks")]
                 flags = main_listing_flags(rows)
-                conn.executemany("UPDATE stocks SET data=json_set(data,'$.main_listing',json(?),'$.listing_reason',?) WHERE symbol=?",
-                    [(json.dumps(flag["main_listing"]), flag["listing_reason"], symbol) for symbol, flag in flags.items()])
+                changes = [(json.dumps(flags[r['symbol']]['main_listing']),flags[r['symbol']]['listing_reason'],r['symbol']) for r in rows
+                    if r.get('main_listing') != flags[r['symbol']]['main_listing'] or r.get('listing_reason') != flags[r['symbol']]['listing_reason']]
+                conn.executemany("UPDATE stocks SET data=json_set(data,'$.main_listing',json(?),'$.listing_reason',?) WHERE symbol=?", changes)
             self.set_meta("listing_classified", time.time())
-            self.set_meta("listing_policy_version", 3)
+            self.set_meta("listing_policy_version", 4)
 
 
 def query_sql(search="", regions="", filters="[]", sort="market_cap", direction="desc", include_other=False, only_symbols="", main_only=False):
@@ -900,17 +933,22 @@ class Pipeline:
         if not info or not info.get("symbol"):
             raise ValueError("Yahoo did not return company details")
         row = self.store.get(symbol)
-        annual_income = ticker.income_stmt
-        values = financial_values(ticker.quarterly_income_stmt, annual_income, ticker.quarterly_cashflow, ticker.cashflow)
         from statements import capture_statements
-        statement_values, _ = capture_statements(ticker, info.get("financialCurrency"), row,
-            dict(income_annual=annual_income,income_quarterly=ticker.quarterly_income_stmt,
-                 cashflow_annual=ticker.cashflow,cashflow_quarterly=ticker.quarterly_cashflow))
+        from currency_validation import verify_currencies, verified_totals
+        frames = {kind+'_'+freq: getattr(ticker, method)(pretty=True,freq='yearly' if freq=='annual' else 'quarterly')
+                  for kind,method in [('income','get_income_stmt'),('balance','get_balance_sheet'),('cashflow','get_cashflow')]
+                  for freq in ['annual','quarterly']}
+        currencies = verify_currencies(ticker, frames)
+        values = verified_totals(frames,currencies,financial_values,row)
+        statement_values, _ = capture_statements(ticker,currencies.get('income_annual'),row,frames,currencies)
         values.update(statement_values)
-        values.update(annual_growth_values(annual_income, info.get("financialCurrency"), row))
+        annual_income = frames['income_annual'] if currencies.get('income_annual') else pd.DataFrame()
+        values.update(annual_growth_values(annual_income,currencies.get('income_annual'),row))
         try:
             # Explicit start avoids invalid 'max' ranges on some secondary listings.
             history = ticker.history(start="1900-01-01", auto_adjust=False, actions=True, raise_errors=True)
+            from technicals import technical_values
+            values.update(technical_values(history,ticker.get_history_metadata().get("currency")))
             dividends = history["Dividends"][history["Dividends"] != 0] if "Dividends" in history else pd.Series(dtype=float)
             values.update(dividend_values(dividends))
             values["dividend_events"] = [dict(date=str(d.date()), amount=number(amount)) for d, amount in dividends.items()]
@@ -920,9 +958,8 @@ class Pipeline:
         except Exception as exc:
             values["dividend_error"] = str(exc)[:250]
         values.update(symbol=symbol, region_code=row["region_code"], sector=info.get("sector"), industry=info.get("industry"),
-                      financial_currency=info.get("financialCurrency"), beta=number(info.get("beta")),
+                      beta=number(info.get("beta")),
                       roe=number(info.get("returnOnEquity")) * 100 if number(info.get("returnOnEquity")) is not None else None,
-                      debt_local=number(info.get("totalDebt")), cash_local=number(info.get("totalCash")),
                       description=info.get("longBusinessSummary"), website=info.get("website"),
                       domicile=info.get("country"), financial_fetched=now_iso(), financial_error=None)
         self.store.upsert_many([values], enriched=True)
@@ -1043,13 +1080,15 @@ def chart(x: str = "net_income", y: str = "div_years", search: str = "", regions
         raise HTTPException(400, str(exc)) from exc
     keys = sorted({"symbol", "name", "region", "region_code", "sector", "industry", "exchange",
                    "income_period", "cf_period", "fcf_growth_period", "financial_fetched", "quote_time", x, y,
-                   *[key + "_period" for key in (x, y) if key in GROWTH_KEYS]})
+                   "technical_asof", *[key.removesuffix("_distance") + "_period" for key in (x, y) if key in GROWTH_KEYS or key.startswith("sma_")]})
     # Project only plot fields and paired values. Do not load every dividend event or description.
     projection = "json_object(" + ",".join(f"'{key}',json_extract(data,'$.{key}')" for key in keys) + ")"
     paired = " AND ".join(f"json_type(data,'$.{key}') IN ('integer','real')" for key in {x, y})
     def pending_sql(key):
         missing = f"COALESCE(json_type(data,'$.{key}') IN ('integer','real'),0)=0"
-        if key in GROWTH_KEYS:
+        if key.startswith("sma_"):
+            source = "COALESCE(json_extract(data,'$.technical_version'),0)<1"
+        elif key in GROWTH_KEYS:
             source = "COALESCE(json_extract(data,'$.annual_growth_version'),0)<1"
         elif key == "roic_proxy":
             source = "COALESCE(json_extract(data,'$.statement_version'),0)<1"
@@ -1068,6 +1107,21 @@ def chart(x: str = "net_income", y: str = "div_years", search: str = "", regions
         records = conn.execute("SELECT " + projection + " FROM stocks WHERE " + where + " AND " + paired, args).fetchall()
     return dict(rows=[json.loads(row[0]) for row in records], total=total,
                 coverage=dict(awaiting=awaiting, unavailable=total-plotted-awaiting))
+
+
+@app.get("/api/technical-screen")
+def technical_screen():
+    # Custom SMA screening uses the same browser calculation in local and Pages modes.
+    store.classify_listings()
+    keys = sorted(set(["symbol","name","region_code","instrument","active","main_listing","listing_reason","annual_growth_version","income_fetched","statement_version","technical_version", *FIELDS]))
+    parts = ["json_object("+','.join(f"'{k}',json_extract(data,'$.{k}')" for k in keys[i:i+32])+")" for i in range(0,len(keys),32)]
+    projection = parts[0]
+    for part in parts[1:]: projection = "json_patch("+projection+","+part+")"
+    with store.connect() as conn:
+        records = [json.loads(r[0]) for r in conn.execute("SELECT "+projection+" FROM stocks WHERE json_extract(data,'$.active')=1")]
+        technicals = [dict(r) for r in conn.execute("SELECT symbol,json_extract(data,'$.technical_history') AS history,json_extract(data,'$.technical_currency') AS currency FROM stocks WHERE json_type(data,'$.technical_history')='object'")]
+    return dict(rows=records,technicals={r['symbol']:json.loads(r['history']) for r in technicals},
+        fx=store.meta('fx',{}),currencies={r['symbol']:r['currency'] for r in technicals})
 
 
 @app.get("/api/analysis-peers/{symbol}")
@@ -1156,7 +1210,8 @@ def export(search: str = "", regions: str = "", filters: str = "[]", sort: str =
     if not all(k in FIELDS for k in selected):
         raise HTTPException(400, "Unknown export column")
     selected = list(dict.fromkeys(["symbol", "name"] + selected + ["income_period", "cf_period", "fcf_growth_period", "quote_time", "financial_fetched"]
-                                 + [key + "_period" for key in selected if key in GROWTH_KEYS]
+                                 + [key.removesuffix("_distance") + "_period" for key in selected if key in GROWTH_KEYS or key.startswith("sma_")]
+                                 + (["technical_asof"] if any(key.startswith("sma_") for key in selected) else [])
                                  + (["annual_growth_fetched"] if any(key in GROWTH_KEYS for key in selected) else [])))
     rows, _ = select_rows(search, regions, filters, sort, direction, include_other, only_symbols, 100000, 0, main_only)
     out = io.StringIO()

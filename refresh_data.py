@@ -16,9 +16,27 @@ import app as model
 from build_site import ICON_FILE
 
 
+def restore_verified_repairs(store):
+    path=model.ROOT/'seed'/'verified-repairs.json'
+    if not path.is_file(): return
+    for incoming in json.loads(path.read_text()).get('rows',[]):
+        old=store.get(incoming['symbol'])
+        if old is None: continue
+        values=dict(symbol=old['symbol'],region_code=old['region_code'])
+        # Seed only missing technical data and pre-verification financial fields.
+        # Never replace later verified source observations on scheduled runs.
+        if not old.get('technical_version') and incoming.get('technical_version'):
+            values.update({k:v for k,v in incoming.items() if k.startswith(('technical_','sma_'))})
+        if old.get('financial_currency_version',0)<2 and incoming.get('financial_currency_version')==2:
+            values.update({k:v for k,v in incoming.items() if k in {'financial_currency','financial_currency_version','financial_field_currencies','financial_quality_note','statement_history','statement_version','statement_fetched','statement_errors','income_period','cf_period','fcf_growth_period','net_margin','fcf_change','roic_proxy','roic_proxy_period','roic_proxy_inputs','roic_proxy_reason'} or k in model.MONETARY_FINANCIAL or k.removesuffix('_local') in model.MONETARY_FINANCIAL})
+            # Verified currency takes precedence even when quote-only cache merging would retain profile metadata.
+        if len(values)>2: store.upsert_many([values])
+
+
 def restore_seed(store, seed):
     with store.connect() as conn:
         if conn.execute("SELECT COUNT(*) FROM stocks").fetchone()[0]:
+            restore_verified_repairs(store)
             return False
     logos = model.LogoCache(store)
     with tarfile.open(seed, "r:gz") as archive:
@@ -44,6 +62,7 @@ def restore_seed(store, seed):
                 (logos.root / filename).write_bytes(content)
                 conn.execute("INSERT OR REPLACE INTO logo_assets VALUES(?,?,?,?,?,?)",
                     (asset["domain"], filename, asset["source_url"], asset["fetched"], asset["attempted"], None))
+    restore_verified_repairs(store)
     return True
 
 
@@ -178,6 +197,7 @@ def backfill_growth(store, seconds=1200, limit=30000, workers=4):
                     values["annual_growth_status"] = "available"
                 else:
                     values["annual_growth_status"] = "no_data"
+                    values["annual_growth_version"] = 1
                     values["annual_growth_missing"] = {key: "Yahoo returned no full annual records in a reporting currency" for key in model.GROWTH_KEYS}
                 store.upsert_many([values])
                 with lock:
@@ -218,13 +238,13 @@ def backfill_statements(store, seconds=180, limit=60):
         candidates = [json.loads(r[0]) for r in conn.execute("""SELECT data FROM stocks WHERE
             json_extract(data,'$.active')=1 AND json_extract(data,'$.instrument')='stock'
             AND json_extract(data,'$.main_listing')=1
-            AND COALESCE(json_extract(data,'$.statement_version'),0)<1
+            AND (COALESCE(json_extract(data,'$.statement_version'),0)<1 OR COALESCE(json_extract(data,'$.financial_currency_version'),0)<2)
             AND COALESCE(json_extract(data,'$.statement_attempted'),0)<?
             AND (json_extract(data,'$.annual_income_history.currency') IS NOT NULL
                 OR json_extract(data,'$.financial_fetched') IS NOT NULL)
             ORDER BY json_extract(data,'$.market_cap') DESC""",(time.time()-6*3600,))]
     # Seed familiar companies, then keep each market represented.
-    priority = {'AAPL','MSFT','NVDA','GOOG','KO','PEP','JNJ','PG','O','JPM','HSBA.L','RY.TO','7203.T','005930.KS','2330.TW'}
+    priority = {'AAPL','MSFT','NVDA','GOOG','KO','PEP','JNJ','PG','O','JPM','HSBA.L','RY.TO','7203.T','005930.KS','2330.TW','241560.KS'}
     first = [r for r in candidates if r['symbol'] in priority]
     buckets = {code:[r for r in candidates if r['region_code']==code and r['symbol'] not in priority] for code in model.REGIONS}
     queue = first + [buckets[code][i] for i in range(max((len(v) for v in buckets.values()),default=0)) for code in model.REGIONS if i<len(buckets[code])]
@@ -236,10 +256,20 @@ def backfill_statements(store, seconds=180, limit=60):
             continue
         counts['attempted'] += 1
         store.upsert_many([dict(symbol=row['symbol'],region_code=row['region_code'],statement_attempted=time.time())])
-        values, frames = capture_statements(model.yf.Ticker(row['symbol']),currency,row)
-        values.update(symbol=row['symbol'],region_code=row['region_code'])
-        if not frames.get('income_annual',model.pd.DataFrame()).empty:
-            values.update(model.annual_growth_values(frames['income_annual'],currency,row))
+        from currency_validation import verify_currencies, verified_totals
+        ticker = model.yf.Ticker(row['symbol'])
+        _, frames = capture_statements(ticker,currency,row)
+        try:
+            currencies = verify_currencies(ticker,frames)
+            values, _ = capture_statements(ticker,currencies.get('income_annual'),row,frames,currencies)
+            values.update(verified_totals(frames,currencies,model.financial_values,row))
+            values.update(symbol=row['symbol'],region_code=row['region_code'])
+            if currencies.get('income_annual'):
+                values.update(model.annual_growth_values(frames['income_annual'],currencies['income_annual'],row))
+        except Exception as exc:
+            counts['failed'] += 1
+            logging.warning('Statement currency verification %s: %s',row['symbol'],exc)
+            break
         store.upsert_many([values])
         counts['succeeded' if values['statement_version']==1 else 'failed'] += 1
         print(json.dumps(dict(statement_progress=counts)),flush=True)
@@ -249,6 +279,43 @@ def backfill_statements(store, seconds=180, limit=60):
             break
     result = dict(statements=counts,finished=model.now_iso())
     store.set_meta('statement_backfill',result)
+    print(json.dumps(result),flush=True)
+    return result
+
+
+def backfill_technicals(store,seconds=180,limit=120):
+    from technicals import technical_values
+    deadline=time.monotonic()+seconds
+    store.classify_listings(force=True)
+    with store.connect() as conn:
+        rows=[json.loads(r[0]) for r in conn.execute("""SELECT data FROM stocks WHERE
+            json_extract(data,'$.active')=1 AND json_extract(data,'$.main_listing')=1
+            AND COALESCE(json_extract(data,'$.technical_attempted'),0)<?
+            AND (COALESCE(json_extract(data,'$.technical_version'),0)<1 OR COALESCE(json_extract(data,'$.technical_fetched'),'')<?)
+            ORDER BY json_extract(data,'$.market_cap') DESC""",(time.time()-6*3600,model.datetime.fromtimestamp(time.time()-86400,model.timezone.utc).isoformat()))]
+    priority={'AAPL','MSFT','NVDA','GOOG','KO','PEP','JNJ','PG','O','JPM','HSBA.L','RY.TO','7203.T','005930.KS','2330.TW','241560.KS'}
+    queue=[r for r in rows if r['symbol'] in priority]
+    buckets={c:[r for r in rows if r['region_code']==c and r['symbol'] not in priority] for c in model.REGIONS}
+    queue += [buckets[c][i] for i in range(max((len(v) for v in buckets.values()),default=0)) for c in model.REGIONS if i<len(buckets[c])]
+    counts=dict(attempted=0,succeeded=0,failed=0)
+    for row in queue[:limit]:
+        if time.monotonic()>deadline: break
+        counts['attempted']+=1
+        store.upsert_many([dict(symbol=row['symbol'],region_code=row['region_code'],technical_attempted=time.time())])
+        try:
+            ticker=model.yf.Ticker(row['symbol'])
+            history=ticker.history(start=model.date.fromtimestamp(time.time()-7*366*86400).isoformat(),auto_adjust=False,actions=False,raise_errors=True,timeout=15)
+            values=technical_values(history,ticker.get_history_metadata().get('currency'))
+            values.update(symbol=row['symbol'],region_code=row['region_code'])
+            store.upsert_many([values])
+            counts['succeeded']+=1
+        except Exception as exc:
+            counts['failed']+=1
+            logging.warning('Price history %s: %s',row['symbol'],exc)
+            if '429' in str(exc) or 'rate' in str(exc).lower(): break
+        if counts['attempted']%10==0: print(json.dumps(dict(technical_progress=counts)),flush=True)
+    result=dict(technicals=counts,finished=model.now_iso())
+    store.set_meta('technical_backfill',result)
     print(json.dumps(result),flush=True)
     return result
 
@@ -263,12 +330,16 @@ def main():
     parser.add_argument("--seed-only", action="store_true")
     parser.add_argument("--growth-only", action="store_true")
     parser.add_argument("--statements-only", action="store_true")
+    parser.add_argument("--technicals-only", action="store_true")
     parser.add_argument("--workers", type=int, default=4)
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO)
     store = model.Store(args.database)
     if args.seed_only:
         print(json.dumps(dict(seed_restored=restore_seed(store, args.seed))))
+    elif args.technicals_only:
+        restore_seed(store,args.seed)
+        backfill_technicals(store,max(1,args.seconds),max(0,args.limit))
     elif args.statements_only:
         restore_seed(store, args.seed)
         backfill_statements(store,max(1,args.seconds),max(0,args.limit))

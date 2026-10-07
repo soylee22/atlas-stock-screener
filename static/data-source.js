@@ -1,7 +1,8 @@
+import { customSMA, smaSettings, usesCustomSMA } from './sma-math.js';
 import { decodeSnapshot, selectSnapshot, snapshotCSV, chartCoverage } from './snapshot-engine.js';
 
 export const isPublished = document.querySelector('meta[name="atlas-data-mode"]')?.content === 'snapshot';
-let loaded, checkedAt = 0;
+let loaded, checkedAt = 0, technicalCache, localTechnicalAt=0;
 const details = new Map();
 async function snapshot() {
   if (!loaded) loaded = Promise.all(['schema', 'status', 'stocks'].map(async name => {
@@ -14,11 +15,32 @@ async function snapshot() {
   }).catch(error => { loaded = undefined; throw error; });
   return loaded;
 }
-export async function reloadSnapshot() { loaded = undefined; details.clear(); return snapshot(); }
+export async function reloadSnapshot() { loaded = undefined; technicalCache=undefined; details.clear(); return snapshot(); }
+async function customData(params) {
+  const settings=smaSettings(params);
+  let data,technical;
+  if(isPublished) {
+    data=await snapshot();
+    technicalCache ||= fetch(new URL('data/technicals.json',document.baseURI),{cache:'no-cache'}).then(r=>{if(!r.ok)throw new Error('Cached price history unavailable');return r.json();}).catch(e=>{technicalCache=undefined;throw e;});
+    technical=await technicalCache;
+    if(technical.built&&technical.built!==data.status.snapshot.built)throw new Error('Price snapshot is updating. Refresh data and retry.');
+  } else {
+    if(!technicalCache||(localTechnicalAt&&Date.now()-localTechnicalAt>15000)) {
+      localTechnicalAt=0;
+      technicalCache=Promise.all([fetch('/api/technical-screen').then(r=>r.json()),fetch('/api/schema').then(r=>r.json())]).then(([v,schema])=>{localTechnicalAt=Date.now();return {...v,schema};}).catch(e=>{technicalCache=undefined;throw e;});
+    }
+    technical=await technicalCache;data={rows:technical.rows,schema:technical.schema,status:{fx:technical.fx}};
+  }
+  return {...data,rows:data.rows.map(row=>customSMA(row,technical.technicals[row.symbol],technical.currencies[row.symbol],data.status.fx,settings))};
+}
+export async function customDetail(row,params) {
+  const fx=isPublished?(await snapshot()).status.fx:await fetch('/api/status').then(r=>r.json()).then(s=>s.fx);
+  return customSMA(row,row.technical_history,row.technical_currency,fx,smaSettings(params));
+}
 export async function chartRows(params, x, y) {
   const query = new URLSearchParams(params); query.set('x', x); query.set('y', y);
-  if (isPublished) {
-    const data = await snapshot();
+  if (isPublished || usesCustomSMA(query)) {
+    const data = usesCustomSMA(query)?await customData(query):await snapshot();
     const numeric = new Set(data.schema.columns.filter(f => f.kind !== 'text').map(f => f.key));
     if (!numeric.has(x) || !numeric.has(y)) throw new Error('Choose numeric chart metrics');
     const selected = selectSnapshot(data.rows, data.schema, query);
@@ -68,7 +90,14 @@ export async function prepareTextDownload(content,filename,mime) {
   return {url,dispose(){URL.revokeObjectURL(url);}};
 }
 export async function api(input, options) {
-  if (!isPublished) return fetch(input, options);
+  if (!isPublished) {
+    const url=new URL(input,'https://atlas.invalid');
+    if(url.pathname==='/api/stocks'&&usesCustomSMA(url.searchParams)) {
+      try {const data=await customData(url.searchParams),rows=selectSnapshot(data.rows,data.schema,url.searchParams),offset=Number(url.searchParams.get('offset')||0),limit=Number(url.searchParams.get('limit')||100);return Response.json({rows:rows.slice(offset,offset+limit),total:rows.length,offset});}
+      catch(e){return Response.json({detail:e.message},{status:400});}
+    }
+    return fetch(input,options);
+  }
   try {
     const data = await snapshot(), url = new URL(input, 'https://atlas.invalid');
     let result;
@@ -84,7 +113,8 @@ export async function api(input, options) {
       result ||= data.status;
     }
     else if (url.pathname === '/api/stocks') {
-      const rows = selectSnapshot(data.rows, data.schema, url.searchParams);
+      const selectedData=usesCustomSMA(url.searchParams)?await customData(url.searchParams):data;
+      const rows = selectSnapshot(selectedData.rows, selectedData.schema, url.searchParams);
       const offset = Math.max(0, Number(url.searchParams.get('offset')) || 0), limit = Math.min(250, Number(url.searchParams.get('limit')) || 100);
       result = { rows: rows.slice(offset, offset + limit), total: rows.length, offset };
     } else if (url.pathname.startsWith('/api/stock/')) {
@@ -107,7 +137,7 @@ export async function api(input, options) {
 }
 
 export async function exportSnapshot(params) {
-  const data = await snapshot();
+  const data = usesCustomSMA(params)?await customData(params):await snapshot();
   const selected = selectSnapshot(data.rows, data.schema, params);
   const csv = snapshotCSV(selected, data.schema, params.get('columns') || '');
   if ('serviceWorker' in navigator) try {

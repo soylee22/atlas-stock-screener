@@ -19,14 +19,14 @@ EXTRA_FIELDS = {
     "dividend_years", "dividend_history_start", "dividend_end_year", "universe_run",
     "price_local", "market_cap_local", "low_52w_local", "high_52w_local",
     "annual_income_history", "annual_growth_version", "annual_growth_fetched", "annual_growth_missing",
-    "annual_growth_status", "income_fetched",
+    "technical_history", "technical_currency", "technical_version", "technical_fetched", "technical_basis", "technical_price_local", "sma_200d_local", "sma_200w_local", "annual_growth_status", "income_fetched", "financial_quality_note", "financial_currency_version", "financial_field_currencies",
     "statement_history", "statement_errors", "statement_version", "statement_fetched", "roic_proxy_inputs", "roic_proxy_reason",
     *(key + "_local" for key in model.MONETARY_FINANCIAL),
 }
 PUBLIC_FIELDS = EXTRA_FIELDS | set(model.FIELDS)
 INDEX_FIELDS = list(dict.fromkeys([
     "symbol", "name", "region_code", "instrument", "active", "main_listing", "listing_reason",
-    "financial_error", "detail_key", "logo_url", "annual_growth_missing", "annual_growth_version", "income_fetched", "statement_version", *[field["key"] for field in model.COLUMNS],
+    "financial_error", "financial_quality_note", "technical_version", "detail_key", "logo_url", "annual_growth_missing", "annual_growth_version", "income_fetched", "statement_version", *[field["key"] for field in model.COLUMNS],
 ]))
 META_KEYS = ["coverage", "fx", "quote_completed", "last_quote_run", "quote_error", "last_financial", "refresh_health", "annual_growth_backfill", "statement_backfill"]
 ICON_FILE = re.compile(r"[a-f0-9]{64}\.(png|jpg|gif|webp|ico)")
@@ -156,6 +156,9 @@ def build_site(database, output, seed=None):
     for asset in assets:
         shutil.copyfile(icon_root / asset["filename"], output / "logos" / asset["filename"])
     built = model.now_iso()
+    write_json(output / "data" / "technicals.json", dict(built=built,
+        technicals={r['symbol']:r['technical_history'] for r in rows if r.get('technical_history')},
+        currencies={r['symbol']:r.get('technical_currency') for r in rows if r.get('technical_history')}))
     # CSV calculations use this same database and FX snapshot.
     model.store = store
     for row in active:
