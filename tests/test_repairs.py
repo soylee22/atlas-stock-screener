@@ -24,14 +24,15 @@ def test_empty_profile_response_cannot_erase_verified_growth_history():
 def test_primary_view_excludes_investment_trusts_and_split_funds_without_excluding_reits():
     names={'TEM.L':('Templeton Emerging Markets Investment Trust plc',None),
            'SHORT.L':('Templeton Emerging Mkts Invmt Tr TEMIT',None),
-           'IAD.L':('Invesco Asia Dragon Trust plc','Asset Management'),
+           'IAD.L':('Invesco Asia Dragon Trust plc',None),
            'CTY.L':('The City of London Investment Trust plc','Asset Management'),
            'XTD.TO':('TDb Split Corp.',None),
            'TRUST.L':('Trust Software plc','Software - Application'),
-           'REIT.L':('Regional REIT Limited','REIT - Office')}
+           'REIT.L':('Regional REIT Limited','REIT - Office'),
+           'PROPERTY.L':('Property Trust plc','REIT - Office')}
     rows=[dict(symbol=s,name=n,industry=i,region_code='ca' if s.endswith('.TO') else 'gb',exchange='Toronto' if s.endswith('.TO') else 'LSE',instrument='stock',active=True) for s,(n,i) in names.items()]
     kept={s for s,v in model.main_listing_flags(rows).items() if v['main_listing']}
-    assert kept=={'TRUST.L','REIT.L'}
+    assert kept=={'TRUST.L','REIT.L','PROPERTY.L'}
 
 
 def test_conflicting_currency_is_withheld_from_rankings_until_verified():
