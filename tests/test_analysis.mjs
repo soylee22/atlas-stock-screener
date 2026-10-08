@@ -1,3 +1,4 @@
+import { capitalReturnsHTML } from '../static/capital-returns.js';
 import assert from 'node:assert/strict';
 import {buildAnalysisPack,analysisText,analysisCSV,annualTrends,peerContext} from '../static/analysis-pack.js';
 import {ANALYSIS_PROMPT} from '../static/analysis-prompt.js';
@@ -58,3 +59,16 @@ assert.equal(peerContext(many,stock,schema).industry.count,100);
 assert.ok(ANALYSIS_PROMPT.split(/\s+/).length>2000);
 for(const phrase of ['net income','share count','dividend','ROIC','ROE','positive starting','Pareto','bear, base and bull','untrusted','five-year or ten-year','cash flow','counter-case'])assert.ok(ANALYSIS_PROMPT.toLowerCase().includes(phrase.toLowerCase()),phrase);
 console.log('Analysis pack: histories, restatements, losses, quarterly YoY, FX units, dividends, peer coverage, deduplication, CSV completeness, privacy and detailed prompt checks passed');
+
+const returnsRow={...stock,roce:15,roic_proxy:10,roce_5y_avg:null,roce_5y_count:3,roce_5y_avg_reason:'Needs 5 valid years',capital_returns_history:[{end_date:'2025-06-30',roic_proxy:10,roce:15,inputs:{roce:{ebit:60,average_capital:400}},reasons:{roce:null}}]};
+const returnsPack=buildAnalysisPack(returnsRow,rows,schema,status);
+assert.equal(returnsPack.data.capital_efficiency.roce_percent,15);
+assert.equal(returnsPack.data.capital_efficiency.roce_5y_average_percent,null);
+assert.equal(returnsPack.data.capital_efficiency.roce_5y_valid_years,3);
+assert.equal(returnsPack.data.capital_efficiency.annual_history[0].inputs.roce.ebit,60);
+assert.ok(analysisCSV(returnsPack).includes('capital_efficiency.annual_history.0.inputs.roce.ebit,60'));
+assert.ok(returnsPack.data.data_gaps.some(v=>v.includes('ROCE 5Y average unavailable: Needs 5 valid years')));
+const returnsHTML=capitalReturnsHTML(returnsRow);
+assert.ok(returnsHTML.includes('3/5 valid annual ratios')&&returnsHTML.includes('15.00%')&&returnsHTML.includes('2025-06-30'));
+assert.ok(capitalReturnsHTML({...returnsRow,roce_reason:'<script>unsafe</script>',roce:null}).includes('&lt;script&gt;'));
+assert.ok(ANALYSIS_PROMPT.includes('not CAGR'));

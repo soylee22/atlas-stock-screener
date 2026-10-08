@@ -230,3 +230,9 @@ The scheduled GitHub runner works without a local computer. Two bounded profile 
 The Pages site reads a published snapshot. Opening the chart does not start a source scan. Refresh data reloads the latest publication. Data coverage links to the cloud workflow and shows the last completed batch. GitHub can delay scheduled runs. Public repository schedules can be disabled after 60 days without repository activity.
 
 Manual Actions runs accept `enrich_limit` up to 30000 and `refresh_seconds` up to 14400. Smaller values allow a bounded refresh check. Code pushes publish the cached snapshot without the overnight scan.
+
+### Capital returns
+
+ROIC proxy and ROCE are available in columns, filters, quadrant axes, company details and AI packs. ROIC retains the after-tax operating-income method over average debt plus equity less cash. ROCE uses Yahoo EBIT over average total assets less current liabilities. Both need matched reporting currencies and positive opening and closing annual capital balances. Financial-sector businesses are excluded.
+
+The 5Y average fields require five valid consecutive annual ratios ending at the latest FY. They are arithmetic means, not CAGR. A shorter window stays unavailable. The valid-year counts and annual history explain coverage. Yahoo usually returns four annual statements, and the earliest annual ratio also needs its opening balance. Retained source histories can build a longer window over time. Cached rows are recomputed during publication without additional Yahoo requests.

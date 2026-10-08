@@ -61,3 +61,9 @@ console.log('5 source coverage and zero/loss handling assertions passed');
 assert.deepEqual(chartCoverage([{net_income:100,income_fetched:'2026-10-08',dividend_fetched:'2026-10-07'},
   {net_income:100,income_fetched:'2026-10-08'}],'net_income','div_years',{div_years:{group:'Dividends'}}),{awaiting:1,unavailable:1});
 console.log('Independent dividend collection is distinct from a missing profile');
+
+const capitalSchema={...schema,columns:[...schema.columns,{key:'roce',kind:'percent',group:'Financials'},{key:'roce_5y_avg',kind:'percent',group:'Financials'}]};
+const capitalRows=[{...rows[0],roce:100,roce_5y_avg:20,statement_version:1},{...rows[1],roce:20,roce_5y_avg:null,statement_version:1},{...rows[2],roce:null,roce_5y_avg:null,statement_version:0}];
+assert.deepEqual(selectSnapshot(capitalRows,capitalSchema,new URLSearchParams({sort:'roce'})).map(r=>r.symbol),['BIG','SMALL','UNKNOWN']);
+assert.deepEqual(chartCoverage(capitalRows,'roce','roce_5y_avg',Object.fromEntries(capitalSchema.columns.map(f=>[f.key,f]))),{awaiting:1,unavailable:1});
+assert.ok(snapshotCSV(capitalRows,capitalSchema,'roce,roce_5y_avg').includes('roce_5y_avg_period'));

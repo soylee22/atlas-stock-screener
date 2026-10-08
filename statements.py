@@ -41,35 +41,90 @@ def retain_statement(frame, currency, frequency, previous=None, fetched=None):
                 periods=[periods[day] for day in sorted(periods)])
 
 
-def roic_proxy(history):
-    """FY NOPAT proxy / average book debt + equity - cash. Never substitute ROE."""
-    income = history.get('income_annual', {})
-    balance = history.get('balance_annual', {})
+RETURN_METHODS = {
+    'roic_proxy': 'Operating income × (1 − Tax Provision / Pretax Income) / average(Total Debt + Stockholders Equity − Cash And Cash Equivalents)',
+    'roce': 'EBIT / average(Total Assets − Current Liabilities)',
+}
+
+
+def annual_return(history, period, metric):
+    income, balance = history.get('income_annual', {}), history.get('balance_annual', {})
+    day, values = period['end_date'], period['values']
+    result = dict(end_date=day, currency=income.get('currency'), value=None, inputs=None, reason=None)
     if not income.get('currency') or income.get('currency') != balance.get('currency'):
-        return dict(roic_proxy=None, roic_proxy_period=None, roic_proxy_inputs=None, roic_proxy_reason='Matching reporting currency unavailable')
+        result['reason'] = 'Matching reporting currency unavailable'
+        return result
     balances = {p['end_date']: p['values'] for p in balance.get('periods', [])}
-    for period in reversed(income.get('periods', [])):
-        day = period['end_date']
-        # Do not silently present an older valid ROIC as the latest fiscal year.
-        values = period['values']
-        prior = [d for d in balances if 330 <= (date.fromisoformat(day)-date.fromisoformat(d)).days <= 400]
+    prior = [d for d in balances if 330 <= (date.fromisoformat(day)-date.fromisoformat(d)).days <= 400]
+    if day not in balances or not prior:
+        result['reason'] = 'Needs matched opening and closing annual capital balances'
+        return result
+    opening = max(prior)
+    fields = ['Total Debt','Stockholders Equity','Cash And Cash Equivalents'] if metric == 'roic_proxy' else ['Total Assets','Current Liabilities']
+    def capital(v):
+        parts = [finite(v.get(k)) for k in fields]
+        if any(p is None for p in parts): return None
+        return parts[0]+parts[1]-parts[2] if metric == 'roic_proxy' else parts[0]-parts[1]
+    first, last = capital(balances[opening]), capital(balances[day])
+    if first is None or last is None or first <= 0 or last <= 0:
+        result['reason'] = 'Needs complete inputs and two positive capital balances'
+        return result
+    inputs = dict(opening_capital=first, closing_capital=last, opening_date=opening,
+        closing_date=day, currency=income['currency'], method=RETURN_METHODS[metric],
+        opening_balance={k:finite(balances[opening].get(k)) for k in fields},
+        closing_balance={k:finite(balances[day].get(k)) for k in fields})
+    if metric == 'roic_proxy':
         op, pretax, tax = (finite(values.get(k)) for k in ['Operating Income','Pretax Income','Tax Provision'])
-        if day not in balances or not prior or op is None or pretax is None or tax is None or pretax <= 0 or not 0 <= tax/pretax <= 1:
-            break
-        def capital(v):
-            parts = [finite(v.get(k)) for k in ['Total Debt','Stockholders Equity','Cash And Cash Equivalents']]
-            return parts[0]+parts[1]-parts[2] if all(p is not None for p in parts) else None
-        first, last = capital(balances[max(prior)]), capital(balances[day])
-        if first is None or last is None or first <= 0 or last <= 0:
-            break
-        result = op*(1-tax/pretax)/((first+last)/2)*100
-        return dict(roic_proxy=result, roic_proxy_period=f'FY {day} · {income["currency"]} · average book capital',
-                    roic_proxy_reason=None,
-                    roic_proxy_inputs=dict(operating_income=op,pretax_income=pretax,tax_provision=tax,
-                        opening_capital=first,closing_capital=last,opening_date=max(prior),closing_date=day,
-                        currency=income['currency'],method='Operating income × (1 − Tax Provision / Pretax Income) / average(Total Debt + Stockholders Equity − Cash And Cash Equivalents)'))
-    return dict(roic_proxy=None,roic_proxy_period=None,roic_proxy_inputs=None,
-                roic_proxy_reason='Latest FY needs matched income and two positive capital balances with a valid effective tax rate')
+        if op is None or pretax is None or tax is None or pretax <= 0 or not 0 <= tax/pretax <= 1:
+            result['reason'] = 'Needs operating income and a valid effective tax rate between 0% and 100%'
+            return result
+        numerator = op*(1-tax/pretax)
+        inputs.update(operating_income=op, pretax_income=pretax, tax_provision=tax)
+    else:
+        numerator = finite(values.get('EBIT'))
+        if numerator is None:
+            result['reason'] = 'Yahoo EBIT unavailable for this fiscal year'
+            return result
+        inputs['ebit'] = numerator
+    inputs.update(numerator=numerator, average_capital=(first+last)/2)
+    result.update(value=numerator/inputs['average_capital']*100, inputs=inputs)
+    return result
+
+
+def capital_returns(history, sector=None):
+    """Annual book-capital ratios. Five-year means five consecutive FY ratios, not CAGR."""
+    periods = sorted(history.get('income_annual', {}).get('periods', []), key=lambda p:p['end_date'])
+    result = dict(capital_returns_version=1, capital_returns_history=[])
+    annual = {key:[annual_return(history,p,key) for p in periods] for key in RETURN_METHODS}
+    for key, observations in annual.items():
+        if sector == 'Financial Services':
+            for observation in observations:
+                observation.update(value=None, inputs=None, reason='Industrial capital-return ratios are not used for financial-sector businesses')
+        latest = observations[-1] if observations else None
+        result[key] = latest['value'] if latest else None
+        result[key+'_inputs'] = latest['inputs'] if latest else None
+        result[key+'_reason'] = latest['reason'] if latest else 'Awaiting annual income and balance sheets'
+        result[key+'_period'] = ('FY '+latest['end_date']+' · '+str(latest['currency'])+' · average book capital') if latest and latest['value'] is not None else None
+        window = observations[-5:]
+        count = sum(p['value'] is not None for p in window)
+        consecutive = all(330 <= (date.fromisoformat(b['end_date'])-date.fromisoformat(a['end_date'])).days <= 400 for a,b in zip(window,window[1:]))
+        complete = len(window) == 5 and count == 5 and consecutive
+        result[key+'_5y_avg'] = sum(p['value'] for p in window)/5 if complete else None
+        result[key+'_5y_count'] = count
+        result[key+'_5y_avg_period'] = f"FY {window[0]['end_date']} to {window[-1]['end_date']} · arithmetic mean of 5 annual ratios" if complete else None
+        result[key+'_5y_avg_reason'] = None if complete else ('Industrial capital-return ratios are not used for financial-sector businesses' if sector == 'Financial Services' else f'Needs 5 valid consecutive annual ratios ending at latest FY. {count} valid in the latest {len(window)} cached fiscal years. Each ratio needs opening and closing balances.')
+    for i,period in enumerate(periods):
+        result['capital_returns_history'].append(dict(end_date=period['end_date'],
+            currency=history.get('income_annual', {}).get('currency'),
+            **{key:annual[key][i]['value'] for key in RETURN_METHODS},
+            inputs={key:annual[key][i]['inputs'] for key in RETURN_METHODS},
+            reasons={key:annual[key][i]['reason'] for key in RETURN_METHODS}))
+    return result
+
+
+def roic_proxy(history):
+    # Retain the existing callable for integrations and old tests.
+    return capital_returns(history)
 
 
 def capture_statements(ticker, currency, previous=None, frames=None, currencies=None):
@@ -95,8 +150,5 @@ def capture_statements(ticker, currency, previous=None, frames=None, currencies=
         errors['all_statements'] = 'No statement observations returned. Source fetch remains pending.'
     values = dict(statement_history=history,statement_errors=errors,statement_version=0 if errors or not currency else 1,
                   statement_fetched=datetime.now(timezone.utc).isoformat(timespec='seconds'))
-    values.update(roic_proxy(history))
-    if previous.get('sector') == 'Financial Services':
-        values.update(roic_proxy=None,roic_proxy_period=None,roic_proxy_inputs=None,
-                      roic_proxy_reason='Industrial ROIC proxy is not used for financial-sector businesses')
+    values.update(capital_returns(history, previous.get('sector')))
     return values, frames

@@ -109,3 +109,84 @@ def test_statement_queue_preserves_profile_age_and_cools_down_after_failure(tmp_
         assert conn.execute("SELECT enriched FROM stocks WHERE symbol='AAPL'").fetchone()[0]==old
     refresh_data.backfill_statements(store,seconds=10,limit=10)
     assert calls==['AAPL','NEXT']
+
+
+def long_history():
+    from statements import retain_statement
+    dates = tuple(f'{year}-06-30' for year in range(2020,2026))
+    balance = frame({'Total Debt':[100]*6,'Stockholders Equity':[200]*6,
+        'Cash And Cash Equivalents':[50]*6,'Total Assets':[500]*6,'Current Liabilities':[100]*6}, dates)
+    income = frame({'Operating Income':[10,20,30,40,50],'Pretax Income':[10]*5,
+        'Tax Provision':[2]*5,'EBIT':[15,25,35,45,55]}, dates[1:])
+    return {'income_annual':retain_statement(income,'USD','annual'),
+        'balance_annual':retain_statement(balance,'USD','annual')}
+
+
+def test_five_year_arithmetic_means_include_latest_and_all_operands():
+    from statements import capital_returns
+    result=capital_returns(long_history())
+    assert result['roic_proxy']==pytest.approx(50*.8/250*100)
+    assert result['roce']==pytest.approx(55/400*100)
+    assert result['roic_proxy_5y_avg']==pytest.approx(30*.8/250*100)
+    assert result['roce_5y_avg']==pytest.approx(35/400*100)
+    assert result['roic_proxy_5y_count']==result['roce_5y_count']==5
+    assert result['roce_inputs']['opening_balance']=={'Total Assets':500,'Current Liabilities':100}
+    assert result['capital_returns_history'][0]['inputs']['roic_proxy']['opening_date']=='2020-06-30'
+    assert '2021-06-30 to 2025-06-30' in result['roce_5y_avg_period']
+
+
+def test_short_history_never_presents_three_years_as_five():
+    from statements import capital_returns
+    data=long_history();data['income_annual']['periods']=data['income_annual']['periods'][-3:]
+    result=capital_returns(data)
+    assert result['roce'] is not None and result['roce_5y_count']==3
+    assert result['roce_5y_avg'] is None and '3 valid' in result['roce_5y_avg_reason']
+
+
+def test_latest_invalid_capital_does_not_fall_back_to_older_year():
+    from statements import capital_returns
+    data=long_history();data['balance_annual']['periods'][-1]['values']['Current Liabilities']=500
+    result=capital_returns(data)
+    assert result['roce'] is None and result['roce_inputs'] is None
+    assert result['roce_5y_avg'] is None and result['roce_5y_count']==4
+    assert result['roic_proxy_5y_avg'] is not None
+
+
+def test_five_valid_but_nonconsecutive_ratios_are_not_five_year_average():
+    from statements import capital_returns
+    data=long_history();old=data['income_annual']['periods'][0]
+    old['end_date']='2019-06-30'
+    data['balance_annual']['periods'] += [dict(end_date=f'{y}-06-30',values=dict(data['balance_annual']['periods'][0]['values'])) for y in (2018,2019)]
+    result=capital_returns(data)
+    assert result['roce_5y_count']==5 and result['roce_5y_avg'] is None
+
+
+def test_loss_roce_is_valid_without_fabricated_tax_shield():
+    from statements import capital_returns
+    data=long_history();data['income_annual']['periods'][-1]['values'].update({'EBIT':-40,'Pretax Income':-40})
+    result=capital_returns(data)
+    assert result['roce']==pytest.approx(-10)
+    assert result['roce_5y_avg'] is not None
+    assert result['roic_proxy'] is None and result['roic_proxy_5y_avg'] is None
+
+
+def test_currency_change_and_financial_sector_clear_all_capital_returns():
+    from statements import capital_returns
+    data=long_history();data['balance_annual']['currency']='JPY'
+    result=capital_returns(data)
+    assert all(result[k] is None for k in ['roce','roic_proxy','roce_5y_avg','roic_proxy_5y_avg'])
+    result=capital_returns(long_history(),'Financial Services')
+    assert all(result[k] is None for k in ['roce','roic_proxy','roce_5y_avg','roic_proxy_5y_avg'])
+    assert all(p['roce'] is None and p['inputs']['roce'] is None for p in result['capital_returns_history'])
+
+
+def test_cached_statement_metrics_recomputed_without_source_fetch(tmp_path):
+    import app as model
+    store=model.Store(tmp_path/'returns.sqlite')
+    store.upsert_many([dict(symbol='TEST',region_code='us',statement_history=long_history(),
+        sector='Industrials',statement_version=1,active=True,instrument='stock',main_listing=True)])
+    assert store.get('TEST')['roce_5y_avg']==pytest.approx(35/400*100)
+    with store.connect() as conn:
+        conn.execute("UPDATE stocks SET data=json_set(data,'$.roce',999,'$.roce_5y_avg',999) WHERE symbol='TEST'")
+    store.recalibrate_fx()
+    assert store.get('TEST')['roce']==pytest.approx(55/400*100)

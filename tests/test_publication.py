@@ -185,7 +185,10 @@ def test_complete_statement_history_survives_publication_and_seed(tmp_path, monk
     build_site.build_site(store.path,output,seed)
     details=[json.loads(p.read_text()) for p in (output/'data'/'details').glob('*.json')]
     row=next(r for r in details if r['symbol']=='TEST.US')
-    assert row['statement_history']==history and row['roic_proxy']==20
+    assert row['statement_history']==history and row['roic_proxy'] is None
+    assert row['roce'] is None and row['roce_5y_avg'] is None
+    assert row['roic_proxy_inputs'] is None, 'Unsupported old ratios must not survive recalculation'
+    assert 'capital_returns_history' in row
     snapshot=json.loads((output/'data'/'stocks.json').read_text())
     assert 'statement_history' not in snapshot['fields'],'full statements load only with a company detail'
     assert 'roic_proxy' in snapshot['fields'] and 'statement_version' in snapshot['fields']

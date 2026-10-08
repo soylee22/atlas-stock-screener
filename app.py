@@ -48,6 +48,7 @@ def col(key, label, kind="number", default=False, group="Overview", description=
     return dict(key=key, label=label, kind=kind, default=default, group=group, description=description)
 
 
+CAPITAL_KEYS = ("roic_proxy", "roce", "roic_proxy_5y_avg", "roce_5y_avg")
 GROWTH_HORIZONS = (1, 3, 5, 10)
 GROWTH_KEYS = [f"{metric}_growth_{years}y" for metric in ("revenue", "net_income") for years in GROWTH_HORIZONS]
 GROWTH_COLUMNS = [col(key, f"{'Revenue' if key.startswith('revenue') else 'Net income'} {'growth 1Y' if years == 1 else 'CAGR ' + str(years) + 'Y'}",
@@ -83,6 +84,11 @@ COLUMNS = [
     col("roe", "Return on equity", "percent", group="Financials"),
     col("roic_proxy", "ROIC proxy", "percent", group="Financials", description="FY after-tax operating income proxy / average book debt plus equity less cash. Uses effective tax, excludes missing/invalid inputs and makes no lease, R&D or goodwill adjustments. Compare operating businesses with consistent methods."),
     col("roic_proxy_period", "ROIC proxy period", "text", group="Financials"),
+    col("roce", "ROCE", "percent", group="Financials", description="Latest FY EBIT / average opening and closing (Total Assets minus Current Liabilities). Book-capital estimate with matched reporting currency. Withheld for financial businesses and invalid capital."),
+    col("roce_period", "ROCE period", "text", group="Financials"),
+    *[col(key+"_5y_avg",label+" 5Y average","percent",group="Financials",description="Arithmetic mean of five consecutive valid annual ratios ending at the latest FY, not CAGR. Requires matching annual statements and opening/closing capital balances. Fewer years remain unavailable.") for key,label in [("roic_proxy","ROIC proxy"),("roce","ROCE")]],
+    *[col(key+"_5y_count",label+" 5Y valid years","integer",group="Financials",description="Valid annual ratios among the latest five cached fiscal years. A five-year average additionally requires five consecutive fiscal years.") for key,label in [("roic_proxy","ROIC proxy"),("roce","ROCE")]],
+    *[col(key+"_5y_avg_period",label+" 5Y average period","text",group="Financials") for key,label in [("roic_proxy","ROIC proxy"),("roce","ROCE")]],
     col("debt", "Total debt", "usd", group="Financials"), col("cash", "Cash", "usd", group="Financials"),
     col("beta", "Beta", group="Performance"),
     col("avg_volume", "Avg volume 3M", group="Overview"),
@@ -382,6 +388,9 @@ def dollarise(row, fx):
         for statement in row.get("statement_history", {}).values():
             statement["currency"] = None
             statement["status"] = "currency_conflict"
+    if row.get("statement_history"):
+        from statements import capital_returns
+        row.update(capital_returns(row["statement_history"], row.get("sector")))
     for key in MONETARY_FINANCIAL:
         currency = row.get("financial_field_currencies", {}).get(key, row.get("financial_currency"))
         row[key] = None if conflict else usd(row.get(key + "_local"), currency, fx)
@@ -1138,7 +1147,7 @@ def chart(x: str = "net_income", y: str = "div_years", search: str = "", regions
         raise HTTPException(400, str(exc)) from exc
     keys = sorted({"symbol", "name", "region", "region_code", "sector", "industry", "exchange",
                    "income_period", "cf_period", "fcf_growth_period", "financial_fetched", "quote_time", x, y,
-                   "technical_asof", *[key.removesuffix("_distance") + "_period" for key in (x, y) if key in GROWTH_KEYS or key.startswith("sma_")]})
+                   "technical_asof", *[key.removesuffix("_distance") + "_period" for key in (x, y) if key in GROWTH_KEYS or key in CAPITAL_KEYS or key.startswith("sma_")]})
     # Project only plot fields and paired values. Do not load every dividend event or description.
     projection = "json_object(" + ",".join(f"'{key}',json_extract(data,'$.{key}')" for key in keys) + ")"
     paired = " AND ".join(f"json_type(data,'$.{key}') IN ('integer','real')" for key in {x, y})
@@ -1148,7 +1157,7 @@ def chart(x: str = "net_income", y: str = "div_years", search: str = "", regions
             source = "COALESCE(json_extract(data,'$.technical_version'),0)<1"
         elif key in GROWTH_KEYS:
             source = "COALESCE(json_extract(data,'$.annual_growth_version'),0)<1"
-        elif key == "roic_proxy":
+        elif key in {"roic_proxy", "roce", "roic_proxy_5y_avg", "roce_5y_avg", "roic_proxy_5y_count", "roce_5y_count"}:
             source = "COALESCE(json_extract(data,'$.statement_version'),0)<1"
         elif key in {"net_income", "revenue", "net_margin"}:
             source = "json_extract(data,'$.financial_fetched') IS NULL AND json_extract(data,'$.income_fetched') IS NULL"
@@ -1273,9 +1282,10 @@ def export(search: str = "", regions: str = "", filters: str = "[]", sort: str =
     if not all(k in FIELDS for k in selected):
         raise HTTPException(400, "Unknown export column")
     selected = list(dict.fromkeys(["symbol", "name"] + selected + ["income_period", "cf_period", "fcf_growth_period", "quote_time", "financial_fetched"]
-                                 + [key.removesuffix("_distance") + "_period" for key in selected if key in GROWTH_KEYS or key.startswith("sma_")]
+                                 + [key.removesuffix("_distance") + "_period" for key in selected if key in GROWTH_KEYS or key in CAPITAL_KEYS or key.startswith("sma_")]
                                  + (["technical_asof"] if any(key.startswith("sma_") for key in selected) else [])
-                                 + (["annual_growth_fetched"] if any(key in GROWTH_KEYS for key in selected) else [])))
+                                 + (["annual_growth_fetched"] if any(key in GROWTH_KEYS for key in selected) else [])
+                                 + (["statement_fetched"] if any(key in CAPITAL_KEYS for key in selected) else [])))
     rows, _ = select_rows(search, regions, filters, sort, direction, include_other, only_symbols, 100000, 0, main_only)
     out = io.StringIO()
     writer = csv.writer(out)

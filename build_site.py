@@ -21,7 +21,8 @@ EXTRA_FIELDS = {
     "price_local", "market_cap_local", "low_52w_local", "high_52w_local",
     "annual_income_history", "annual_growth_version", "annual_growth_fetched", "annual_growth_missing",
     "technical_history", "technical_currency", "technical_version", "technical_fetched", "technical_basis", "technical_price_local", "sma_200d_local", "sma_200w_local", "annual_growth_status", "income_fetched", "financial_quality_note", "financial_currency_version", "financial_field_currencies",
-    "statement_history", "statement_errors", "statement_version", "statement_fetched", "roic_proxy_inputs", "roic_proxy_reason",
+    "statement_history", "statement_errors", "statement_version", "statement_fetched", "roic_proxy_inputs", "roic_proxy_reason", "roce_inputs", "roce_reason",
+    "capital_returns_history", "capital_returns_version", "roic_proxy_5y_avg_reason", "roce_5y_avg_reason",
     *(key + "_local" for key in model.MONETARY_FINANCIAL),
 }
 PUBLIC_FIELDS = EXTRA_FIELDS | set(model.FIELDS)
