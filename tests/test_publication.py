@@ -1,5 +1,6 @@
 import json
 import gzip
+import io
 import re
 import shutil
 import sys
@@ -71,6 +72,20 @@ def test_builder_rejects_source_and_unrelated_output(tmp_path):
     with pytest.raises(ValueError, match='not an Atlas'):
         build_site.build_site(store.path, output)
     assert (output / 'precious.txt').read_text() == 'keep'
+
+
+def test_published_recovery_restores_empty_initialised_database(tmp_path,monkeypatch):
+    source=seeded_store(tmp_path)
+    output=tmp_path/'site'
+    seed=tmp_path/'recovery.tar.gz'
+    build_site.build_site(source.path,output,seed)
+    monkeypatch.setattr(refresh_data,'EUROPE_SEED',tmp_path/'absent.json')
+    monkeypatch.setattr(refresh_data,'urlopen',lambda *args,**kwargs:io.BytesIO(seed.read_bytes()))
+    restored=model.Store(tmp_path/'empty'/'cache.sqlite')
+    assert restored.path.stat().st_size>0
+    assert refresh_data.restore_published_seed(restored)
+    assert restored.get('TEST.US')['net_income']==1e9
+    assert not refresh_data.restore_published_seed(restored)
 
 
 def test_compressed_detail_and_latest_recovery_seed_preserve_full_history(tmp_path, monkeypatch):

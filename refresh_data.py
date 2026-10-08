@@ -11,6 +11,7 @@ import threading
 import time
 from datetime import datetime
 from pathlib import Path
+from urllib.request import urlopen
 
 import app as model
 from build_site import ICON_FILE
@@ -100,6 +101,22 @@ def restore_seed(store, seed):
     restore_verified_repairs(store)
     restore_market_extension(store)
     return True
+
+
+def restore_published_seed(store):
+    with store.connect() as conn:
+        if conn.execute('SELECT COUNT(*) FROM stocks').fetchone()[0]:
+            return False
+    try:
+        with tempfile.TemporaryDirectory() as tmp:
+            path=Path(tmp)/'published.tar.gz'
+            with urlopen('https://soylee22.github.io/atlas-stock-screener/data/cache-seed.tar.gz',timeout=240) as response, path.open('wb') as target:
+                while chunk:=response.read(1024*1024):
+                    target.write(chunk)
+            return restore_seed(store,path)
+    except OSError as error:
+        logging.warning('Published recovery seed unavailable. Using starter seed: %s',error)
+        return False
 
 
 def refresh_quotes(pipeline):
@@ -420,6 +437,7 @@ def main():
     parser.add_argument("--limit", type=int, default=400)
     parser.add_argument("--force-quotes", action="store_true")
     parser.add_argument("--seed-only", action="store_true")
+    parser.add_argument("--published-fallback", action="store_true")
     parser.add_argument("--growth-only", action="store_true")
     parser.add_argument("--europe-only", action="store_true")
     parser.add_argument("--statements-only", action="store_true")
@@ -429,7 +447,8 @@ def main():
     logging.basicConfig(level=logging.INFO)
     store = model.Store(args.database)
     if args.seed_only:
-        print(json.dumps(dict(seed_restored=restore_seed(store, args.seed))))
+        restored=restore_published_seed(store) if args.published_fallback else False
+        print(json.dumps(dict(seed_restored=restore_seed(store, args.seed) or restored)))
     elif args.europe_only:
         restore_seed(store,args.seed)
         bootstrap_europe(store,max(1,args.seconds),max(0,args.limit))

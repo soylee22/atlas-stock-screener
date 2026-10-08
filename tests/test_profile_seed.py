@@ -21,6 +21,7 @@ def test_profile_seed_preserves_quotes_fx_newer_history_and_verified_currency(tm
         financial_currency_version=2 if symbol!='UNVERIFIED' else 0,financial_currency='KRW',net_income_local=499e9,
         dividend_fetched='2026-10-07',div_years=15,dividend_events=[dict(date='1984-01-01',amount=20)],
         annual_growth_fetched='2026-10-07',annual_growth_version=1,
+        annual_growth_status='available',
         annual_income_history={'currency':'KRW','net_income':{'2025-12-31':300},'revenue':{'2025-12-31':1000}},
         private_note='PRIVATE',sector='Industrials') for symbol in ['NEW','RECENT','UNVERIFIED']]
     seed=tmp_path/'source.tar.gz'
@@ -50,3 +51,19 @@ def test_older_dividends_do_not_replace_newer_collection(tmp_path,monkeypatch):
     build_site.make_seed(seed,[dict(base,dividend_fetched='2026-10-07',div_years=19)],{},[],tmp_path)
     profile_seed.merge_profiles(store,seed)
     assert store.get('TEST')['div_years']==20
+
+
+def test_unverified_profile_history_does_not_supply_assumed_currency_income(tmp_path,monkeypatch):
+    store=model.Store(tmp_path/'cache.sqlite')
+    monkeypatch.setattr(store,'classify_listings',lambda **kwargs:None)
+    base=dict(symbol='OLD',region_code='kr',active=True,instrument='stock',main_listing=True)
+    store.upsert_many([base])
+    seed=tmp_path/'source.tar.gz'
+    build_site.make_seed(seed,[dict(base,financial_fetched='2026-10-07',financial_currency='USD',
+        annual_growth_fetched='2026-10-07',annual_growth_version=1,dividend_fetched='2026-10-07',div_years=10,
+        annual_income_history={'currency':'USD','net_income':{'2025-12-31':499e9}})],{},[],tmp_path)
+    profile_seed.merge_profiles(store,seed)
+    row=store.get('OLD')
+    assert row['div_years']==10
+    assert not row.get('net_income_local') and not row.get('annual_income_history')
+    assert not row.get('financial_fetched')

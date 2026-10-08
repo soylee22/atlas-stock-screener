@@ -10,7 +10,7 @@ from urllib.request import urlopen
 import app as model
 from build_site import ICON_FILE, public_row
 
-VERSION = '2026-10-08'
+VERSION = '2026-10-08-v2'
 URL = 'https://github.com/soylee22/atlas-stock-screener/releases/download/data-bootstrap-2026-10-08/collected-profiles.tar.gz'
 PROFILE_KEYS = {field['key'] for field in model.COLUMNS if field['group'] in {'Financials', 'Cash flow'}} - set(model.GROWTH_KEYS)
 PROFILE_KEYS |= set(model.MONETARY_FINANCIAL) | {key+'_local' for key in model.MONETARY_FINANCIAL}
@@ -46,6 +46,8 @@ def merge_profiles(store, path):
                 (('annual_','revenue_growth_','net_income_growth_'),'annual_growth_fetched'),
                 (('dividend_','div_years','div_growth'),'dividend_fetched'),
                 (('technical_','sma_'),'technical_fetched')]:
+                if stamp=='annual_growth_fetched' and (source.get('financial_currency_version') or 0)<2 and source.get('annual_growth_status')!='available':
+                    continue
                 if (source.get(stamp) or '') > (old.get(stamp) or ''):
                     values.update({k:v for k,v in source.items() if k.startswith(prefixes)})
             # Independently fetched annual history can fill FY income for quote-only rows.
