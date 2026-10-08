@@ -69,3 +69,13 @@ def test_analysis_peers_are_global_compact_and_exclude_wrappers(tmp_path,monkeyp
     assert result['population']['total']==3
     assert all('private_note' not in r and 'dividend_events' not in r for r in result['rows'])
     with pytest.raises(HTTPException):model.analysis_peers('UNKNOWN')
+
+
+def test_independent_dividend_fetch_is_unavailable_rather_than_waiting(tmp_path,monkeypatch):
+    store=model.Store(tmp_path/'dividend.sqlite')
+    store.upsert_many([dict(symbol=symbol,region_code='us',active=True,instrument='stock',main_listing=True,
+        net_income_local=100,income_fetched='2026-10-08',**extra) for symbol,extra in
+        [('CHECKED',{'dividend_fetched':'2026-10-07'}),('PENDING',{})]])
+    monkeypatch.setattr(model,'store',store)
+    result=model.chart(x='net_income',y='div_years',main_only=False)
+    assert result['coverage']==dict(awaiting=1,unavailable=1)

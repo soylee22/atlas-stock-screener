@@ -1152,6 +1152,8 @@ def chart(x: str = "net_income", y: str = "div_years", search: str = "", regions
             source = "COALESCE(json_extract(data,'$.statement_version'),0)<1"
         elif key in {"net_income", "revenue", "net_margin"}:
             source = "json_extract(data,'$.financial_fetched') IS NULL AND json_extract(data,'$.income_fetched') IS NULL"
+        elif FIELDS[key].get("group") == "Dividends" and key != "div_yield":
+            source = "json_extract(data,'$.dividend_fetched') IS NULL AND json_extract(data,'$.financial_fetched') IS NULL"
         elif (FIELDS[key].get("group") in {"Financials", "Cash flow", "Dividends"} and key != "div_yield") or key == "beta":
             source = "json_extract(data,'$.financial_fetched') IS NULL"
         else:

@@ -27,7 +27,7 @@ EXTRA_FIELDS = {
 PUBLIC_FIELDS = EXTRA_FIELDS | set(model.FIELDS)
 INDEX_FIELDS = list(dict.fromkeys([
     "symbol", "name", "region_code", "instrument", "active", "main_listing", "listing_reason",
-    "financial_error", "financial_quality_note", "technical_version", "detail_key", "logo_url", "annual_growth_missing", "annual_growth_version", "income_fetched", "statement_version", *[field["key"] for field in model.COLUMNS],
+    "financial_error", "financial_quality_note", "technical_version", "detail_key", "logo_url", "annual_growth_missing", "annual_growth_version", "income_fetched", "dividend_fetched", "statement_version", *[field["key"] for field in model.COLUMNS],
 ]))
 META_KEYS = ["coverage", "fx", "quote_completed", "last_quote_run", "quote_error", "last_financial", "refresh_health", "annual_growth_backfill", "statement_backfill", "cloud_refresh", "profile_seed"]
 ICON_FILE = re.compile(r"[a-f0-9]{64}\.(png|jpg|gif|webp|ico)")

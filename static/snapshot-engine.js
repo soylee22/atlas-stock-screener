@@ -54,6 +54,7 @@ export function chartCoverage(rows, x, y, fields) {
     if (/^(revenue|net_income)_growth_(1|3|5|10)y$/.test(key)) return !row.annual_growth_version;
     if (key === 'roic_proxy') return !row.statement_version;
     if (['net_income', 'revenue', 'net_margin'].includes(key)) return !row.financial_fetched && !row.income_fetched;
+    if (fields[key]?.group === 'Dividends' && key !== 'div_yield') return !row.dividend_fetched && !row.financial_fetched;
     if ((['Financials', 'Cash flow', 'Dividends'].includes(fields[key]?.group) && key !== 'div_yield') || key === 'beta') return !row.financial_fetched;
     return false;
   };

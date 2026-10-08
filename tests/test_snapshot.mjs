@@ -58,3 +58,6 @@ assert.deepEqual(chartCoverage([{financial_fetched:'2026-10-06',fcf:null},{fcf:n
 assert.deepEqual(chartCoverage([{below_52w_high:null},{below_52w_high:0}], 'below_52w_high','below_52w_high',{}),{awaiting:0,unavailable:1});
 assert.deepEqual(chartCoverage(coverageRows.slice(0,1),'revenue_growth_3y','net_income_growth_1y',{}),{awaiting:0,unavailable:0});
 console.log('5 source coverage and zero/loss handling assertions passed');
+assert.deepEqual(chartCoverage([{net_income:100,income_fetched:'2026-10-08',dividend_fetched:'2026-10-07'},
+  {net_income:100,income_fetched:'2026-10-08'}],'net_income','div_years',{div_years:{group:'Dividends'}}),{awaiting:1,unavailable:1});
+console.log('Independent dividend collection is distinct from a missing profile');
