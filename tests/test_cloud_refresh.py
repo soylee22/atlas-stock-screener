@@ -81,7 +81,7 @@ def test_two_cloud_parts_aggregate_and_skip_after_rate_limit(tmp_path,monkeypatc
     cloud_refresh.cloud_batch(store,'1',seconds=11,limit=9,force_quotes=True)
     cloud_refresh.cloud_batch(store,'2',seconds=11,limit=9)
     result=cloud_refresh.cloud_batch(store,'history')
-    assert calls==[dict(seconds=5,limit=4,force_quotes=True,workers=4)]
+    assert calls==[dict(seconds=5,limit=4,force_quotes=True,workers=2)]
     assert result['financials']==dict(attempted=4,succeeded=3,failed=1)
     assert result['phase']=='finished' and result['rate_limited']
     status=build_site.snapshot_status([],{'cloud_refresh':result},0,model.now_iso())
@@ -105,3 +105,27 @@ def test_checkpoint_parts_share_exact_budget(tmp_path,monkeypatch):
     assert sum(c['limit'] for c in calls)==9
     assert result['financials']['succeeded']==9 and result['quotes_succeeded']
     assert not calls[1]['force_quotes']
+
+
+def test_cloud_recovers_from_rate_limit_within_the_same_night(tmp_path,monkeypatch):
+    store=model.Store(tmp_path/'test.sqlite')
+    clock=[0]
+    monkeypatch.setattr(cloud_refresh.time,'monotonic',lambda:clock[0])
+    monkeypatch.setattr(cloud_refresh.time,'sleep',lambda seconds:clock.__setitem__(0,clock[0]+seconds))
+    calls=[]
+    def refresh(*args,**kwargs):
+        calls.append(kwargs)
+        limited=len(calls)==1
+        attempts=1 if limited else kwargs['limit']
+        return dict(financials=dict(attempted=attempts,succeeded=0 if limited else attempts,failed=1 if limited else 0),
+            quotes_attempted=kwargs['force_quotes'],quotes_succeeded=True,
+            stop_reason='rate_limited' if limited else 'profile_limit')
+    monkeypatch.setattr(refresh_data,'refresh',refresh)
+    result=cloud_refresh.cloud_batch(store,'1',seconds=1200,limit=10,force_quotes=True)
+    assert clock[0]==300 and len(calls)==2
+    assert [call['seconds'] for call in calls]==[600,300]
+    assert [call['limit'] for call in calls]==[5,4]
+    assert calls[0]['force_quotes'] and not calls[1]['force_quotes']
+    assert result['financials']==dict(attempted=5,succeeded=4,failed=1)
+    assert result['cooldowns']==1 and result['rate_limits_seen']
+    assert not result['rate_limited']
