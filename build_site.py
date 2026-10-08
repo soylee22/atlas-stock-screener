@@ -29,7 +29,7 @@ INDEX_FIELDS = list(dict.fromkeys([
     "symbol", "name", "region_code", "instrument", "active", "main_listing", "listing_reason",
     "financial_error", "financial_quality_note", "technical_version", "detail_key", "logo_url", "annual_growth_missing", "annual_growth_version", "income_fetched", "statement_version", *[field["key"] for field in model.COLUMNS],
 ]))
-META_KEYS = ["coverage", "fx", "quote_completed", "last_quote_run", "quote_error", "last_financial", "refresh_health", "annual_growth_backfill", "statement_backfill", "cloud_refresh"]
+META_KEYS = ["coverage", "fx", "quote_completed", "last_quote_run", "quote_error", "last_financial", "refresh_health", "annual_growth_backfill", "statement_backfill", "cloud_refresh", "profile_seed"]
 ICON_FILE = re.compile(r"[a-f0-9]{64}\.(png|jpg|gif|webp|ico)")
 
 
@@ -67,7 +67,7 @@ def snapshot_status(rows, metadata, icon_count, built):
         refreshing=False, completed=metadata.get("quote_completed"), error=metadata.get("quote_error"),
         last_financial=metadata.get("last_financial"), refresh_health=metadata.get("refresh_health"),
         annual_growth_backfill=metadata.get("annual_growth_backfill"), statement_backfill=metadata.get("statement_backfill"),
-        cloud_refresh=metadata.get("cloud_refresh"),
+        cloud_refresh=metadata.get("cloud_refresh"), profile_seed=metadata.get("profile_seed"),
         missing_fx=sum(r.get("market_cap_local") is not None and r.get("market_cap") is None for r in rows),
         logos=dict(cached=icon_count, queued=0, downloading=0), snapshot=dict(built=built, version=1,
             cadence="Nightly at 01:23 UK time. Quotes daily, company profiles on a seven-day cache.",

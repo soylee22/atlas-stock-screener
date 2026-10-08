@@ -76,6 +76,8 @@ jobs:
             rm -f data/latest-seed.tar.gz
           fi
           python refresh_data.py --seed-only
+      - name: Merge previously collected public company histories
+        run: python profile_seed.py
       - name: Refresh security classifications
         if: github.event_name != 'push'
         run: python listing_types.py
