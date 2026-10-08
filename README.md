@@ -2,7 +2,7 @@
 
 Open [Atlas on GitHub Pages](https://soylee22.github.io/atlas-stock-screener/).
 
-The hosted table reads a public data snapshot. GitHub Actions publishes updates every four hours.
+The hosted table reads a public data snapshot. GitHub Actions starts the overnight refresh at 01:23 UK time each day.
 Quotes and FX refresh daily. Financial profiles and company icons load in bounded batches.
 Refresh data reloads the most recent published snapshot. Saved screens and watchlists stay in your browser.
 
@@ -167,8 +167,8 @@ Revenue and net income offer 1-year fiscal-year growth and 3-year, 5-year and 10
 Yahoo usually returns four annual statements. These support 1-year growth and 3-year CAGR. Longer horizons remain unavailable until the cache holds consecutive years. The cache retains older annual observations as Yahoo windows advance. Changing reporting currency clears incompatible observations. No SEC or other source supplements this history.
 A positive starting value is required for percentage growth. One-year net income growth can include a move from profit to loss. Multi-year CAGR requires a non-negative endpoint. Missing years and irregular fiscal spans remain unavailable.
 Below 52W high is 100 × (high − latest price) / high in matching local quote units. Zero means at the high. Lower values mean closer. A negative value means above the provider's quoted high. This differs from the existing 52-week price change.
-Annual statements load independently of full company profiles across the main-listing universe. Each publication allows a 20-minute batch with four concurrent requests, balanced across all twelve markets. Run `python refresh_data.py --growth-only --seconds 1200 --limit 30000 --workers 4` to advance the queue. Provider failures remain pending and retry after a cooldown. A rate limit stops the batch. Full profile refreshes update and retain the same annual history.
-The chart separates awaiting source fetches from unavailable or undefined values. All zone statistics describe the plotted population. Source gaps and invalid growth bases do not become zeroes.
+Annual statements load independently of full company profiles across the main-listing universe. Nightly collection allows up to four hours and 30,000 full-profile attempts with four concurrent requests, followed by a 20-minute annual-only batch. Unfetched main companies take priority across all twelve markets. Run `python refresh_data.py --growth-only --seconds 1200 --limit 30000 --workers 4` to advance the queue. Provider failures remain pending and retry after a cooldown. A rate limit stops the batch. Full profile refreshes update and retain the same annual history.
+The chart separates sources not fetched yet from unavailable or undefined values. All zone statistics describe the plotted population. Source gaps and invalid growth bases do not become zeroes.
 
 ## Stock AI analysis pack
 
@@ -222,3 +222,11 @@ Nasdaq directories refresh daily through the existing scheduled workflow. Failed
 All financial figures and prices still come from Yahoo. Ordinary share classes and operating REIT or partnership units remain eligible.
 Main listings only excludes these securities across table, chart, rankings, peers and exports. Switching it off exposes all cached listings.
 Classification remains practical. Unrecognised share classes and primary venues outside the covered markets remain limitations.
+
+## Overnight cloud collection
+
+The scheduled GitHub runner works without a local computer. Two bounded profile batches share a four-hour budget. A halfway cache checkpoint and a final cache save preserve collected records. The published recovery archive restores public histories if the Actions cache is lost. Stock details are compressed without dropping statements or dividend events. Each nightly run refreshes quotes and FX. Weekly profile caching avoids repeatedly fetching companies already collected. The initial collection can take several nights. Yahoo rate limits stop additional profile requests and retain the completed records for later runs. Missing provider history remains unavailable.
+
+The Pages site reads a published snapshot. Opening the chart does not start a source scan. Refresh data reloads the latest publication. Data coverage links to the cloud workflow and shows the last completed batch. GitHub can delay scheduled runs. Public repository schedules can be disabled after 60 days without repository activity.
+
+Manual Actions runs accept `enrich_limit` up to 30000 and `refresh_seconds` up to 14400. Smaller values allow a bounded refresh check. Code pushes publish the cached snapshot without the overnight scan.

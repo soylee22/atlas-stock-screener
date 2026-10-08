@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import gzip
 import hashlib
 import io
 import json
@@ -28,7 +29,7 @@ INDEX_FIELDS = list(dict.fromkeys([
     "symbol", "name", "region_code", "instrument", "active", "main_listing", "listing_reason",
     "financial_error", "financial_quality_note", "technical_version", "detail_key", "logo_url", "annual_growth_missing", "annual_growth_version", "income_fetched", "statement_version", *[field["key"] for field in model.COLUMNS],
 ]))
-META_KEYS = ["coverage", "fx", "quote_completed", "last_quote_run", "quote_error", "last_financial", "refresh_health", "annual_growth_backfill", "statement_backfill"]
+META_KEYS = ["coverage", "fx", "quote_completed", "last_quote_run", "quote_error", "last_financial", "refresh_health", "annual_growth_backfill", "statement_backfill", "cloud_refresh"]
 ICON_FILE = re.compile(r"[a-f0-9]{64}\.(png|jpg|gif|webp|ico)")
 
 
@@ -65,9 +66,12 @@ def snapshot_status(rows, metadata, icon_count, built):
     return dict(counts=counts, coverage=metadata.get("coverage", {}), fx=metadata.get("fx", {}),
         refreshing=False, completed=metadata.get("quote_completed"), error=metadata.get("quote_error"),
         last_financial=metadata.get("last_financial"), refresh_health=metadata.get("refresh_health"),
-        annual_growth_backfill=metadata.get("annual_growth_backfill"),
+        annual_growth_backfill=metadata.get("annual_growth_backfill"), statement_backfill=metadata.get("statement_backfill"),
+        cloud_refresh=metadata.get("cloud_refresh"),
         missing_fx=sum(r.get("market_cap_local") is not None and r.get("market_cap") is None for r in rows),
-        logos=dict(cached=icon_count, queued=0, downloading=0), snapshot=dict(built=built, version=1, cadence="Every four hours. Quotes refresh daily."))
+        logos=dict(cached=icon_count, queued=0, downloading=0), snapshot=dict(built=built, version=1,
+            cadence="Nightly at 01:23 UK time. Quotes daily, company profiles on a seven-day cache.",
+            actions_url="https://github.com/soylee22/atlas-stock-screener/actions/workflows/pages.yml"))
 
 
 def make_seed(destination, rows, metadata, assets, icon_root):
@@ -89,7 +93,7 @@ def make_seed(destination, rows, metadata, assets, icon_root):
                     archive.addfile(member, source)
 
 
-def build_site(database, output, seed=None):
+def build_site(database, output, seed=None, compress_details=False):
     store = model.Store(database)
     # Recompute quote-derived values when upgrading a cached snapshot.
     store.recalibrate_fx()
@@ -147,7 +151,7 @@ def build_site(database, output, seed=None):
     html = html.replace('./static/', f'./static/{version}/')
     html = html.replace("while the local service runs", "on GitHub")
     html = html.replace("Use Refresh data for a new universe scan.", "Use Refresh data to load the latest published snapshot.")
-    html = html.replace("Financials load in a rolling queue, prioritising visible rows, and are cached for seven days.", "Financials load in scheduled batches. Published snapshots update every four hours.")
+    html = html.replace("Financials load in a rolling queue, prioritising visible rows, and are cached for seven days.", "GitHub collects data nightly from 01:23 UK time. Initial collection can take several nights. Company profiles use a seven-day cache.")
     html = html.replace("Files are stored locally", "Files are stored with the published site")
     (output / "index.html").write_text(html)
     (output / ".nojekyll").write_text("")
@@ -169,7 +173,13 @@ def build_site(database, output, seed=None):
         if has_details:
             detail = dict(row)
             detail["dividend_exports"] = {mode: f"data/dividends/{row['detail_key']}-{mode}.csv" for mode in ["annual", "events"]}
-            write_json(output / "data" / "details" / (row["detail_key"] + ".json"), detail)
+            filename = output / "data" / "details" / (row["detail_key"] + ".json")
+            if compress_details:
+                filename.parent.mkdir(parents=True, exist_ok=True)
+                filename.with_suffix('.json.gz').write_bytes(gzip.compress(
+                    json.dumps(detail, ensure_ascii=False, separators=(',', ':'), allow_nan=False).encode(), mtime=0))
+            else:
+                write_json(filename, detail)
             for mode, filename in detail["dividend_exports"].items():
                 destination = output / filename
                 destination.parent.mkdir(parents=True, exist_ok=True)
@@ -177,6 +187,7 @@ def build_site(database, output, seed=None):
     write_json(output / "data" / "schema.json", dict(columns=model.COLUMNS, regions=model.REGIONS))
     write_json(output / "data" / "stocks.json", dict(version=1, built=built, fields=INDEX_FIELDS, rows=[[r.get(key) for key in INDEX_FIELDS] for r in active]))
     status = snapshot_status(active, metadata, len(assets), built)
+    status['snapshot']['detail_compression'] = 'gzip' if compress_details else None
     write_json(output / "data" / "status.json", status)
     if seed:
         # Browser-derived fields and storage are never part of the source seed.
@@ -195,8 +206,9 @@ def main():
     parser.add_argument("--database", type=Path, default=model.DB)
     parser.add_argument("--output", type=Path, default=model.ROOT / "public")
     parser.add_argument("--seed", type=Path)
+    parser.add_argument("--compress-details", action="store_true")
     args = parser.parse_args()
-    build_site(args.database, args.output, args.seed)
+    build_site(args.database, args.output, args.seed, args.compress_details)
 
 
 if __name__ == "__main__":

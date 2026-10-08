@@ -668,6 +668,35 @@ class Store:
             conn.executemany("UPDATE stocks SET data=? WHERE symbol=?",
                              [(json.dumps(dollarise(json.loads(r["data"]), fx)), r["symbol"]) for r in rows])
 
+    def enrichment_candidates(self):
+        """Scan once, serving never-fetched main companies before weekly refreshes."""
+        with self.connect() as conn:
+            rows = conn.execute("""SELECT symbol,region,enriched FROM stocks WHERE
+                (enriched < ? OR COALESCE(json_extract(data,'$.annual_growth_version'),0)<1)
+                AND attempted < ? AND json_extract(data,'$.instrument')='stock'
+                AND json_extract(data,'$.active')=1 AND COALESCE(json_extract(data,'$.main_listing'),1)=1
+                ORDER BY (enriched=0) DESC, json_extract(data,'$.market_cap') DESC""",
+                (time.time()-7*86400, time.time()-6*3600)).fetchall()
+        result = []
+        for missing in (True, False):
+            buckets = {region: [] for region in REGIONS}
+            for row in rows:
+                if (row['enriched'] == 0) == missing and row['region'] in buckets:
+                    buckets[row['region']].append(row['symbol'])
+            result.extend(buckets[region][i]
+                for i in range(max((len(v) for v in buckets.values()), default=0))
+                for region in REGIONS if i < len(buckets[region]))
+        return result
+
+    def claim_enrichment(self, symbol):
+        with self.connect() as conn:
+            cursor = conn.execute("""UPDATE stocks SET attempted=? WHERE symbol=?
+                AND (enriched < ? OR COALESCE(json_extract(data,'$.annual_growth_version'),0)<1)
+                AND attempted < ? AND json_extract(data,'$.instrument')='stock'
+                AND json_extract(data,'$.active')=1 AND COALESCE(json_extract(data,'$.main_listing'),1)=1""",
+                (time.time(), symbol, time.time()-7*86400, time.time()-6*3600))
+        return cursor.rowcount == 1
+
     def next_enrichment(self):
         with self.connect() as conn:
             conn.execute("BEGIN IMMEDIATE")

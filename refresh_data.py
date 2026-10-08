@@ -136,8 +136,9 @@ def refresh_quotes(pipeline):
         backup.unlink(missing_ok=True)
 
 
-def refresh(store, seed, seconds=720, limit=400, force_quotes=False):
+def refresh(store, seed, seconds=720, limit=400, force_quotes=False, workers=2):
     restored = restore_seed(store, seed)
+    started = model.now_iso()
     deadline = time.monotonic() + seconds
     logos = model.LogoCache(store)
     pipeline = model.Pipeline(store, logos)
@@ -149,16 +150,20 @@ def refresh(store, seed, seconds=720, limit=400, force_quotes=False):
     store.classify_listings(force=True)
     counts = dict(attempted=0, succeeded=0, failed=0)
     lock = threading.Lock()
+    queue = iter(store.enrichment_candidates())
+    rate_limited = threading.Event()
 
     def worker():
         while not pipeline.stop.is_set() and time.monotonic() < deadline:
             with lock:
                 if counts["attempted"] >= limit:
                     break
+                symbol = next(queue, None)
+                if not symbol:
+                    break
+                if not store.claim_enrichment(symbol):
+                    continue
                 counts["attempted"] += 1
-            symbol = store.next_enrichment()
-            if not symbol:
-                break
             try:
                 pipeline.enrich(symbol)
                 store.set_meta("last_financial", dict(symbol=symbol, time=model.now_iso()))
@@ -169,10 +174,12 @@ def refresh(store, seed, seconds=720, limit=400, force_quotes=False):
                 with lock:
                     counts["failed"] += 1
                 if "429" in str(exc) or "rate" in str(exc).lower():
+                    rate_limited.set()
+                    pipeline.stop.set()
                     break
             pipeline.stop.wait(.3)
 
-    workers = [threading.Thread(target=worker, daemon=True) for _ in range(2)]
+    workers = [threading.Thread(target=worker, daemon=True) for _ in range(max(1, min(4, workers)))]
     icon_workers = [threading.Thread(target=logos.loop, args=(pipeline.stop,), daemon=True) for _ in range(2)]
     for thread in workers + icon_workers:
         thread.start()
@@ -189,7 +196,10 @@ def refresh(store, seed, seconds=720, limit=400, force_quotes=False):
         thread.join(timeout=15)
     store.classify_listings(force=True)
     result = dict(seed_restored=restored, quotes_attempted=due, quotes_succeeded=quotes_ok,
-        financials=counts, icons=logos.status(), finished=model.now_iso())
+        financials=counts, icons=logos.status(), started=started, finished=model.now_iso(),
+        stop_reason='rate_limited' if rate_limited.is_set() else 'time_budget' if time.monotonic() >= deadline
+            else 'profile_limit' if counts['attempted'] >= limit else 'queue_complete',
+        remaining_eligible=len(store.enrichment_candidates()))
     store.set_meta("refresh_health", result)
     print(json.dumps(result), flush=True)
     return result
@@ -200,6 +210,7 @@ def backfill_growth(store, seconds=1200, limit=30000, workers=4, regions=None):
     deadline = time.monotonic() + seconds
     counts = dict(attempted=0, succeeded=0, failed=0, no_data=0)
     lock, stop = threading.Lock(), threading.Event()
+    rate_limited = threading.Event()
     queue = store.growth_candidates()
     if regions is not None:
         if not regions or any(region not in model.REGIONS for region in regions):
@@ -250,6 +261,7 @@ def backfill_growth(store, seconds=1200, limit=30000, workers=4, regions=None):
                 with lock:
                     counts["failed"] += 1
                 if "429" in str(exc) or "rate" in str(exc).lower():
+                    rate_limited.set()
                     stop.set()
                     return
             stop.wait(.05)
@@ -266,7 +278,7 @@ def backfill_growth(store, seconds=1200, limit=30000, workers=4, regions=None):
     stop.set()
     for thread in threads:
         thread.join(timeout=16)
-    result = dict(annual_growth=counts.copy(), finished=model.now_iso())
+    result = dict(annual_growth=counts.copy(), finished=model.now_iso(), rate_limited=rate_limited.is_set())
     store.set_meta("annual_growth_backfill", result)
     print(json.dumps(result), flush=True)
     return result
@@ -431,7 +443,7 @@ def main():
         restore_seed(store, args.seed)
         backfill_growth(store, max(1, args.seconds), max(0, args.limit), args.workers)
     else:
-        refresh(store, args.seed, max(1, args.seconds), max(0, args.limit), args.force_quotes)
+        refresh(store, args.seed, max(1, args.seconds), max(0, args.limit), args.force_quotes, args.workers)
 
 
 if __name__ == "__main__":

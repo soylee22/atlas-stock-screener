@@ -1,5 +1,6 @@
 import { customSMA, smaSettings, usesCustomSMA } from './sma-math.js';
 import { decodeSnapshot, selectSnapshot, snapshotCSV, chartCoverage } from './snapshot-engine.js';
+import { snapshotJSON } from './snapshot-json.js';
 
 export const isPublished = document.querySelector('meta[name="atlas-data-mode"]')?.content === 'snapshot';
 let loaded, checkedAt = 0, technicalCache, localTechnicalAt=0;
@@ -123,10 +124,9 @@ export async function api(input, options) {
       if (!row) return Response.json({ detail: 'Unknown symbol' }, { status: 404 });
       if (!row.detail_key) result = row;
       else {
-        if (!details.has(symbol)) details.set(symbol, fetch(new URL(`data/details/${row.detail_key}.json`, document.baseURI), {cache:"no-cache"}).then(async r => {
-          if (!r.ok) throw new Error('Company snapshot unavailable');
-          return r.json();
-        }).catch(error => { details.delete(symbol); throw error; }));
+        const compressed = data.status.snapshot.detail_compression === 'gzip';
+        if (!details.has(symbol)) details.set(symbol, fetch(new URL(`data/details/${row.detail_key}.json${compressed ? '.gz' : ''}`, document.baseURI), {cache:"no-cache"})
+          .then(r => snapshotJSON(r, compressed)).catch(error => { details.delete(symbol); throw error; }));
         result = await details.get(symbol);
       }
     } else if (url.pathname === '/api/enrich' || url.pathname === '/api/refresh') {

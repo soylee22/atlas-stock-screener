@@ -12,9 +12,14 @@ on:
       enrich_limit:
         description: Maximum company profiles in this batch
         type: number
-        default: 400
+        default: 30000
+      refresh_seconds:
+        description: Profile time budget in seconds (2 to 14400)
+        type: number
+        default: 14400
   schedule:
-    - cron: '23 */4 * * *'
+    - cron: '23 1 * * *'
+      timezone: Europe/London
 
 concurrency:
   group: atlas-pages
@@ -26,7 +31,10 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 300
+    env:
+      ENRICH_LIMIT: ${{ github.event_name == 'workflow_dispatch' && format('{0}', inputs.enrich_limit) || '30000' }}
+      REFRESH_SECONDS: ${{ github.event_name == 'workflow_dispatch' && format('{0}', inputs.refresh_seconds) || '14400' }}
     permissions:
       contents: read
       pages: read
@@ -49,6 +57,7 @@ jobs:
           node --experimental-default-type=module tests/test_quadrant.mjs
           node --experimental-default-type=module tests/test_analysis.mjs
           node --experimental-default-type=module tests/test_repairs.mjs
+          node --experimental-default-type=module tests/test_snapshot_json.mjs
           node --check static/quadrant.js
           node --check static/app.js
       - name: Restore market data cache
@@ -58,32 +67,47 @@ jobs:
           key: atlas-data-v1-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: atlas-data-v1-
       - name: Restore initial public snapshot
-        run: python refresh_data.py --seed-only
+        run: |
+          if [ ! -s data/screener.sqlite ]; then
+            mkdir -p data
+            if curl --fail --silent --show-error --max-time 240 --retry 2 https://soylee22.github.io/atlas-stock-screener/data/cache-seed.tar.gz -o data/latest-seed.tar.gz; then
+              python refresh_data.py --seed-only --seed data/latest-seed.tar.gz
+            fi
+            rm -f data/latest-seed.tar.gz
+          fi
+          python refresh_data.py --seed-only
       - name: Refresh security classifications
         if: github.event_name != 'push'
         run: python listing_types.py
       - name: Bootstrap added European markets
         if: github.event_name == 'push'
         run: python refresh_data.py --europe-only --seconds 300 --limit 600
-      - name: Refresh Yahoo data
+      - name: Overnight Yahoo refresh, first half
         if: github.event_name != 'push'
         env:
-          FORCE_QUOTES: ${{ inputs.force_quotes || 'false' }}
-          ENRICH_LIMIT: ${{ github.event_name == 'workflow_dispatch' && format('{0}', inputs.enrich_limit) || '400' }}
+          FORCE_QUOTES: ${{ github.event_name == 'schedule' || inputs.force_quotes || 'false' }}
         run: |
-          args=(--seconds 720 --limit "$ENRICH_LIMIT")
+          args=(--part 1 --seconds "$REFRESH_SECONDS" --limit "$ENRICH_LIMIT")
           if [ "$FORCE_QUOTES" = true ]; then args+=(--force-quotes); fi
-          python refresh_data.py "${args[@]}"
-      - name: Backfill financial and price history
+          python cloud_refresh.py "${args[@]}"
+      - name: Checkpoint collected data
+        if: ${{ always() && github.event_name != 'push' }}
+        uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25 # v5
+        with:
+          path: data
+          key: atlas-data-v1-${{ github.run_id }}-${{ github.run_attempt }}-checkpoint
+      - name: Overnight Yahoo refresh, second half
+        if: github.event_name != 'push'
+        run: python cloud_refresh.py --part 2 --seconds "$REFRESH_SECONDS" --limit "$ENRICH_LIMIT"
+      - name: Backfill remaining annual and statement history
         if: github.event_name != 'push'
         run: |
-          python refresh_data.py --statements-only --seconds 180 --limit 60
-          python refresh_data.py --technicals-only --seconds 180 --limit 120
-          python refresh_data.py --growth-only --seconds 1200 --limit 30000 --workers 4
+          python cloud_refresh.py --part history --seconds "$REFRESH_SECONDS"
       - name: Build public site
         run: |
-          python build_site.py --output public
+          python build_site.py --output public --compress-details --seed public/data/cache-seed.tar.gz
       - name: Preserve refreshed data
+        if: ${{ always() }}
         uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25 # v5
         with:
           path: data

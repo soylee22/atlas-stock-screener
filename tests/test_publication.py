@@ -1,4 +1,5 @@
 import json
+import gzip
 import re
 import shutil
 import sys
@@ -70,6 +71,28 @@ def test_builder_rejects_source_and_unrelated_output(tmp_path):
     with pytest.raises(ValueError, match='not an Atlas'):
         build_site.build_site(store.path, output)
     assert (output / 'precious.txt').read_text() == 'keep'
+
+
+def test_compressed_detail_and_latest_recovery_seed_preserve_full_history(tmp_path, monkeypatch):
+    monkeypatch.setattr(refresh_data, 'EUROPE_SEED', tmp_path / 'absent.json')
+    store = seeded_store(tmp_path)
+    history={'income_annual':{'currency':'USD','periods':[{'end_date':'2025-12-31','values':{'Net Income':123}}]}}
+    store.upsert_many([dict(symbol='TEST.US',region_code='us',statement_history=history)])
+    cloud=dict(run_id='123',financials=dict(attempted=20,succeeded=18,failed=2),phase='finished')
+    store.set_meta('cloud_refresh',cloud)
+    output=tmp_path/'site'
+    seed=output/'data'/'cache-seed.tar.gz'
+    build_site.build_site(store.path,output,seed,compress_details=True)
+    status=json.loads((output/'data'/'status.json').read_text())
+    assert status['snapshot']['detail_compression']=='gzip' and status['cloud_refresh']==cloud
+    details=[json.loads(gzip.decompress(p.read_bytes())) for p in (output/'data'/'details').glob('*.json.gz')]
+    assert next(r for r in details if r['symbol']=='TEST.US')['statement_history']==history
+    assert not list((output/'data'/'details').glob('*.json'))
+    assert not any('private_note' in r for r in details)
+    restored=model.Store(tmp_path/'restored'/'test.sqlite')
+    refresh_data.restore_seed(restored,seed)
+    assert restored.get('TEST.US')['statement_history']==history
+    assert restored.meta('cloud_refresh')==cloud
 
 
 def test_annual_only_stock_has_detail_without_fabricated_dividend_history(tmp_path):
