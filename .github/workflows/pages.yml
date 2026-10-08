@@ -116,7 +116,7 @@ jobs:
           python cloud_refresh.py --part history --seconds "$REFRESH_SECONDS"
       - name: Build public site
         run: |
-          python build_site.py --output public --compress-details --seed public/data/cache-seed.tar.gz
+          python build_site.py --output public --compress-details --compress-data --seed public/data/cache-seed.tar.gz
       - name: Preserve refreshed data
         if: ${{ always() }}
         uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25 # v5

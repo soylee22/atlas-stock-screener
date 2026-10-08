@@ -55,6 +55,15 @@ def write_json(path, data):
     path.write_text(json.dumps(data, ensure_ascii=False, separators=(",", ":"), allow_nan=False) + "\n")
 
 
+def write_data_json(path, data, compressed=False):
+    if not compressed:
+        write_json(path, data)
+        return
+    path.parent.mkdir(parents=True, exist_ok=True)
+    content = json.dumps(data, ensure_ascii=False, separators=(',', ':'), allow_nan=False).encode()
+    path.with_suffix('.json.gz').write_bytes(gzip.compress(content, mtime=0))
+
+
 def snapshot_status(rows, metadata, icon_count, built):
     counts = []
     for code in model.REGIONS:
@@ -64,7 +73,13 @@ def snapshot_status(rows, metadata, icon_count, built):
             main_stocks=sum(bool(r.get("main_listing")) for r in regional),
             main_enriched=sum(bool(r.get("main_listing") and r.get("financial_fetched")) for r in regional),
             fcf=sum(r.get("fcf") is not None for r in regional)))
-    return dict(counts=counts, coverage=metadata.get("coverage", {}), fx=metadata.get("fx", {}),
+    main = [r for r in rows if r.get('active') and r.get('instrument') == 'stock' and r.get('main_listing')]
+    capital_coverage = dict(main_listings=len(main), method='Calculated from matched annual Yahoo statements, not issuer-reported ROIC or ROCE.', metrics={})
+    for key in model.CAPITAL_KEYS:
+        available = sum(model.number(r.get(key)) is not None for r in main)
+        pending = sum(model.number(r.get(key)) is None and not r.get('statement_version') for r in main)
+        capital_coverage['metrics'][key] = dict(available=available, not_fetched=pending, unavailable=len(main)-available-pending)
+    return dict(capital_returns=capital_coverage, counts=counts, coverage=metadata.get("coverage", {}), fx=metadata.get("fx", {}),
         refreshing=False, completed=metadata.get("quote_completed"), error=metadata.get("quote_error"),
         last_financial=metadata.get("last_financial"), refresh_health=metadata.get("refresh_health"),
         annual_growth_backfill=metadata.get("annual_growth_backfill"), statement_backfill=metadata.get("statement_backfill"),
@@ -94,7 +109,7 @@ def make_seed(destination, rows, metadata, assets, icon_root):
                     archive.addfile(member, source)
 
 
-def build_site(database, output, seed=None, compress_details=False):
+def build_site(database, output, seed=None, compress_details=False, compress_data=False):
     store = model.Store(database)
     # Recompute quote-derived values when upgrading a cached snapshot.
     store.recalibrate_fx()
@@ -161,9 +176,9 @@ def build_site(database, output, seed=None, compress_details=False):
     for asset in assets:
         shutil.copyfile(icon_root / asset["filename"], output / "logos" / asset["filename"])
     built = model.now_iso()
-    write_json(output / "data" / "technicals.json", dict(built=built,
+    write_data_json(output / "data" / "technicals.json", dict(built=built,
         technicals={r['symbol']:r['technical_history'] for r in rows if r.get('technical_history')},
-        currencies={r['symbol']:r.get('technical_currency') for r in rows if r.get('technical_history')}))
+        currencies={r['symbol']:r.get('technical_currency') for r in rows if r.get('technical_history')}), compress_data)
     # CSV calculations use this same database and FX snapshot.
     model.store = store
     for row in active:
@@ -186,16 +201,17 @@ def build_site(database, output, seed=None, compress_details=False):
                 destination.parent.mkdir(parents=True, exist_ok=True)
                 destination.write_bytes(model.dividend_export(row["symbol"], mode).body)
     write_json(output / "data" / "schema.json", dict(columns=model.COLUMNS, regions=model.REGIONS))
-    write_json(output / "data" / "stocks.json", dict(version=1, built=built, fields=INDEX_FIELDS, rows=[[r.get(key) for key in INDEX_FIELDS] for r in active]))
+    write_data_json(output / "data" / "stocks.json", dict(version=1, built=built, fields=INDEX_FIELDS, rows=[[r.get(key) for key in INDEX_FIELDS] for r in active]), compress_data)
     status = snapshot_status(active, metadata, len(assets), built)
     status['snapshot']['detail_compression'] = 'gzip' if compress_details else None
+    status['snapshot']['index_compression'] = status['snapshot']['technical_compression'] = 'gzip' if compress_data else None
     write_json(output / "data" / "status.json", status)
     if seed:
         # Browser-derived fields and storage are never part of the source seed.
         make_seed(seed, [public_row(r) for r in rows], metadata, assets, icon_root)
     size = sum(p.stat().st_size for p in output.rglob("*") if p.is_file())
     if size > 900_000_000:
-        raise ValueError("Snapshot exceeds the Pages publication size budget")
+        raise ValueError(f"Snapshot exceeds the Pages publication size budget: {size:,} bytes")
     result = dict(built=built, stocks=sum(c["stocks"] for c in status["counts"]), main_listings=sum(c["main_stocks"] for c in status["counts"]),
         detail_files=sum(bool(r["detail_key"]) for r in active), icons=len(assets), bytes=size)
     print(json.dumps(result))
@@ -208,8 +224,9 @@ def main():
     parser.add_argument("--output", type=Path, default=model.ROOT / "public")
     parser.add_argument("--seed", type=Path)
     parser.add_argument("--compress-details", action="store_true")
+    parser.add_argument("--compress-data", action="store_true")
     args = parser.parse_args()
-    build_site(args.database, args.output, args.seed, args.compress_details)
+    build_site(args.database, args.output, args.seed, args.compress_details, args.compress_data)
 
 
 if __name__ == "__main__":

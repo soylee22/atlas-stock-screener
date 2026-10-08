@@ -6,11 +6,14 @@ export const isPublished = document.querySelector('meta[name="atlas-data-mode"]'
 let loaded, checkedAt = 0, technicalCache, localTechnicalAt=0;
 const details = new Map();
 async function snapshot() {
-  if (!loaded) loaded = Promise.all(['schema', 'status', 'stocks'].map(async name => {
+  if (!loaded) loaded = Promise.all(['schema', 'status'].map(async name => {
     const response = await fetch(new URL(`data/${name}.json`, document.baseURI), { cache: 'no-cache' });
     if (!response.ok) throw new Error('Published market data could not be loaded');
     return response.json();
-  })).then(([schema, status, data]) => {
+  })).then(async ([schema, status]) => {
+    const compressed = status.snapshot.index_compression === 'gzip';
+    const response = await fetch(new URL(`data/stocks.json${compressed ? '.gz' : ''}`, document.baseURI), {cache:'no-cache'});
+    const data = await snapshotJSON(response, compressed);
     if (data.built !== status.snapshot.built) throw new Error('Snapshot is being updated. Please retry shortly.');
     checkedAt = Date.now(); return { schema, status, rows: decodeSnapshot(data) };
   }).catch(error => { loaded = undefined; throw error; });
@@ -22,7 +25,8 @@ async function customData(params) {
   let data,technical;
   if(isPublished) {
     data=await snapshot();
-    technicalCache ||= fetch(new URL('data/technicals.json',document.baseURI),{cache:'no-cache'}).then(r=>{if(!r.ok)throw new Error('Cached price history unavailable');return r.json();}).catch(e=>{technicalCache=undefined;throw e;});
+    const compressed=data.status.snapshot.technical_compression==='gzip';
+    technicalCache ||= fetch(new URL(`data/technicals.json${compressed?'.gz':''}`,document.baseURI),{cache:'no-cache'}).then(r=>snapshotJSON(r,compressed)).catch(e=>{technicalCache=undefined;throw e;});
     technical=await technicalCache;
     if(technical.built&&technical.built!==data.status.snapshot.built)throw new Error('Price snapshot is updating. Refresh data and retry.');
   } else {

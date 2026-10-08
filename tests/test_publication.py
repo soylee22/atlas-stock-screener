@@ -195,3 +195,21 @@ def test_complete_statement_history_survives_publication_and_seed(tmp_path, monk
     restored=model.Store(tmp_path/'restored'/'test.sqlite')
     refresh_data.restore_seed(restored,seed)
     assert restored.get('TEST.US')['statement_history']==history
+
+
+def test_compressed_index_and_price_histories_preserve_every_observation(tmp_path):
+    store=seeded_store(tmp_path)
+    history={'daily':{'dates':['2025-01-01','2025-01-02'],'closes':[100,101]},'weekly':{'dates':['2025-01-03'],'closes':[102]}}
+    store.upsert_many([dict(symbol='TEST.US',region_code='us',technical_history=history,technical_currency='USD')])
+    output=tmp_path/'compressed'
+    build_site.build_site(store.path,output,compress_details=True,compress_data=True)
+    assert not (output/'data'/'stocks.json').exists()
+    index=json.loads(gzip.decompress((output/'data'/'stocks.json.gz').read_bytes()))
+    prices=json.loads(gzip.decompress((output/'data'/'technicals.json.gz').read_bytes()))
+    assert len(index['rows'])==len(model.REGIONS)
+    assert prices['technicals']['TEST.US']==history
+    status=json.loads((output/'data'/'status.json').read_text())
+    assert status['snapshot']['index_compression']==status['snapshot']['technical_compression']=='gzip'
+    assert index['built']==prices['built']==status['snapshot']['built']
+    assert 'roic_proxy' in status['capital_returns']['metrics']
+    assert status['capital_returns']['main_listings']==sum(c['main_stocks'] for c in status['counts'])
