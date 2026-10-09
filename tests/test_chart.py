@@ -60,6 +60,9 @@ def test_chart_income_fetch_does_not_pretend_full_profile_loaded(tmp_path, monke
 
 
 def test_analysis_peers_are_global_compact_and_exclude_wrappers(tmp_path,monkeypatch):
+    import primary_listings
+    monkeypatch.setattr(primary_listings, 'catalogue', lambda: {
+        s: dict(primary=True, source='NYSE:'+s, type='stock', types=['common']) for s in ['TARGET','PEER','OTHER']})
     store=model.Store(tmp_path/'peers.sqlite')
     shared=dict(region_code='us',active=True,instrument='stock',exchange='NYSE',sector='Technology',industry='Software')
     store.upsert_many([dict(shared,symbol='TARGET',name='Target'),dict(shared,symbol='PEER',name='Peer',private_note='secret',dividend_events=[{'date':'2025-01-01','amount':1}]),dict(shared,symbol='PEER.OTC',name='Peer',exchange='PNK'),dict(shared,symbol='OTHER',sector='Energy',industry='Oil')])

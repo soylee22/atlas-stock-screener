@@ -90,6 +90,8 @@ jobs:
       - name: Refresh security classifications
         if: github.event_name != 'push'
         run: python listing_types.py
+      - name: Refresh primary-listing designations
+        run: python primary_listings.py
       - name: Bootstrap added European markets
         if: github.event_name == 'push'
         run: python refresh_data.py --europe-only --seconds 300 --limit 600

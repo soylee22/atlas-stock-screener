@@ -47,6 +47,9 @@ def test_verified_currency_survives_store_merge_without_aging_profile(tmp_path):
 
 
 def test_rolling_technical_queue_advances_missing_data_and_refreshes_stale(tmp_path,monkeypatch):
+    import primary_listings
+    monkeypatch.setattr(primary_listings, 'catalogue', lambda: {
+        f'T{i}': dict(primary=True, source=f'NYSE:T{i}', type='stock', types=['common']) for i in range(6)})
     import refresh_data
     store=app.Store(tmp_path/'queue.sqlite')
     for i in range(6):

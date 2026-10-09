@@ -125,9 +125,10 @@ MAIN_EXCHANGES = {
 }
 
 
-def main_listing_flags(rows):
-    """Choose home-market counterparts globally, before user filters are applied."""
+def main_listing_flags(rows, primary_types=None):
+    """Apply security exclusions and, when supplied, explicit primary designations."""
     from listing_types import catalogue, security_reason
+    from primary_listings import exclusion
     security_types = catalogue()
     flags, groups = {}, {}
     for row in rows:
@@ -153,6 +154,13 @@ def main_listing_flags(rows):
             reason = "London international or secondary quote"
         elif region == "it" and re.match(r"^1[A-Z].*\.MI$", symbol):
             reason = "Italian quote of a foreign equity"
+        if not reason and primary_types is not None:
+            record = primary_types.get(symbol)
+            reason = exclusion(record)
+            flags[symbol] = dict(main_listing=reason is None,
+                listing_reason=reason or ("Ordinary share class on primary venue (" if record.get('ordinary_class_of')
+                    else "Primary listing confirmed (") + record['source'] + ")")
+            continue
         flags[symbol] = dict(main_listing=False, listing_reason=reason)
         if reason:
             continue
@@ -754,20 +762,21 @@ class Store:
         return None
 
     def classify_listings(self, force=False):
-        # Refresh the classification as home-country profiles become available.
+        from primary_listings import catalogue as primary_catalogue
+        # Cached designations apply before market, financial and chart filters.
         with self.listing_lock:
-            if not force and self.meta("listing_policy_version", 0) == 10 and time.time() - self.meta("listing_classified", 0) < 300:
+            if not force and self.meta("listing_policy_version", 0) == 11 and time.time() - self.meta("listing_classified", 0) < 300:
                 return
             with self.connect() as conn:
                 keys = ['symbol','name','region_code','exchange','domicile','instrument','active','price','volume','avg_volume','main_listing','listing_reason','industry']
                 projection = "json_object("+','.join(f"'{key}',json_extract(data,'$.{key}')" for key in keys)+")"
                 rows = [json.loads(r[0]) for r in conn.execute("SELECT "+projection+" FROM stocks")]
-                flags = main_listing_flags(rows)
+                flags = main_listing_flags(rows, primary_catalogue())
                 changes = [(json.dumps(flags[r['symbol']]['main_listing']),flags[r['symbol']]['listing_reason'],r['symbol']) for r in rows
                     if r.get('main_listing') != flags[r['symbol']]['main_listing'] or r.get('listing_reason') != flags[r['symbol']]['listing_reason']]
                 conn.executemany("UPDATE stocks SET data=json_set(data,'$.main_listing',json(?),'$.listing_reason',?) WHERE symbol=?", changes)
             self.set_meta("listing_classified", time.time())
-            self.set_meta("listing_policy_version", 10)
+            self.set_meta("listing_policy_version", 11)
 
 
 def query_sql(search="", regions="", filters="[]", sort="market_cap", direction="desc", include_other=False, only_symbols="", main_only=False):

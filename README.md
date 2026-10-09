@@ -25,12 +25,16 @@ The optional local service supports immediate refreshes and priority company loa
 
 Select market cards to combine the UK, US, Canada, Japan, South Korea, Taiwan, Germany, Spain, Italy, the Netherlands, Denmark and Sweden.
 Main listings only is enabled by default.
-It hides OTC quotes, London secondary venues, recognised depositary wrappers, funds and leveraged products.
-Matching company names prefer a home-market counterpart across the complete twelve-market universe.
-When Yahoo home-country data is absent, the busiest recognised exchange listing is retained.
-Separate share classes in the chosen market remain visible.
-The classification is practical and does not certify an exchange's primary-listing register.
-Switch it off to restore all stock listings. The switch is saved with your screen.
+Only explicitly confirmed primary listings are eligible, including genuine ordinary share classes.
+TradingView's public screener supplies primary-exchange designations using exact venue and ticker mappings.
+Prices, financial statements and dividends remain Yahoo data.
+Foreign trading lines stay excluded when the primary market is outside the twelve covered markets.
+Unknown mappings are excluded until confirmed. Switch the filter off to view them.
+OTC quotes, recognised wrappers, preferred securities and other products remain excluded.
+Domicile and trading volume do not establish primary status.
+The catalogue refreshes nightly and a failed refresh retains the last complete cache.
+This uses a provider designation rather than an exchange-certified primary-listing register.
+The bundled seed supplies designations for initial builds without an additional network requirement.
 Search by company name or Yahoo ticker.
 Add numeric, text, availability or missing-value filters for any column.
 Numeric filters accept `10B`, `100M`, `250K` and percentages.

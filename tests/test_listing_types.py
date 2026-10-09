@@ -83,7 +83,7 @@ def test_cached_old_flags_are_reclassified_for_table_chart_and_export(tmp_path,m
     monkeypatch.setattr(model,'store',store)
     selected,total=model.select_rows('JPM','','[]','market_cap','desc',False,'',100,0,True)
     assert total==1 and selected[0]['symbol']=='JPM'
-    assert store.meta('listing_policy_version')==10
+    assert store.meta('listing_policy_version')==11
     exported=list(csv.DictReader(io.StringIO(model.export(search='JPM',columns='symbol',main_only=True).body.decode())))
     assert [r['symbol'] for r in exported]==['JPM']
     chart=model.chart(x='net_income',y='div_years',search='JPM',main_only=True)
