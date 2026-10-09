@@ -50,6 +50,7 @@ export function chartCoverage(rows, x, y, fields) {
   const finite = value => typeof value === 'number' && Number.isFinite(value);
   const pending = (row, key) => {
     if (finite(row[key])) return false;
+    if(key === 'eps_diluted') return !row.eps_version;
     if(key.startsWith('sma_')) return !row.technical_version;
     if (/^(revenue|net_income)_growth_(1|3|5|10)y$/.test(key)) return !row.annual_growth_version;
     if (/^(roic_proxy|roce)(_(5y_avg|5y_count))?$/.test(key)) return !row.statement_version;
@@ -70,7 +71,7 @@ export function snapshotCSV(rows, schema, requested = '') {
   const allowed = new Set(['symbol', 'name', 'instrument', ...schema.columns.map(f => f.key)]);
   const columns = requested ? requested.split(',') : schema.columns.filter(f => f.default).map(f => f.key);
   if (columns.some(k => !allowed.has(k))) throw new Error('Invalid export column');
-  const keys = [...new Set(['symbol', 'name', ...columns, 'income_period', 'cf_period', 'fcf_growth_period', 'quote_time', 'financial_fetched', ...columns.filter(k=>/^(roic_proxy|roce)(_5y_avg)?$/.test(k)).map(k=>k+'_period'), ...(columns.some(k=>/^(roic_proxy|roce)(_5y_avg)?$/.test(k))?['statement_fetched']:[]), ...columns.filter(k=>k.startsWith('sma_')).map(k=>k.replace(/_distance$/,'')+'_period'), ...(columns.some(k=>k.startsWith('sma_'))?['technical_asof']:[]), ...columns.filter(k => /^(revenue|net_income)_growth_(1|3|5|10)y$/.test(k)).map(k => k + '_period'), ...(columns.some(k => /^(revenue|net_income)_growth_(1|3|5|10)y$/.test(k)) ? ['annual_growth_fetched'] : [])])];
+  const keys = [...new Set(['symbol', 'name', ...columns, 'income_period', 'cf_period', 'fcf_growth_period', 'quote_time', 'financial_fetched', ...(columns.includes('eps_diluted')?['eps_diluted_period','eps_currency','eps_fetched']:[]), ...columns.filter(k=>/^(roic_proxy|roce)(_5y_avg)?$/.test(k)).map(k=>k+'_period'), ...(columns.some(k=>/^(roic_proxy|roce)(_5y_avg)?$/.test(k))?['statement_fetched']:[]), ...columns.filter(k=>k.startsWith('sma_')).map(k=>k.replace(/_distance$/,'')+'_period'), ...(columns.some(k=>k.startsWith('sma_'))?['technical_asof']:[]), ...columns.filter(k => /^(revenue|net_income)_growth_(1|3|5|10)y$/.test(k)).map(k => k + '_period'), ...(columns.some(k => /^(revenue|net_income)_growth_(1|3|5|10)y$/.test(k)) ? ['annual_growth_fetched'] : [])])];
   const cell = value => {
     if (value == null) return '';
     let text = String(value);

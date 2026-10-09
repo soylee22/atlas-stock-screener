@@ -67,3 +67,13 @@ const capitalRows=[{...rows[0],roce:100,roce_5y_avg:20,statement_version:1},{...
 assert.deepEqual(selectSnapshot(capitalRows,capitalSchema,new URLSearchParams({sort:'roce'})).map(r=>r.symbol),['BIG','SMALL','UNKNOWN']);
 assert.deepEqual(chartCoverage(capitalRows,'roce','roce_5y_avg',Object.fromEntries(capitalSchema.columns.map(f=>[f.key,f]))),{awaiting:1,unavailable:1});
 assert.ok(snapshotCSV(capitalRows,capitalSchema,'roce,roce_5y_avg').includes('roce_5y_avg_period'));
+
+const epsSchema={...schema,columns:[...schema.columns,{key:'eps_diluted',kind:'price',group:'Financials'}]};
+const epsRows=[{...rows[0],eps_diluted:10,eps_version:1,eps_diluted_period:'TTM 2026-06-30',eps_currency:'GBP',eps_fetched:'2026-10-09'}, {...rows[1],eps_diluted:-2,eps_version:1}, {...rows[2],eps_diluted:null,eps_version:0}];
+assert.deepEqual(selectSnapshot(epsRows,epsSchema,new URLSearchParams({sort:'eps_diluted'})).map(r=>r.symbol),['BIG','SMALL','UNKNOWN']);
+assert.equal(selectSnapshot(epsRows,epsSchema,new URLSearchParams({filters:JSON.stringify([{field:'eps_diluted',op:'gte',value:0}])})).length,1);
+assert.deepEqual(chartCoverage([...epsRows,{eps_diluted:null,eps_version:1}],'eps_diluted','eps_diluted',{}),{awaiting:1,unavailable:1});
+const epsCSV=snapshotCSV(epsRows,epsSchema,'eps_diluted');
+for(const key of ['eps_diluted_period','eps_currency','eps_fetched'])assert.ok(epsCSV.includes(key));
+assert.ok(epsCSV.includes('TTM 2026-06-30'));
+console.log('EPS sorting, filtering, source coverage and dated CSV passed');

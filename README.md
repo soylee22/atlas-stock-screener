@@ -242,3 +242,12 @@ ROIC proxy and ROCE are available in columns, filters, quadrant axes, company de
 The 5Y average fields require five valid consecutive annual ratios ending at the latest FY. They are arithmetic means, not CAGR. A shorter window stays unavailable. The valid-year counts and annual history explain coverage. Yahoo usually returns four annual statements, and the earliest annual ratio also needs its opening balance. Retained source histories can build a longer window over time. Cached rows are recomputed during publication without additional Yahoo requests.
 
 The large stock index and cached price histories are also compressed on Pages. Schema and status remain plain JSON. Compression preserves every observation and prevents the growing catch-up cache from exceeding the site budget. The coverage panel reports actual capital-return availability separately from headline profile counts. Yahoo does not provide a direct ROIC field in the statement feed used here.
+
+
+### Earnings per share
+
+**Diluted EPS** is an optional Financials column, filter and quadrant axis. It also appears in company details and AI packs. Select it in Columns. The figure sums the latest four consecutive quarterly Diluted EPS observations when complete, otherwise it uses the latest annual figure. Missing values, unknown reporting currency and gaps remain unavailable. Negative earnings and zero EPS are retained.
+
+The table reports USD per share at current cached reporting-currency FX. Its CSV automatically includes the EPS period, reporting currency and statement fetch time. Statement history retains local per-share observations for trends. No extra Yahoo request is made for this metric.
+
+Quarterly EPS can use different diluted weighted-average share counts. Their rolling sum is not a recalculated annual weighted-share ratio. Yahoo split treatment is retained. Different share denominations make absolute EPS unsuitable for comparing business quality or cheapness between companies. Use EPS trends alongside total income and valuation.

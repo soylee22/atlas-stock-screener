@@ -41,6 +41,39 @@ def retain_statement(frame, currency, frequency, previous=None, fetched=None):
                 periods=[periods[day] for day in sorted(periods)])
 
 
+def earnings_per_share(history):
+    """Reported diluted EPS. Rolling quarterly sum, otherwise latest FY. Never infer shares."""
+    result = dict(eps_diluted_local=None, eps_diluted_period=None, eps_currency=None,
+                  eps_fetched=None, eps_version=0, eps_reason='Awaiting Yahoo income statements')
+    sources = [history.get('income_'+frequency, {}) for frequency in ('quarterly', 'annual')]
+    result['eps_version'] = int(any(s.get('periods') or s.get('fetched_at') for s in sources))
+    result['eps_fetched'] = max((s['fetched_at'] for s in sources if s.get('fetched_at')), default=None)
+    for frequency, source in zip(('quarterly', 'annual'), sources):
+        currency = source.get('currency')
+        if not currency or source.get('status') == 'currency_conflict':
+            continue
+        periods = sorted(source.get('periods', []), key=lambda p: p['end_date'])
+        window = periods[-4:] if frequency == 'quarterly' else periods[-1:]
+        if not window or frequency == 'quarterly' and len(window) != 4:
+            continue
+        dates = [date.fromisoformat(p['end_date']) for p in window]
+        annual_dates = [p['end_date'] for p in sources[1].get('periods', [])]
+        if frequency == 'quarterly' and annual_dates and max(annual_dates) > window[-1]['end_date']:
+            continue
+        if frequency == 'quarterly' and not all(70 <= (b-a).days <= 110 for a,b in zip(dates, dates[1:])):
+            continue
+        values = [finite(p.get('values', {}).get('Diluted EPS')) for p in window]
+        if any(v is None for v in values):
+            continue
+        result.update(eps_diluted_local=sum(values), eps_currency=currency,
+            eps_diluted_period=('TTM ' if frequency == 'quarterly' else 'FY ')+window[-1]['end_date'],
+            eps_fetched=source.get('fetched_at'), eps_reason=None)
+        return result
+    if result['eps_version']:
+        result['eps_reason'] = 'Needs four consecutive quarterly Diluted EPS values or latest annual Diluted EPS, with verified reporting currency'
+    return result
+
+
 RETURN_METHODS = {
     'roic_proxy': 'Operating income × (1 − Tax Provision / Pretax Income) / average(Total Debt + Stockholders Equity − Cash And Cash Equivalents)',
     'roce': 'EBIT / average(Total Assets − Current Liabilities)',

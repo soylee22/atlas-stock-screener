@@ -72,3 +72,8 @@ const returnsHTML=capitalReturnsHTML(returnsRow);
 assert.ok(returnsHTML.includes('3/5 valid annual ratios')&&returnsHTML.includes('15.00%')&&returnsHTML.includes('2025-06-30'));
 assert.ok(capitalReturnsHTML({...returnsRow,roce_reason:'<script>unsafe</script>',roce:null}).includes('&lt;script&gt;'));
 assert.ok(ANALYSIS_PROMPT.includes('not CAGR'));
+
+const epsPack=buildAnalysisPack({...stock,eps_diluted:2.5,eps_diluted_local:2,eps_currency:'GBP',eps_diluted_period:'FY 2026-06-30',eps_fetched:'2026-10-09'},[],{columns:[...schema.columns,{key:'eps_diluted',label:'Diluted EPS',kind:'price'}]},status,{now:'2026-10-09'});
+assert.equal(epsPack.data.current_stock.eps_diluted,2.5);
+assert.equal(epsPack.data.earnings_per_share.diluted_local,2);
+assert.equal(epsPack.data.earnings_per_share.period,'FY 2026-06-30');

@@ -75,6 +75,10 @@ COLUMNS = [
     col("exchange", "Exchange", "text", True),
     col("change", "Day change", "percent", group="Performance"),
     col("revenue", "Revenue", "usd", group="Financials"),
+    col("eps_diluted", "Diluted EPS", "price", group="Financials", description="Reported earnings per diluted share in USD at current FX. Sum of four consecutive quarterly EPS values, otherwise latest FY. Check its own period. Not a valuation measure and not comparable across different share denominations."),
+    col("eps_diluted_period", "Diluted EPS period", "text", group="Financials"),
+    col("eps_currency", "EPS reporting currency", "text", group="Financials"),
+    col("eps_fetched", "EPS statements fetched", "text", group="Financials"),
     *GROWTH_COLUMNS,
     col("operating_cf", "Operating cash flow", "usd", group="Cash flow"),
     col("fcf_delta", "FCF change $", "usd", group="Cash flow", description="Latest FY less preceding FY, converted using the current cached FX rate."),
@@ -399,6 +403,9 @@ def dollarise(row, fx):
     if row.get("statement_history"):
         from statements import capital_returns
         row.update(capital_returns(row["statement_history"], row.get("sector")))
+    from statements import earnings_per_share
+    row.update(earnings_per_share(row.get("statement_history", {})))
+    row["eps_diluted"] = None if conflict else usd(row["eps_diluted_local"], row["eps_currency"], fx)
     for key in MONETARY_FINANCIAL:
         currency = row.get("financial_field_currencies", {}).get(key, row.get("financial_currency"))
         row[key] = None if conflict else usd(row.get(key + "_local"), currency, fx)
@@ -1156,7 +1163,7 @@ def chart(x: str = "net_income", y: str = "div_years", search: str = "", regions
         raise HTTPException(400, str(exc)) from exc
     keys = sorted({"symbol", "name", "region", "region_code", "sector", "industry", "exchange",
                    "income_period", "cf_period", "fcf_growth_period", "financial_fetched", "quote_time", x, y,
-                   "technical_asof", *[key.removesuffix("_distance") + "_period" for key in (x, y) if key in GROWTH_KEYS or key in CAPITAL_KEYS or key.startswith("sma_")]})
+                   "technical_asof", "eps_version", "eps_fetched", "eps_currency", *[key.removesuffix("_distance") + "_period" for key in (x, y) if key in GROWTH_KEYS or key in CAPITAL_KEYS or key == "eps_diluted" or key.startswith("sma_")]})
     # Project only plot fields and paired values. Do not load every dividend event or description.
     projection = "json_object(" + ",".join(f"'{key}',json_extract(data,'$.{key}')" for key in keys) + ")"
     paired = " AND ".join(f"json_type(data,'$.{key}') IN ('integer','real')" for key in {x, y})
@@ -1166,6 +1173,8 @@ def chart(x: str = "net_income", y: str = "div_years", search: str = "", regions
             source = "COALESCE(json_extract(data,'$.technical_version'),0)<1"
         elif key in GROWTH_KEYS:
             source = "COALESCE(json_extract(data,'$.annual_growth_version'),0)<1"
+        elif key == "eps_diluted":
+            source = "COALESCE(json_extract(data,'$.eps_version'),0)<1"
         elif key in {"roic_proxy", "roce", "roic_proxy_5y_avg", "roce_5y_avg", "roic_proxy_5y_count", "roce_5y_count"}:
             source = "COALESCE(json_extract(data,'$.statement_version'),0)<1"
         elif key in {"net_income", "revenue", "net_margin"}:
@@ -1291,7 +1300,8 @@ def export(search: str = "", regions: str = "", filters: str = "[]", sort: str =
     if not all(k in FIELDS for k in selected):
         raise HTTPException(400, "Unknown export column")
     selected = list(dict.fromkeys(["symbol", "name"] + selected + ["income_period", "cf_period", "fcf_growth_period", "quote_time", "financial_fetched"]
-                                 + [key.removesuffix("_distance") + "_period" for key in selected if key in GROWTH_KEYS or key in CAPITAL_KEYS or key.startswith("sma_")]
+                                 + [key.removesuffix("_distance") + "_period" for key in selected if key in GROWTH_KEYS or key in CAPITAL_KEYS or key == "eps_diluted" or key.startswith("sma_")]
+                                 + (["eps_currency", "eps_fetched"] if "eps_diluted" in selected else [])
                                  + (["technical_asof"] if any(key.startswith("sma_") for key in selected) else [])
                                  + (["annual_growth_fetched"] if any(key in GROWTH_KEYS for key in selected) else [])
                                  + (["statement_fetched"] if any(key in CAPITAL_KEYS for key in selected) else [])))
