@@ -17,6 +17,7 @@ const options={x:'nav_return_3y',y:'williams_r',xPrefer:'higher',yPrefer:'lower'
 const model=quadrantModel(rows,options,Object.fromEntries(schema.columns.map(f=>[f.key,f])));
 assert.equal(model.points.length,2);assert.equal(model.frontier.length,1);assert.equal(model.frontier[0].row.symbol,'SMALL');
 assert.match(rankedCSV(orderPoints(model.points,'balanced'),options),/nav_return_3y_percent/);
+assert.match(rankedCSV(orderPoints(model.points,'balanced'),options),/williams_source_note/);
 // Browser state is isolated without applying the stock capital policy.
 globalThis.document={querySelector:selector=>selector.includes('atlas-universe')?{content:'etf'}:null};
 const {defaultFilters,defaultSort,storageKey}=await import('../static/universe.js');

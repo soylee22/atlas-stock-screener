@@ -12,9 +12,11 @@ from pathlib import Path
 import re
 import time
 
+import pandas as pd
 import requests
 import yfinance as yf
 from technicals import technical_values
+from market_sessions import SessionCutoff
 
 ROOT = Path(__file__).resolve().parent
 CATALOGUE = ROOT / 'seed' / 'etfs-2026-10-09.csv'
@@ -41,7 +43,7 @@ COLUMNS = [
     column('product_type', 'Product type', default=False, description='ETF, ETC or ETP where explicitly stated in the imported name. Otherwise type unconfirmed.'),
     column('exposure', 'Exposure', default=False, description='Leveraged or inverse only where explicitly named. Standard / unspecified is not a certified exclusion of leverage.'),
     column('nav_return_3y', 'NAV total return 3Y', 'percent', description='Cumulative three-year NAV total return imported on 9 October 2026. Return currency is not supplied. Not CAGR or market-price return.'),
-    column('williams_r', 'Williams %R · weekly', 'number', True, 'Technicals', '14 weekly Yahoo OHLC candles. Oversold <= -80. Includes the developing week through the previous session.'),
+    column('williams_r', 'Williams %R · weekly', 'number', True, 'Technicals', '14 weekly Yahoo OHLC candles. Oversold <= -80. Includes the developing week through the latest completed exchange session.'),
     column('holdings', 'Holdings', 'integer', False),
     column('quote_currency', 'Quote currency', default=False),
     column('change', 'Session change', 'percent', False, 'Price', 'Change between the last two completed Yahoo daily closes. CSV 1-day change is the fallback.'),
@@ -161,12 +163,17 @@ def identity_error(row, metadata):
     return None
 
 
-def apply_history(row, history, metadata, today=None):
+def apply_history(row, history, metadata, today=None, *, asof=None):
     error = identity_error(row, metadata)
     if error:
         raise ValueError(error)
-    today = today or date.today()
-    complete = history[history.index.date < today].dropna(subset=['Close']).sort_index()
+    history = history.copy()
+    history.index = pd.to_datetime(history.index)
+    if history.index.tz is not None:
+        history.index = history.index.tz_localize(None)
+    cutoff = SessionCutoff(today, asof=asof, metadata=metadata, region='gb')
+    today = cutoff.today
+    complete = cutoff.completed(history).dropna(subset=['Close']).sort_index()
     if complete.empty:
         raise ValueError('Yahoo returned no completed sessions')
     latest = float(complete.Close.iloc[-1])
@@ -182,7 +189,7 @@ def apply_history(row, history, metadata, today=None):
     currency = metadata['currency']
     out = dict(row, mapping_status='Verified', mapping_reason=None, yahoo_name=metadata.get('longName') or metadata.get('shortName'),
         exchange='LSE', region='UK / London', quote_currency=currency, yahoo_instrument_type=metadata.get('instrumentType'))
-    out.update(technical_values(coherent, currency, today, validate_daily_close=False))
+    out.update(technical_values(coherent, currency, validate_daily_close=False, asof=cutoff.asof, metadata=metadata, region='gb'))
     out['history_regime_start'] = str(regime_start.date()) if regime_start is not None else None
     out['history_quality_note'] = 'A price discontinuity above twenty-fold was detected. Indicators use only the subsequent consistent segment. No unit correction is guessed.' if regime_start is not None else None
     candles=coherent[['High','Low','Close']]
@@ -247,8 +254,9 @@ def refresh(cache_path=CACHE, seconds=1200, limit=1000, fetcher=None):
     cache['refresh'] = checkpoint
     cutoff = datetime.now(timezone.utc) - timedelta(hours=20)
     retry = datetime.now(timezone.utc) - timedelta(hours=6)
-    due = lambda row: row.get('etf_history_version') != 3 or not row.get('technical_fetched') or datetime.fromisoformat(row['technical_fetched']) < cutoff
-    ready = lambda row: (row.get('technical_fetched') and row.get('etf_history_version')!=3) or not row.get('history_attempted') or datetime.fromisoformat(row['history_attempted']) < retry
+    session_date, session_ready = SessionCutoff(region='gb').latest_session()
+    due = lambda row: row.get('etf_history_version') != 4 or not row.get('technical_fetched') or datetime.fromisoformat(row['technical_fetched']) < cutoff or (row.get('technical_asof') or '') < session_date
+    ready = lambda row: (row.get('technical_fetched') and row.get('etf_history_version')!=4) or not row.get('history_attempted') or datetime.fromisoformat(row['history_attempted']) < retry or (row.get('technical_fetched') and datetime.fromisoformat(row['history_attempted']) < session_ready)
     candidates = sorted([r for r in cache['rows'] if due(r) and ready(r)], key=lambda r: (bool(r.get('technical_fetched')), r.get('technical_fetched') or '', -(r.get('aum_local') or 0), r['symbol']))
     deadline = time.monotonic() + seconds
     for row in candidates[:limit]:
@@ -265,7 +273,7 @@ def refresh(cache_path=CACHE, seconds=1200, limit=1000, fetcher=None):
                 metadata = ticker.history_metadata
             refreshed = apply_history(row, history, metadata)
             refreshed['history_error'] = None
-            refreshed['etf_history_version'] = 3
+            refreshed['etf_history_version'] = 4
             row.clear()
             row.update(refreshed)
             checkpoint['succeeded'] += 1
@@ -326,7 +334,7 @@ def publish(output, fx, built, cache_path=CACHE, compress=True):
     fields = ['symbol','name','instrument','active','main_listing','region_code','region','detail_key',
         'catalogue_source','catalogue_price_local','price_source','history_error','mapping_reason','nav_return_currency','nav_return_3y_period',
         'aum_period','expense_ratio_period','price_local','aum_local','aum_currency','turnover_local','turnover_currency','quote_time','technical_version','technical_asof',
-        'history_quality_note','history_regime_start','williams_input_note','williams_daily_range_discrepancies','williams_version','williams_reason','williams_asof','williams_zone','williams_r_period','williams_provisional',
+        'history_quality_note','history_regime_start','williams_input_note','williams_daily_range_discrepancies','technical_calendar','williams_source_note','williams_version','williams_reason','williams_asof','williams_zone','williams_r_period','williams_provisional',
         'sma_200d_period','sma_200w_period','below_52w_high_period', *[c['key'] for c in COLUMNS]]
     fields = list(dict.fromkeys(fields))
     write('schema.json', dict(universe='etf', columns=COLUMNS, regions=REGIONS))

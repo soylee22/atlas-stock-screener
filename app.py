@@ -75,7 +75,7 @@ COLUMNS = [
     col("div_years", "Div growth years", "integer", True, "Dividends", "Observed consecutive increases in total annual dividends per share, ending in the latest completed calendar year. History can be incomplete."),
     col("div_growth", "Div growth 5Y", "percent", True, "Dividends", "Five-year CAGR of local-currency annual dividends per share over completed calendar years. Requires both endpoints and all intervening years."),
     col("exchange", "Exchange", "text", True),
-    col("williams_r", "Weekly Williams %R", "number", True, "Technicals", "14 weekly High/Low/Close candles through the previous completed session. Current week is provisional. Oversold <= -80, overbought >= -20. Momentum position, not intrinsic value."),
+    col("williams_r", "Weekly Williams %R", "number", True, "Technicals", "14 weekly High/Low/Close candles through the latest completed exchange session. Current-day closes are eligible 30 minutes after exchange close. Oversold <= -80, overbought >= -20. Momentum position, not intrinsic value."),
     col("williams_zone", "Williams zone", "text", group="Technicals"),
     col("williams_r_period", "Williams period", "text", group="Technicals"),
     col("williams_asof", "Williams source date", "text", group="Technicals"),
@@ -1038,7 +1038,8 @@ class Pipeline:
             # Explicit start avoids invalid 'max' ranges on some secondary listings.
             history = ticker.history(start="1900-01-01", auto_adjust=False, actions=True, raise_errors=True)
             from technicals import technical_values
-            values.update(technical_values(history,ticker.get_history_metadata().get("currency")))
+            metadata=ticker.get_history_metadata()
+            values.update(technical_values(history,metadata.get("currency"),metadata=metadata,region=row["region_code"]))
             dividends = history["Dividends"][history["Dividends"] != 0] if "Dividends" in history else pd.Series(dtype=float)
             values.update(dividend_values(dividends))
             values["dividend_events"] = [dict(date=str(d.date()), amount=number(amount)) for d, amount in dividends.items()]
@@ -1177,7 +1178,7 @@ def chart(x: str = "net_income", y: str = "div_years", search: str = "", regions
         raise HTTPException(400, str(exc)) from exc
     keys = sorted({"symbol", "name", "region", "region_code", "sector", "industry", "exchange",
                    "income_period", "cf_period", "fcf_growth_period", "financial_fetched", "quote_time", x, y,
-                   "technical_asof", "williams_asof", "williams_zone", "williams_version", "eps_version", "eps_fetched", "eps_currency", *[key.removesuffix("_distance") + "_period" for key in (x, y) if key in GROWTH_KEYS or key in CAPITAL_KEYS or key in {"eps_diluted", "williams_r"} or key.startswith("sma_")]})
+                   "technical_asof", "technical_calendar", "williams_source_note", "williams_provisional", "williams_asof", "williams_zone", "williams_version", "eps_version", "eps_fetched", "eps_currency", *[key.removesuffix("_distance") + "_period" for key in (x, y) if key in GROWTH_KEYS or key in CAPITAL_KEYS or key in {"eps_diluted", "williams_r"} or key.startswith("sma_")]})
     # Project only plot fields and paired values. Do not load every dividend event or description.
     projection = "json_object(" + ",".join(f"'{key}',json_extract(data,'$.{key}')" for key in keys) + ")"
     paired = " AND ".join(f"json_type(data,'$.{key}') IN ('integer','real')" for key in {x, y})
@@ -1216,7 +1217,7 @@ def chart(x: str = "net_income", y: str = "div_years", search: str = "", regions
 def technical_screen():
     # Custom SMA screening uses the same browser calculation in local and Pages modes.
     store.classify_listings()
-    keys = sorted(set(["symbol","name","region_code","instrument","active","main_listing","listing_reason","annual_growth_version","income_fetched","statement_version","technical_version", *FIELDS]))
+    keys = sorted(set(["symbol","name","region_code","instrument","active","main_listing","listing_reason","annual_growth_version","income_fetched","statement_version","technical_version", "technical_calendar", "williams_source_note", "williams_provisional", *FIELDS]))
     parts = ["json_object("+','.join(f"'{k}',json_extract(data,'$.{k}')" for k in keys[i:i+32])+")" for i in range(0,len(keys),32)]
     projection = parts[0]
     for part in parts[1:]: projection = "json_patch("+projection+","+part+")"

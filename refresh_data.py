@@ -362,9 +362,20 @@ def backfill_technicals(store,seconds=180,limit=120):
     with store.connect() as conn:
         rows=[json.loads(r[0]) for r in conn.execute("""SELECT data FROM stocks WHERE
             json_extract(data,'$.active')=1 AND json_extract(data,'$.main_listing')=1
-            AND COALESCE(json_extract(data,'$.technical_attempted'),0)<?
-            AND (COALESCE(json_extract(data,'$.williams_version'),0)<1 OR COALESCE(json_extract(data,'$.technical_fetched'),'')<?)
-            """ + model.COLLECTION_SCOPE + """ ORDER BY json_extract(data,'$.market_cap') DESC""",(time.time()-6*3600,model.datetime.fromtimestamp(time.time()-86400,model.timezone.utc).isoformat()))]
+            """ + model.COLLECTION_SCOPE + """ ORDER BY json_extract(data,'$.market_cap') DESC""")]
+    from market_sessions import SessionCutoff
+    cutoffs = {}
+    def due(row):
+        venue = (row.get('exchange'), row['region_code'])
+        if venue not in cutoffs:
+            cutoffs[venue] = SessionCutoff(metadata={'exchange':venue[0]}, region=venue[1]).latest_session()
+        session_date, session_ready = cutoffs[venue]
+        upgrade = (row.get('williams_version') or 0) < 2
+        stale = (row.get('technical_fetched') or '') < model.datetime.fromtimestamp(time.time()-86400,model.timezone.utc).isoformat()
+        new_session = session_date and (row.get('technical_asof') or '') < session_date
+        ready = upgrade or row.get('technical_attempted',0) < time.time()-6*3600 or (session_ready is not None and row.get('technical_attempted',0) < session_ready.timestamp())
+        return (upgrade or stale or new_session) and ready
+    rows = [row for row in rows if due(row)]
     priority={'AAPL','MSFT','NVDA','GOOG','KO','PEP','JNJ','PG','O','JPM','HSBA.L','RY.TO','7203.T','005930.KS','2330.TW','241560.KS'}
     queue=[r for r in rows if r['symbol'] in priority]
     buckets={c:[r for r in rows if r['region_code']==c and r['symbol'] not in priority] for c in model.REGIONS}
@@ -386,7 +397,8 @@ def backfill_technicals(store,seconds=180,limit=120):
         try:
             ticker=model.yf.Ticker(row['symbol'])
             history=ticker.history(start=model.date.fromtimestamp(time.time()-7*366*86400).isoformat(),auto_adjust=False,actions=False,raise_errors=True,timeout=15)
-            values=technical_values(history,ticker.get_history_metadata().get('currency'))
+            metadata=ticker.get_history_metadata()
+            values=technical_values(history,metadata.get('currency'),metadata=metadata,region=row['region_code'])
             counts['williams_available'] += int(values['williams_r'] is not None)
             values.update(symbol=row['symbol'],region_code=row['region_code'])
             store.upsert_many([values])

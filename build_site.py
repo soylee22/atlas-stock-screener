@@ -24,13 +24,13 @@ EXTRA_FIELDS = {
     "statement_history", "statement_errors", "statement_version", "statement_fetched", "roic_proxy_inputs", "roic_proxy_reason", "roce_inputs", "roce_reason",
     "capital_returns_history", "capital_returns_version", "roic_proxy_5y_avg_reason", "roce_5y_avg_reason",
     "eps_diluted_local", "eps_reason", "eps_version",
-    "williams_version", "williams_reason", "williams_provisional", "williams_high_local", "williams_low_local", "williams_close_local", "williams_oversold_price_local", "williams_overbought_price_local",
+    "technical_calendar", "williams_source_note", "williams_version", "williams_reason", "williams_provisional", "williams_high_local", "williams_low_local", "williams_close_local", "williams_oversold_price_local", "williams_overbought_price_local",
     *(key + "_local" for key in model.MONETARY_FINANCIAL),
 }
 PUBLIC_FIELDS = EXTRA_FIELDS | set(model.FIELDS)
 INDEX_FIELDS = list(dict.fromkeys([
     "symbol", "name", "region_code", "instrument", "active", "main_listing", "listing_reason",
-    "financial_error", "financial_quality_note", "technical_version", "williams_version", "williams_reason", "williams_provisional", "detail_key", "logo_url", "annual_growth_missing", "annual_growth_version", "income_fetched", "dividend_fetched", "statement_version", "eps_version", *[field["key"] for field in model.COLUMNS],
+    "financial_error", "financial_quality_note", "technical_version", "technical_calendar", "williams_source_note", "williams_version", "williams_reason", "williams_provisional", "detail_key", "logo_url", "annual_growth_missing", "annual_growth_version", "income_fetched", "dividend_fetched", "statement_version", "eps_version", *[field["key"] for field in model.COLUMNS],
 ]))
 META_KEYS = ["coverage", "fx", "quote_completed", "last_quote_run", "quote_error", "last_financial", "refresh_health", "annual_growth_backfill", "statement_backfill", "cloud_refresh", "profile_seed", "technical_backfill"]
 ICON_FILE = re.compile(r"[a-f0-9]{64}\.(png|jpg|gif|webp|ico)")

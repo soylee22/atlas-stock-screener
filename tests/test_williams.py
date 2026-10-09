@@ -52,7 +52,7 @@ def test_no_invented_range_or_missing_history(mode):
     row=technical_values(frame,'USD',date(2026,10,9))
     assert row['williams_r'] is None
     assert row['williams_reason']
-    assert row['williams_version']==1
+    assert row['williams_version']==2
 
 
 def test_collection_scope_is_usd_inclusive_and_primary(tmp_path):
