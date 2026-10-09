@@ -1093,12 +1093,18 @@ async def lifespan(app):
 
 app = FastAPI(title="Atlas stock screener", lifespan=lifespan)
 app.mount("/static", StaticFiles(directory=ROOT / "static"), name="static")
+app.mount("/etf-data", StaticFiles(directory=ROOT / "data" / "etf-public", check_dir=False), name="etf-data")
 app.mount("/logos", StaticFiles(directory=logos.root), name="logos")
 
 
 @app.get("/")
 def index():
     return FileResponse(ROOT / "static" / "index.html")
+
+
+@app.get("/etfs.html")
+def etf_index():
+    return FileResponse(ROOT / "static" / "etfs.html")
 
 
 @app.get("/api/schema")

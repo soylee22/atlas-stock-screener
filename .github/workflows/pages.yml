@@ -59,6 +59,7 @@ jobs:
           node --experimental-default-type=module tests/test_repairs.mjs
           node --experimental-default-type=module tests/test_snapshot_json.mjs
           node --experimental-default-type=module tests/test_williams.mjs
+          node --experimental-default-type=module tests/test_etfs.mjs
           node --check static/quadrant.js
           node --check static/app.js
       - name: Restore market data cache
@@ -98,6 +99,8 @@ jobs:
         run: python refresh_data.py --europe-only --seconds 300 --limit 600
       - name: Refresh large-cap weekly Williams and moving averages
         run: python refresh_data.py --technicals-only --seconds 1200 --limit 1200
+      - name: Refresh ETF price histories and retain the fund catalogue
+        run: python etfs.py --restore --seconds 1200 --limit 1000
       - name: Overnight Yahoo refresh, first half
         if: github.event_name != 'push'
         env:

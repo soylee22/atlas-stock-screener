@@ -1,0 +1,26 @@
+import assert from 'node:assert/strict';
+import { selectSnapshot, snapshotCSV, chartCoverage } from '../static/snapshot-engine.js';
+import { quadrantModel, orderPoints } from '../static/quadrant-math.js';
+import { rankedCSV } from '../static/ranked-export.js';
+const schema={universe:'etf',regions:{gb:'UK'},columns:[{key:'aum',kind:'usd',default:true},{key:'expense_ratio',kind:'percent',default:true},{key:'nav_return_3y',kind:'percent',default:true},{key:'williams_r',kind:'number',default:true},{key:'asset_class',kind:'text'}]};
+const make=(symbol,aum,fee,wr,nav=60)=>({symbol,name:symbol,active:true,instrument:'etf',main_listing:true,region_code:'gb',aum,expense_ratio:fee,williams_r:wr,nav_return_3y:nav,asset_class:'Equity',catalogue_date:'2026-10-09',nav_return_currency:null,nav_return_3y_period:'3Y cumulative · import 2026-10-09',williams_version:1,williams_r_period:'14 weeks ending 2026-10-09'});
+const rows=[make('BIG',10e9,.2,-50),make('SMALL',100e6,.07,-95),make('NONE',null,null,null)];
+let query=new URLSearchParams({sort:'aum'});
+assert.deepEqual(selectSnapshot(rows,schema,query).map(r=>r.symbol),['BIG','SMALL','NONE']);
+query.set('filters',JSON.stringify([{field:'williams_r',op:'lte',value:-80}]));
+assert.deepEqual(selectSnapshot(rows,schema,query).map(r=>r.symbol),['SMALL']);
+query.set('filters',JSON.stringify([{field:'expense_ratio',op:'lte',value:.1}]));
+assert.deepEqual(selectSnapshot(rows,schema,query).map(r=>r.symbol),['SMALL']);
+const csv=snapshotCSV(rows,schema);assert.match(csv,/aum_currency/);assert.match(csv,/nav_return_currency/);assert.doesNotMatch(csv,/income_period/);assert.match(csv,/0.07/);
+assert.deepEqual(chartCoverage(rows,'nav_return_3y','williams_r',{}),{awaiting:0,unavailable:1});
+const options={x:'nav_return_3y',y:'williams_r',xPrefer:'higher',yPrefer:'lower',xScale:'linear',yScale:'linear',split:'median',zone:'all',pareto:true,order:'balanced'};
+const model=quadrantModel(rows,options,Object.fromEntries(schema.columns.map(f=>[f.key,f])));
+assert.equal(model.points.length,2);assert.equal(model.frontier.length,1);assert.equal(model.frontier[0].row.symbol,'SMALL');
+assert.match(rankedCSV(orderPoints(model.points,'balanced'),options),/nav_return_3y_percent/);
+// Browser state is isolated without applying the stock capital policy.
+globalThis.document={querySelector:selector=>selector.includes('atlas-universe')?{content:'etf'}:null};
+const {defaultFilters,defaultSort,storageKey}=await import('../static/universe.js');
+assert.deepEqual(defaultFilters(),[]);assert.equal(defaultSort,'aum');assert.equal(storageKey('atlas.last.v1'),'atlas.etfs.last.v1');
+const {fundPacket}=await import('../static/etf-ui.js');
+const packet=fundPacket(rows[0],rows,{});assert.match(packet.prompt,/Do not equate it to CAGR/);assert.equal(packet.comparable_funds.length,2);
+console.log('ETF numeric sorting, low fees, small funds, oversold, Pareto, dated exports, browser state and fund research packet passed');

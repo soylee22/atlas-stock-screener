@@ -174,6 +174,9 @@ def build_site(database, output, seed=None, compress_details=False, compress_dat
     html = html.replace("Financials load in a rolling queue, prioritising visible rows, and are cached for seven days.", "GitHub collects data nightly from 01:23 UK time. Initial collection can take several nights. Company profiles use a seven-day cache.")
     html = html.replace("Files are stored locally", "Files are stored with the published site")
     (output / "index.html").write_text(html)
+    etf_html=(model.ROOT / 'static' / 'etfs.html').read_text().replace('href="/', 'href="./').replace('src="/', 'src="./')
+    etf_html=etf_html.replace('./static/',f'./static/{version}/').replace('content="/etf-data/"','content="data/etfs/"')
+    (output / 'etfs.html').write_text(etf_html)
     (output / ".nojekyll").write_text("")
     (output / "logos").mkdir()
     by_domain = {asset["domain"]: asset for asset in assets}
@@ -212,6 +215,8 @@ def build_site(database, output, seed=None, compress_details=False, compress_dat
     status['snapshot']['detail_compression'] = 'gzip' if compress_details else None
     status['snapshot']['index_compression'] = status['snapshot']['technical_compression'] = 'gzip' if compress_data else None
     write_json(output / "data" / "status.json", status)
+    import etfs
+    etf_status=etfs.publish(output / 'data' / 'etfs', metadata.get('fx') or {}, built, store.path.parent / 'etfs.json', compress=compress_data)
     if seed:
         # Browser-derived fields and storage are never part of the source seed.
         make_seed(seed, [public_row(r) for r in rows], metadata, assets, icon_root)
@@ -219,7 +224,7 @@ def build_site(database, output, seed=None, compress_details=False, compress_dat
     if size > 900_000_000:
         raise ValueError(f"Snapshot exceeds the Pages publication size budget: {size:,} bytes")
     result = dict(built=built, stocks=sum(c["stocks"] for c in status["counts"]), main_listings=sum(c["main_stocks"] for c in status["counts"]),
-        detail_files=sum(bool(r["detail_key"]) for r in active), icons=len(assets), bytes=size)
+        detail_files=sum(bool(r["detail_key"]) for r in active), icons=len(assets), bytes=size, etfs=etf_status)
     print(json.dumps(result))
     return result
 

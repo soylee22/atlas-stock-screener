@@ -3,16 +3,16 @@ import { quadrantModel, ZONES, validViewport, zoomViewport, panViewport, centreV
 import { escapeHtml as esc, parseNumber } from './format.js';
 
 export const quadrantDefaults = { x:'net_income', y:'div_years', xPrefer:'higher', yPrefer:'higher', xScale:'symlog', yScale:'linear', split:'median', xCut:0, yCut:10, fit:true, zone:'all', pareto:true, frontierOnly:false, order:'balanced', viewport:null };
-const lowerDefault = new Set(['pe','forward_pe','price_book','debt','delay','below_52w_high','williams_r']);
+const lowerDefault = new Set(['pe','forward_pe','price_book','debt','delay','below_52w_high','williams_r','expense_ratio']);
 const number = n => n.toLocaleString('en-GB');
-export function createQuadrant(root, { fields, settings, loadData, onChange, onDetail, onExport, format }) {
+export function createQuadrant(root, { fields, defaults=quadrantDefaults, noun='stock', settings, loadData, onChange, onDetail, onExport, format }) {
   const numeric = Object.values(fields).filter(f=>f.kind !== 'text');
-  let options = { ...quadrantDefaults, ...settings }, data, model, ranked = [], seq = 0, hovered = null, screenPoints = [], geometry, drawFrame, dragging=null, suppressClick=false, clickTimer;
+  let options = { ...defaults, ...settings }, data, model, ranked = [], seq = 0, hovered = null, screenPoints = [], geometry, drawFrame, dragging=null, suppressClick=false, clickTimer;
   const pointers=new Map();
   const el = id => root.querySelector('#'+id);
   function validate() {
-    if (!numeric.some(f=>f.key === options.x)) options.x = quadrantDefaults.x;
-    if (!numeric.some(f=>f.key === options.y)) options.y = quadrantDefaults.y;
+    if (!numeric.some(f=>f.key === options.x)) options.x = numeric.some(f=>f.key===defaults.x)?defaults.x:numeric[0]?.key;
+    if (!numeric.some(f=>f.key === options.y)) options.y = numeric.some(f=>f.key===defaults.y)?defaults.y:numeric[1]?.key||numeric[0]?.key;
     for (const a of ['x','y']) {
       if (!['linear','symlog','rank'].includes(options[a+'Scale'])) options[a+'Scale'] = 'linear';
       if (!['higher','lower'].includes(options[a+'Prefer'])) options[a+'Prefer'] = 'higher';
@@ -32,6 +32,7 @@ export function createQuadrant(root, { fields, settings, loadData, onChange, onD
     el('quad-metric-note').textContent += ([options.x,options.y].some(k=>k.startsWith('sma_'))?' SMA distances: positive above, negative below. Uses the previous completed daily close and completed weeks. Change the custom window using Moving averages above. Cached price history loads progressively.':'');
     el('quad-metric-note').textContent += ([options.x,options.y].includes('williams_r')?' Weekly Williams %R: 14 weekly High/Low/Close candles through the previous completed session, including the developing week. Oversold ≤ -80, overbought ≥ -20. Lower values favour oversold position, not intrinsic value.':'');
     el('quad-metric-note').textContent += ([options.x,options.y].includes('eps_diluted')?' Diluted EPS: USD per share at current FX. TTM sums reported quarterly EPS, otherwise latest FY. Share denominations differ, so higher EPS alone does not establish business quality or value.':'');
+    if([options.x,options.y].includes('nav_return_3y'))el('quad-metric-note').textContent+=' NAV total return 3Y is cumulative and imported on 9 October 2026. Its currency and exact endpoints are unknown. Compare like exposures and verified return currencies.';
     el('quad-metric-note').hidden = !el('quad-metric-note').textContent;
     el('quad-pareto').checked=options.pareto;el('quad-frontier-only').checked=options.frontierOnly;el('quad-order').value=options.order;
     el('quad-split').value = options.split; el('quad-fit').checked = options.fit; el('quad-custom').hidden = options.split !== 'custom';
@@ -89,11 +90,11 @@ export function createQuadrant(root, { fields, settings, loadData, onChange, onD
     catch(error) { el('quad-coverage').textContent=error.message; return; }
     hovered=null;el('quad-tooltip').hidden=true;
     const n=model.points.length;
-    el('quad-frontier-count').textContent=`· ${number(model.frontier?.length||0)} stocks`;
+    el('quad-frontier-count').textContent=`· ${number(model.frontier?.length||0)} ${noun}s`;
     const coverage=data.coverage;
     el('quad-coverage').textContent=`${number(n)} plotted / ${number(model.total)} matching listings` + (coverage ? ` · ${number(coverage.awaiting)} not fetched yet · ${number(coverage.unavailable)} unavailable/undefined` : ` · ${number(model.missing)} missing one or both metrics`);
     const published=document.querySelector('meta[name="atlas-data-mode"]')?.content==='snapshot';
-    el('quad-data-note').textContent=(model.missing ? `${model.total ? (n/model.total*100).toFixed(1) : '0'}% metric coverage. Not fetched yet means a required source is absent from this snapshot. Unavailable/undefined includes missing Yahoo history or invalid growth bases. Statistics describe plotted stocks only. ` : '') + (published ? 'GitHub collects data nightly from 01:23 UK time. Initial collection can take several nights. Refresh data loads the latest published snapshot. This chart does not start a cloud scan.' : 'The local service continues collecting data while it runs.');
+    el('quad-data-note').textContent=(model.missing ? `${model.total ? (n/model.total*100).toFixed(1) : '0'}% metric coverage. Not fetched yet means a required source is absent from this snapshot. Unavailable/undefined includes missing Yahoo history or invalid growth bases. Statistics describe plotted listings only. ` : '') + (published ? 'GitHub collects data nightly from 01:23 UK time. Initial collection can take several nights. Refresh data loads the latest published snapshot. This chart does not start a cloud scan.' : 'The local service continues collecting data while it runs.');
     el('quad-fit-stats').textContent=options.fit ? model.fit ? `Best fit · r ${model.fit.r.toFixed(2)} · R² ${model.fit.r2.toFixed(3)} · n ${number(n)}`:'Best fit unavailable · needs 3 points and variation on both axes' : 'Best-fit line hidden';
     el('quad-zones').innerHTML=Object.entries(ZONES).map(([key,z])=>`<button class="quad-zone ${options.zone===key?'selected':''}" data-zone="${key}" aria-pressed="${options.zone===key}" style="--zone:${z.colour}"><span>${z.name}</span><strong>${number(model.counts[key])}<small>${n ? (model.counts[key]/n*100).toFixed(1):'0'}%</small></strong><em>${z.hint}</em></button>`).join('');
     const scaleName={linear:'linear',symlog:'signed log',rank:'percentile rank'};
@@ -101,16 +102,17 @@ export function createQuadrant(root, { fields, settings, loadData, onChange, onD
     el('quad-y-caption').textContent=`Y · ${fields[options.y].label} · ${scaleName[options.yScale]} · ${options.yPrefer} preferred`;
     const cuts=n ? `Cut-offs: X ${format(model.xcut,fields[options.x],true)}, Y ${format(model.ycut,fields[options.y],true)}. `:'';
     const text=document.createElement('span');text.innerHTML=cuts;
-    el('quad-method').textContent=text.textContent+'Cut-offs, best fit and frontier use all paired listings, including hidden zones and points outside the viewport. Ties at a cut-off go to the preferred side. Signed log retains zero and losses. Percentiles give equal weight to listings and share tied ranks. The line is ordinary least squares in the displayed scales. Zones are relative to this screen. Financial periods and dividend history coverage can differ. Frontier stocks have no other matching stock at least as good on both raw metrics and strictly better on one. The purple line joins observed frontier points, not attainable intermediate combinations.';
+    el('quad-method').textContent=text.textContent+'Cut-offs, best fit and frontier use all paired listings, including hidden zones and points outside the viewport. Ties at a cut-off go to the preferred side. Signed log retains zero and losses. Percentiles give equal weight to listings and share tied ranks. The line is ordinary least squares in the displayed scales. Zones are relative to this screen. Source dates, currencies and history coverage can differ. Frontier listings have no other matching listing at least as good on both raw metrics and strictly better on one. The purple line joins observed frontier points, not attainable intermediate combinations.';
     el('quad-empty').hidden=!!n; el('quad-empty').textContent='No paired observations in this screen. Try different metrics or wider filters. Missing values are not treated as zero.';
     const visible=orderPoints(model.points.filter(p=>(options.zone==='all'||p.zone===options.zone)&&(!options.frontierOnly||p.pareto)),options.order);
     ranked=visible;el('quad-export').disabled=!ranked.length;
     const orderName={balanced:'Balanced score, highest first',x:'Preferred X, then balanced score',y:'Preferred Y, then balanced score',frontier:'Frontier members first, then balanced score'};
-    el('quad-list-note').textContent=orderName[options.order]+'. Balanced score = 50% preferred X percentile + 50% preferred Y percentile (0 to 100). Symbol breaks exact ties. The list covers the selected zones, including stocks outside the viewport. Select a stock for its deep dive.';
+    el('quad-list-note').textContent=orderName[options.order]+'. Balanced score = 50% preferred X percentile + 50% preferred Y percentile (0 to 100). Symbol breaks exact ties. The list covers the selected zones, including listings outside the viewport. Select a listing for its deep dive.';
     el('quad-list-title').textContent=`${options.frontierOnly?'Frontier · ':''}${options.zone==='all'?'All zones':ZONES[options.zone].name} · ${number(visible.length)} listings${visible.length>100?' · top 100 shown':''}`;
     el('quad-all').hidden=options.zone==='all';
-    el('quad-stock-list').innerHTML=`<div class="quad-stock-header"><span>Company</span><span>${esc(fields[options.x].label)}</span><span>${esc(fields[options.y].label)}</span><span>Zone / frontier</span><span>Balanced score</span></div>`+visible.slice(0,100).map(p=>`<button class="quad-stock" data-detail="${esc(p.row.symbol)}"><span><b>${esc(p.row.symbol)}</b><small>${esc(p.row.name)} · ${esc(p.row.region || '')}</small></span><span>${format(p.x,fields[options.x])}</span><span>${format(p.y,fields[options.y])}</span><span class="quad-zone-tag" style="color:${ZONES[p.zone].colour}">${ZONES[p.zone].name}${p.pareto?'<small class="quad-frontier-tag">◆ Frontier</small>':''}</span><span>${p.score.toFixed(1)}</span></button>`).join('')+(n&&!visible.length?'<p class="helper">No stocks fall in this zone.</p>':'');
-    el('quad-canvas').setAttribute('aria-label',`${number(n)} stocks plotted. X: ${fields[options.x].label}. Y: ${fields[options.y].label}. ${number(model.counts.dream)} in the Dream zone. Use the stock list below for keyboard access.`);
+    el('quad-stock-list').innerHTML=`<div class="quad-stock-header"><span>${noun==='fund'?'Fund':'Company'}</span><span>${esc(fields[options.x].label)}</span><span>${esc(fields[options.y].label)}</span><span>Zone / frontier</span><span>Balanced score</span></div>`+visible.slice(0,100).map(p=>`<button class="quad-stock" data-detail="${esc(p.row.symbol)}"><span><b>${esc(p.row.symbol)}</b><small>${esc(p.row.name)} · ${esc(p.row.region || '')}</small></span><span>${format(p.x,fields[options.x])}</span><span>${format(p.y,fields[options.y])}</span><span class="quad-zone-tag" style="color:${ZONES[p.zone].colour}">${ZONES[p.zone].name}${p.pareto?'<small class="quad-frontier-tag">◆ Frontier</small>':''}</span><span>${p.score.toFixed(1)}</span></button>`).join('')+(n&&!visible.length?'<p class="helper">No listings fall in this zone.</p>':'');
+    el('quad-canvas').setAttribute('aria-label',`${number(n)} ${noun}s plotted. X: ${fields[options.x].label}. Y: ${fields[options.y].label}. ${number(model.counts.dream)} in the Dream zone. Use the list below for keyboard access.`);
+    if(noun==='fund')el('quad-data-note').textContent=el('quad-data-note').textContent.replace('missing Yahoo history or invalid growth bases','missing imported metrics, unconfirmed mappings or insufficient/invalid Yahoo OHLC')+' Fund metadata remains the dated CSV import. Yahoo refreshes price history only.';
     scheduleDraw();
   }
   function scheduleDraw() { cancelAnimationFrame(drawFrame); drawFrame=requestAnimationFrame(draw); }
@@ -159,7 +161,7 @@ export function createQuadrant(root, { fields, settings, loadData, onChange, onD
     hovered=nearest; const tip=el('quad-tooltip');tip.hidden=!nearest;el('quad-canvas').style.cursor=nearest?'pointer':'grab';
     if(!nearest)return;
     const p=nearest,periods=[p.row.income_period,p.row.cf_period,p.row.fcf_growth_period,p.row[metricPeriodKey(options.x)],p.row[metricPeriodKey(options.y)]].filter(Boolean);
-    tip.innerHTML=`<strong>${esc(p.row.symbol)}</strong><span>${esc(p.row.name)}</span><dl><dt>${esc(fields[options.x].label)}</dt><dd>${format(p.x,fields[options.x])}</dd><dt>${esc(fields[options.y].label)}</dt><dd>${format(p.y,fields[options.y])}</dd></dl><b style="color:${ZONES[p.zone].colour}">${ZONES[p.zone].name}${p.pareto?' · Pareto frontier':''}</b><small>${esc([...new Set(periods)].join(' · '))}</small><small>Click for stock deep dive</small>`;
+    tip.innerHTML=`<strong>${esc(p.row.symbol)}</strong><span>${esc(p.row.name)}</span><dl><dt>${esc(fields[options.x].label)}</dt><dd>${format(p.x,fields[options.x])}</dd><dt>${esc(fields[options.y].label)}</dt><dd>${format(p.y,fields[options.y])}</dd></dl><b style="color:${ZONES[p.zone].colour}">${ZONES[p.zone].name}${p.pareto?' · Pareto frontier':''}</b><small>${esc([...new Set(periods)].join(' · '))}</small><small>Click for listing deep dive</small>`;
     tip.style.left=Math.max(8,Math.min(x+16,rect.width-300))+'px';tip.style.top=Math.max(8,Math.min(y+16,rect.height-230))+'px';
   }
   const canvas=el('quad-canvas');

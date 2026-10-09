@@ -1,3 +1,4 @@
+import { dataBase } from './universe.js';
 import { customSMA, smaSettings, usesCustomSMA } from './sma-math.js';
 import { decodeSnapshot, selectSnapshot, snapshotCSV, chartCoverage } from './snapshot-engine.js';
 import { snapshotJSON } from './snapshot-json.js';
@@ -7,12 +8,12 @@ let loaded, checkedAt = 0, technicalCache, localTechnicalAt=0;
 const details = new Map();
 async function snapshot() {
   if (!loaded) loaded = Promise.all(['schema', 'status'].map(async name => {
-    const response = await fetch(new URL(`data/${name}.json`, document.baseURI), { cache: 'no-cache' });
+    const response = await fetch(new URL(`${dataBase}${name}.json`, document.baseURI), { cache: 'no-cache' });
     if (!response.ok) throw new Error('Published market data could not be loaded');
     return response.json();
   })).then(async ([schema, status]) => {
     const compressed = status.snapshot.index_compression === 'gzip';
-    const response = await fetch(new URL(`data/stocks.json${compressed ? '.gz' : ''}`, document.baseURI), {cache:'no-cache'});
+    const response = await fetch(new URL(`${dataBase}stocks.json${compressed ? '.gz' : ''}`, document.baseURI), {cache:'no-cache'});
     const data = await snapshotJSON(response, compressed);
     if (data.built !== status.snapshot.built) throw new Error('Snapshot is being updated. Please retry shortly.');
     checkedAt = Date.now(); return { schema, status, rows: decodeSnapshot(data) };
@@ -26,7 +27,7 @@ async function customData(params) {
   if(isPublished) {
     data=await snapshot();
     const compressed=data.status.snapshot.technical_compression==='gzip';
-    technicalCache ||= fetch(new URL(`data/technicals.json${compressed?'.gz':''}`,document.baseURI),{cache:'no-cache'}).then(r=>snapshotJSON(r,compressed)).catch(e=>{technicalCache=undefined;throw e;});
+    technicalCache ||= fetch(new URL(`${dataBase}technicals.json${compressed?'.gz':''}`,document.baseURI),{cache:'no-cache'}).then(r=>snapshotJSON(r,compressed)).catch(e=>{technicalCache=undefined;throw e;});
     technical=await technicalCache;
     if(technical.built&&technical.built!==data.status.snapshot.built)throw new Error('Price snapshot is updating. Refresh data and retry.');
   } else {
@@ -110,7 +111,7 @@ export async function api(input, options) {
     else if (url.pathname === '/api/status') {
       if (Date.now() - checkedAt >= 60000) {
         checkedAt = Date.now();
-        const response = await fetch(new URL('data/status.json', document.baseURI), { cache: 'no-cache' });
+        const response = await fetch(new URL(dataBase+'status.json', document.baseURI), { cache: 'no-cache' });
         if (!response.ok) throw new Error('Published data unavailable');
         const latest = await response.json();
         if (latest.snapshot.built !== data.status.snapshot.built) result = (await reloadSnapshot()).status;
@@ -129,7 +130,7 @@ export async function api(input, options) {
       if (!row.detail_key) result = row;
       else {
         const compressed = data.status.snapshot.detail_compression === 'gzip';
-        if (!details.has(symbol)) details.set(symbol, fetch(new URL(`data/details/${row.detail_key}.json${compressed ? '.gz' : ''}`, document.baseURI), {cache:"no-cache"})
+        if (!details.has(symbol)) details.set(symbol, fetch(new URL(`${dataBase}details/${row.detail_key}.json${compressed ? '.gz' : ''}`, document.baseURI), {cache:"no-cache"})
           .then(r => snapshotJSON(r, compressed)).catch(error => { details.delete(symbol); throw error; }));
         result = await details.get(symbol);
       }

@@ -3,7 +3,7 @@ from datetime import date,datetime,timezone
 import pandas as pd
 
 
-def technical_values(history,currency,today=None):
+def technical_values(history,currency,today=None, *, validate_daily_close=True):
     today=today or date.today()
     closes=history.get('Close',pd.Series(dtype=float)).dropna().sort_index()
     # A session dated today may still be trading. Keep the prior completed session.
@@ -26,11 +26,11 @@ def technical_values(history,currency,today=None):
         result['sma_'+label+'_local']=average
         result['sma_'+label+'_distance']=(result['technical_price_local']/average-1)*100 if average and currency else None
         result['sma_'+label+'_period']=f'{series.index[-200].date()} to {series.index[-1].date()} · {currency}' if average else f'Needs 200 completed {kind} closes. {len(series)} available.'
-    result.update(weekly_williams(history, today))
+    result.update(weekly_williams(history, today, validate_daily_close=validate_daily_close))
     return result
 
 
-def weekly_williams(history, today):
+def weekly_williams(history, today, *, validate_daily_close=True):
     """14 weekly OHLC bars, including a developing week through prior sessions."""
     out = dict(williams_r=None, williams_zone=None, williams_r_period=None,
         williams_asof=None, williams_provisional=None, williams_version=1,
@@ -48,7 +48,9 @@ def weekly_williams(history, today):
         return out
     out['williams_asof'] = str(candles.index[-1].date())
     # Do not silently skip corrupt daily bars or missing whole weeks.
-    valid = candles.notna().all(axis=1) & candles.apply(lambda col: col.map(lambda v: pd.notna(v) and abs(v) != float('inf'))).all(axis=1) & (candles['Low'] > 0) & (candles['High'] >= candles['Low']) & (candles['Close'] >= candles['Low']) & (candles['Close'] <= candles['High'])
+    valid = candles.notna().all(axis=1) & candles.apply(lambda col: col.map(lambda v: pd.notna(v) and abs(v) != float('inf'))).all(axis=1) & (candles['Low'] > 0) & (candles['High'] >= candles['Low']) & (candles['Close'] > 0)
+    if validate_daily_close:
+        valid &= (candles['Close'] >= candles['Low']) & (candles['Close'] <= candles['High'])
     weekly = candles.resample('W-FRI').agg({'High':'max', 'Low':'min', 'Close':'last'})
     weekly.loc[~valid.resample('W-FRI').min().fillna(False).astype(bool), :] = float('nan')
     window = weekly.tail(14)
@@ -60,6 +62,9 @@ def weekly_williams(history, today):
     high, low, close = float(window.High.max()), float(window.Low.min()), float(window.Close.iloc[-1])
     if high <= low:
         out['williams_reason'] = 'Flat 14-week price range. Williams %R is undefined.'
+        return out
+    if not low <= close <= high:
+        out['williams_reason'] = 'Latest close is outside the reported 14-week high/low range.'
         return out
     value = -100 * (high-close)/(high-low)
     out.update(williams_r=value, williams_zone='Oversold' if value <= -80 else 'Overbought' if value >= -20 else 'Neutral',
