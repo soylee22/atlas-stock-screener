@@ -36,6 +36,8 @@ REGIONS = {"us": "United States", "gb": "United Kingdom", "ca": "Canada",
            "dk": "Denmark", "se": "Sweden"}
 EUROPE_REGIONS = {"de", "es", "it", "nl", "dk", "se"}
 LOG = logging.getLogger("screener")
+# CLI collection policy is separate from user-adjustable screen filters.
+COLLECTION_SCOPE = " AND COALESCE(json_extract(data,'$.market_cap'),0)>=COALESCE((SELECT CAST(value AS REAL) FROM metadata WHERE key='collection_min_market_cap'),0)"
 
 
 def region_query(region):
@@ -73,6 +75,10 @@ COLUMNS = [
     col("div_years", "Div growth years", "integer", True, "Dividends", "Observed consecutive increases in total annual dividends per share, ending in the latest completed calendar year. History can be incomplete."),
     col("div_growth", "Div growth 5Y", "percent", True, "Dividends", "Five-year CAGR of local-currency annual dividends per share over completed calendar years. Requires both endpoints and all intervening years."),
     col("exchange", "Exchange", "text", True),
+    col("williams_r", "Weekly Williams %R", "number", True, "Technicals", "14 weekly High/Low/Close candles through the previous completed session. Current week is provisional. Oversold <= -80, overbought >= -20. Momentum position, not intrinsic value."),
+    col("williams_zone", "Williams zone", "text", group="Technicals"),
+    col("williams_r_period", "Williams period", "text", group="Technicals"),
+    col("williams_asof", "Williams source date", "text", group="Technicals"),
     col("change", "Day change", "percent", group="Performance"),
     col("revenue", "Revenue", "usd", group="Financials"),
     col("eps_diluted", "Diluted EPS", "price", group="Financials", description="Reported earnings per diluted share in USD at current FX. Sum of four consecutive quarterly EPS values, otherwise latest FY. Check its own period. Not a valuation measure and not comparable across different share denominations."),
@@ -699,7 +705,7 @@ class Store:
                 (enriched < ? OR COALESCE(json_extract(data,'$.annual_growth_version'),0)<1)
                 AND attempted < ? AND json_extract(data,'$.instrument')='stock'
                 AND json_extract(data,'$.active')=1 AND COALESCE(json_extract(data,'$.main_listing'),1)=1
-                ORDER BY (enriched=0) DESC, json_extract(data,'$.market_cap') DESC""",
+                """ + COLLECTION_SCOPE + """ ORDER BY (enriched=0) DESC, json_extract(data,'$.market_cap') DESC""",
                 (time.time()-7*86400, time.time()-6*3600)).fetchall()
         result = []
         for missing in (True, False):
@@ -717,7 +723,7 @@ class Store:
             cursor = conn.execute("""UPDATE stocks SET attempted=? WHERE symbol=?
                 AND (enriched < ? OR COALESCE(json_extract(data,'$.annual_growth_version'),0)<1)
                 AND attempted < ? AND json_extract(data,'$.instrument')='stock'
-                AND json_extract(data,'$.active')=1 AND COALESCE(json_extract(data,'$.main_listing'),1)=1""",
+                AND json_extract(data,'$.active')=1 AND COALESCE(json_extract(data,'$.main_listing'),1)=1""" + COLLECTION_SCOPE,
                 (time.time(), symbol, time.time()-7*86400, time.time()-6*3600))
         return cursor.rowcount == 1
 
@@ -727,7 +733,8 @@ class Store:
             row = conn.execute("""SELECT symbol FROM stocks WHERE
                 (enriched < ? OR COALESCE(json_extract(data,'$.annual_growth_version'),0)<1) AND attempted < ?
                 AND json_extract(data,'$.instrument')='stock' AND json_extract(data,'$.active')=1
-                ORDER BY (json_extract(data,'$.main_listing')=1) DESC,
+                AND COALESCE(json_extract(data,'$.main_listing'),1)=1
+                """ + COLLECTION_SCOPE + """ ORDER BY (json_extract(data,'$.main_listing')=1) DESC,
                 (enriched=0) DESC, json_extract(data,'$.market_cap') DESC LIMIT 1""",
                 (time.time() - 7 * 86400, time.time() - 6 * 3600)).fetchone()
             if row:
@@ -747,7 +754,7 @@ class Store:
                 AND COALESCE(json_extract(data,'$.annual_growth_attempted'),0) < ?
                 AND json_extract(data,'$.instrument')='stock' AND json_extract(data,'$.active')=1
                 AND COALESCE(json_extract(data,'$.main_listing'),1)=1
-                ORDER BY json_extract(data,'$.market_cap') DESC""", (datetime.fromtimestamp(time.time()-7*86400,timezone.utc).isoformat(), time.time() - 6 * 3600,)).fetchall()
+                """ + COLLECTION_SCOPE + """ ORDER BY json_extract(data,'$.market_cap') DESC""", (datetime.fromtimestamp(time.time()-7*86400,timezone.utc).isoformat(), time.time() - 6 * 3600,)).fetchall()
         buckets = {region: [] for region in REGIONS}
         for row in rows:
             buckets[row['region']].append(row['symbol'])
@@ -1078,6 +1085,7 @@ pipeline = Pipeline(store, logos)
 
 @asynccontextmanager
 async def lifespan(app):
+    store.set_meta('collection_min_market_cap', 20_000_000_000)
     pipeline.start()
     yield
     pipeline.stop.set()
@@ -1163,13 +1171,15 @@ def chart(x: str = "net_income", y: str = "div_years", search: str = "", regions
         raise HTTPException(400, str(exc)) from exc
     keys = sorted({"symbol", "name", "region", "region_code", "sector", "industry", "exchange",
                    "income_period", "cf_period", "fcf_growth_period", "financial_fetched", "quote_time", x, y,
-                   "technical_asof", "eps_version", "eps_fetched", "eps_currency", *[key.removesuffix("_distance") + "_period" for key in (x, y) if key in GROWTH_KEYS or key in CAPITAL_KEYS or key == "eps_diluted" or key.startswith("sma_")]})
+                   "technical_asof", "williams_asof", "williams_zone", "williams_version", "eps_version", "eps_fetched", "eps_currency", *[key.removesuffix("_distance") + "_period" for key in (x, y) if key in GROWTH_KEYS or key in CAPITAL_KEYS or key in {"eps_diluted", "williams_r"} or key.startswith("sma_")]})
     # Project only plot fields and paired values. Do not load every dividend event or description.
     projection = "json_object(" + ",".join(f"'{key}',json_extract(data,'$.{key}')" for key in keys) + ")"
     paired = " AND ".join(f"json_type(data,'$.{key}') IN ('integer','real')" for key in {x, y})
     def pending_sql(key):
         missing = f"COALESCE(json_type(data,'$.{key}') IN ('integer','real'),0)=0"
-        if key.startswith("sma_"):
+        if key == "williams_r":
+            source = "COALESCE(json_extract(data,'$.williams_version'),0)<1"
+        elif key.startswith("sma_"):
             source = "COALESCE(json_extract(data,'$.technical_version'),0)<1"
         elif key in GROWTH_KEYS:
             source = "COALESCE(json_extract(data,'$.annual_growth_version'),0)<1"
@@ -1300,8 +1310,9 @@ def export(search: str = "", regions: str = "", filters: str = "[]", sort: str =
     if not all(k in FIELDS for k in selected):
         raise HTTPException(400, "Unknown export column")
     selected = list(dict.fromkeys(["symbol", "name"] + selected + ["income_period", "cf_period", "fcf_growth_period", "quote_time", "financial_fetched"]
-                                 + [key.removesuffix("_distance") + "_period" for key in selected if key in GROWTH_KEYS or key in CAPITAL_KEYS or key == "eps_diluted" or key.startswith("sma_")]
+                                 + [key.removesuffix("_distance") + "_period" for key in selected if key in GROWTH_KEYS or key in CAPITAL_KEYS or key in {"eps_diluted", "williams_r"} or key.startswith("sma_")]
                                  + (["eps_currency", "eps_fetched"] if "eps_diluted" in selected else [])
+                                 + (["williams_asof", "williams_zone"] if "williams_r" in selected else [])
                                  + (["technical_asof"] if any(key.startswith("sma_") for key in selected) else [])
                                  + (["annual_growth_fetched"] if any(key in GROWTH_KEYS for key in selected) else [])
                                  + (["statement_fetched"] if any(key in CAPITAL_KEYS for key in selected) else [])))

@@ -1,3 +1,4 @@
+import { migrateLargeCapScreen, largeCapFilter } from './screen-policy.js';
 import { capitalReturnsHTML } from './capital-returns.js';
 import { rankedCSV } from './ranked-export.js';
 import { openAnalysisPack } from './analysis-ui.js';
@@ -9,7 +10,7 @@ const $ = id => document.getElementById(id);
 const FLAGS = { us: '🇺🇸', gb: '🇬🇧', ca: '🇨🇦', jp: '🇯🇵', kr: '🇰🇷', tw: '🇹🇼', de: '🇩🇪', es: '🇪🇸', it: '🇮🇹', nl: '🇳🇱', dk: '🇩🇰', se: '🇸🇪' };
 const SHORT = { us: 'US', gb: 'UK', ca: 'Canada', jp: 'Japan', kr: 'South Korea', tw: 'Taiwan', de: 'Germany', es: 'Spain', it: 'Italy', nl: 'Netherlands', dk: 'Denmark', se: 'Sweden' };
 function readStorage(key, fallback) { try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; } }
-const state = { regions: [], search: '', filters: [], sort: 'market_cap', direction: 'desc', columns: [], page: 0, pageSize: 100, includeOther: false, mainOnly: true, preset: 'all', watchOnly: false, view: '', section:'table', sma:{window:200,interval:'daily'}, quadrant:{...quadrantDefaults} };
+const state = { regions: [], search: '', filters: [largeCapFilter()], sort: 'market_cap', direction: 'desc', columns: [], page: 0, pageSize: 100, includeOther: false, mainOnly: true, preset: 'all', watchOnly: false, view: '', section:'table', sma:{window:200,interval:'daily'}, quadrant:{...quadrantDefaults} };
 let quadrant, chartRefreshed = 0;
 let schema, fields, defaults, rows = [], total = 0, status = {}, saved = readStorage('atlas.views.v1', {}), watched = readStorage('atlas.watch.v1', []);
 let requestSeq = 0, selectedSymbol = null, dividendSymbol = null, filterIndex = -1, toastTimeout, refreshTimer, isLoading = false;
@@ -22,6 +23,7 @@ function params() {
 function fmt(value, field, plain = false) {
   if (value === null || value === undefined || value === '') return plain ? '' : '<span class="missing" title="Unavailable or awaiting retrieval">—</span>';
   if (field.kind === 'text') return esc(value);
+  if (field.key === 'williams_r') return `${Number(value).toFixed(1)}${plain ? '' : '<small class="number-unit">' + (value <= -80 ? ' Oversold' : value >= -20 ? ' Overbought' : '') + '</small>'}`;
   if (!Number.isFinite(Number(value))) return '<span class="missing">—</span>';
   if (field.kind === 'percent') {
     const sign = (['change', 'change_52w', 'fcf_change', 'div_growth'].includes(field.key) || (/_growth_(1|3|5|10)y$/.test(field.key)||/^sma_.*_distance$/.test(field.key))) && value > 0 ? '+' : '';
@@ -37,6 +39,7 @@ function fmt(value, field, plain = false) {
 }
 function valueClass(value, key) {
   if (value == null) return '';
+  if (key === 'williams_r') return value <= -80 ? 'positive' : value >= -20 ? 'negative' : '';
   if ((['change', 'change_52w', 'fcf_change', 'div_growth', 'net_margin', 'fcf_yield'].includes(key) || /_growth_(1|3|5|10)y$/.test(key)||/^sma_.*_distance$/.test(key))) return value > 0 ? 'positive' : value < 0 ? 'negative' : '';
   return value < 0 ? 'negative' : '';
 }
@@ -69,6 +72,9 @@ function renderMarkets() {
 function renderControls() {
   $('sma-setting-note').textContent=`Custom SMA: ${state.sma.window} ${state.sma.interval==='daily'?'days':'weeks'}`;
   renderMarkets();
+  const oversold=state.filters.some(f=>f.field==='williams_r'&&f.op==='lte'&&Number(f.value)===-80);
+  $('weekly-oversold').classList.toggle('active',oversold);
+  $('weekly-oversold').setAttribute('aria-pressed',String(oversold));
   $('search').value = state.search;
   $('column-count').textContent = state.columns.length;
   $('watch-count').textContent = watched.length ? `(${watched.length})` : '';
@@ -84,7 +90,7 @@ function renderControls() {
   }).join('');
   for (const b of $('presets').querySelectorAll('button')) b.classList.toggle('active', b.dataset.preset === state.preset);
 }
-function colWidth(field) { if (field.kind === 'text') return field.key === 'industry' ? 240 : field.key.includes('period') || field.key.includes('time') || field.key.includes('fetched') ? 190 : 160; return field.key === 'div_years' ? 155 : 145; }
+function colWidth(field) { if (field.key === 'williams_r') return 190; if (field.kind === 'text') return field.key === 'industry' ? 240 : field.key.includes('period') || field.key.includes('time') || field.key.includes('fetched') ? 190 : 160; return field.key === 'div_years' ? 155 : 145; }
 function renderTable() {
   $('thead').innerHTML = `<tr><th class="symbol-head ${state.sort === 'symbol' ? 'sorted' : ''}"><button data-sort="symbol">Company <span class="sort-arrow">${state.sort === 'symbol' ? (state.direction === 'desc' ? '↓' : '↑') : ''}</span></button><span class="col-unit">SYMBOL / NAME</span></th>` + state.columns.map(key => {
     const f = fields[key], unit = key === 'eps_diluted' ? 'USD / SHARE' : ['usd', 'price'].includes(f.kind) ? 'USD' : f.kind === 'percent' ? '%' : key === 'fcf_change' ? 'FY YoY' : key === 'volume' ? 'SHARES' : key === 'div_years' ? 'OBSERVED STREAK' : '';
@@ -133,7 +139,7 @@ async function loadStatus() {
     if ($('data-dialog').open) renderCoverage();
   } catch { $('refresh-status').textContent = isPublished ? 'Published data unavailable' : 'Local service unavailable'; }
 }
-function reset() { update({ filters: [], regions: [], search: '', preset: 'all', watchOnly: false, sort: 'market_cap', direction: 'desc' }); }
+function reset() { update({ filters: [largeCapFilter()], regions: [], search: '', preset: 'all', watchOnly: false, sort: 'market_cap', direction: 'desc' }); }
 function renderSaved() {
   $('saved-views').innerHTML = '<option value="">All stocks</option>' + Object.keys(saved).sort().map(name => `<option value="${esc(name)}">${esc(name)}</option>`).join('');
   $('saved-views').value = state.view;
@@ -201,10 +207,10 @@ async function openDetail(symbol) {
   row=await customDetail(row,params());
   if (!row.symbol) { toast(row.detail || 'Company data unavailable'); return; }
   if (symbol !== selectedSymbol) return;
-  const metrics = ['sma_200d_distance','sma_200w_distance','sma_custom_distance','market_cap', 'div_yield', 'net_income', 'net_margin', 'eps_diluted', 'fcf', 'capex', 'fcf_change', 'div_years', 'div_growth', 'pe', 'below_52w_high'];
+  const metrics = ['williams_r','sma_200d_distance','sma_200w_distance','sma_custom_distance','market_cap', 'div_yield', 'net_income', 'net_margin', 'eps_diluted', 'fcf', 'capex', 'fcf_change', 'div_years', 'div_growth', 'pe', 'below_52w_high'];
   const growthKeys = schema.columns.filter(f => /^(revenue|net_income)_growth_(1|3|5|10)y$/.test(f.key)).map(f => f.key);
   const growthDetails = `<h3>Annual revenue &amp; income growth</h3><p class="detail-description">Completed fiscal years in reporting currency. 1Y compares consecutive years. Longer horizons are annualised CAGR. Yahoo usually supplies four annual records. Older records are retained as its window advances. Loss or zero starting income has no meaningful percentage growth.</p><div class="detail-metrics">${growthKeys.map(k => `<div class="detail-metric"><label>${esc(fields[k].label)}</label><strong class="${valueClass(row[k], k)}">${fmt(row[k], fields[k])}</strong><small>${esc(row[k + '_period'] || '')}${row[k] == null ? '<br>' + esc(row.annual_growth_missing?.[k] || 'Awaiting annual statements') : ''}</small></div>`).join('')}</div><p class="detail-period">Annual statements fetched: ${esc(row.annual_growth_fetched ? new Date(row.annual_growth_fetched).toLocaleString('en-GB') : 'Awaiting retrieval')}</p>`;
-  $('detail-content').innerHTML = `<div class="detail-top"><span>${FLAGS[row.region_code]} ${esc(row.exchange)} · ${esc(row.quote_currency)}</span><button class="close" id="close-detail" aria-label="Close company details">×</button></div><div class="detail-identity">${companyIcon(row)}<h2>${esc(symbol)}</h2></div><p class="detail-name">${esc(row.name)}</p><div class="detail-tags"><span>${esc(row.sector || 'Sector awaiting data')}</span><span>${esc(row.industry || 'Industry awaiting data')}</span></div><div class="detail-price">${fmt(row.price, fields.price)}<span class="${valueClass(row.change, 'change')}">${fmt(row.change, fields.change)}</span></div><div class="detail-metrics">${metrics.map(k => `<div class="detail-metric"><label>${esc(fields[k].label)}</label><strong class="${valueClass(row[k], k)}">${fmt(row[k], fields[k])}</strong></div>`).join('')}</div><p class="detail-period">Income: ${esc(row.income_period || 'Awaiting data')}<br>Diluted EPS: ${esc(row.eps_diluted_period || row.eps_reason || 'Awaiting income statements')} · ${esc(row.eps_currency || 'Unknown reporting currency')}<br>Cash flow: ${esc(row.cf_period || 'Awaiting data')}<br>FCF growth: ${esc(row.fcf_growth_period || 'Awaiting data')}<br>Quote: ${esc(row.quote_time ? new Date(row.quote_time).toLocaleString('en-GB') : 'Unavailable')} · ${row.delay ?? 'Unknown'} min provider delay</p>${row.financial_quality_note?'<p class="detail-period negative">'+esc(row.financial_quality_note)+'</p>':''}<p class="detail-description">Diluted EPS is reported earnings per diluted share, converted to USD using current FX. TTM sums four consecutive reported quarterly EPS values. Otherwise it uses the latest annual figure. Share denominations differ between businesses, so a higher EPS alone does not mean a better or cheaper company.</p><h3>Moving averages</h3><p class="detail-description">${esc(row.technical_basis||'Cached Yahoo close history is awaiting retrieval.')} Reference close: ${esc(row.technical_asof||'Pending')}. Positive distance means above the average.</p><p class="detail-period">200-day: ${esc(row.sma_200d_period||'Pending')}<br>200-week: ${esc(row.sma_200w_period||'Pending')}<br>Custom: ${esc(row.sma_custom_period||'Pending')}</p>${growthDetails}${capitalReturnsHTML(row)}<div class="analysis-card"><span class="eyebrow">TAKE IT TO YOUR AI</span><h3>Analyse the whole business</h3><p>Financial statements, earnings trends, dividends and peer comparisons, with a detailed analysis prompt.</p><button id="open-ai-analysis" class="button primary">Create AI analysis pack ↗</button></div><h3>Dividend history</h3><p class="detail-description">Annual dividends per share, individual payments and growth from Yahoo’s earliest available record.</p><button id="open-dividends" class="button primary">Explore dividend history ↗</button><button id="refresh-profile" class="button secondary">↻ Refresh company data</button>${row.financial_error ? `<p class="detail-period negative">${esc(row.financial_error)}</p>` : !row.financial_fetched ? `<p class="detail-period">${isPublished ? 'Financial profile is not in this snapshot yet. Scheduled refreshes add more company data.' : 'Financial profile queued. It will update as data arrives.'}</p>` : `<p class="detail-period">Financials fetched ${esc(new Date(row.financial_fetched).toLocaleString('en-GB'))}</p>`}${row.description ? '<h3>About the business</h3><p class="detail-description">' + esc(row.description) + '</p>' : ''}<p class="detail-period"><a href="https://finance.yahoo.com/quote/${encodeURIComponent(symbol)}/" target="_blank" rel="noopener">View source on Yahoo Finance ↗</a></p>`;
+  $('detail-content').innerHTML = `<div class="detail-top"><span>${FLAGS[row.region_code]} ${esc(row.exchange)} · ${esc(row.quote_currency)}</span><button class="close" id="close-detail" aria-label="Close company details">×</button></div><div class="detail-identity">${companyIcon(row)}<h2>${esc(symbol)}</h2></div><p class="detail-name">${esc(row.name)}</p><div class="detail-tags"><span>${esc(row.sector || 'Sector awaiting data')}</span><span>${esc(row.industry || 'Industry awaiting data')}</span></div><div class="detail-price">${fmt(row.price, fields.price)}<span class="${valueClass(row.change, 'change')}">${fmt(row.change, fields.change)}</span></div><div class="detail-metrics">${metrics.map(k => `<div class="detail-metric"><label>${esc(fields[k].label)}</label><strong class="${valueClass(row[k], k)}">${fmt(row[k], fields[k])}</strong></div>`).join('')}</div><p class="detail-period">Income: ${esc(row.income_period || 'Awaiting data')}<br>Diluted EPS: ${esc(row.eps_diluted_period || row.eps_reason || 'Awaiting income statements')} · ${esc(row.eps_currency || 'Unknown reporting currency')}<br>Cash flow: ${esc(row.cf_period || 'Awaiting data')}<br>FCF growth: ${esc(row.fcf_growth_period || 'Awaiting data')}<br>Quote: ${esc(row.quote_time ? new Date(row.quote_time).toLocaleString('en-GB') : 'Unavailable')} · ${row.delay ?? 'Unknown'} min provider delay</p>${row.financial_quality_note?'<p class="detail-period negative">'+esc(row.financial_quality_note)+'</p>':''}<p class="detail-description">Diluted EPS is reported earnings per diluted share, converted to USD using current FX. TTM sums four consecutive reported quarterly EPS values. Otherwise it uses the latest annual figure. Share denominations differ between businesses, so a higher EPS alone does not mean a better or cheaper company.</p><h3>Weekly Williams %R</h3><p class="detail-description">14 weekly candles using Yahoo split-adjusted High, Low and Close. Oversold is -80 or below. Overbought is -20 or above. The current week develops through the previous completed daily session. This measures position in the recent price range, not business value.</p><p class="detail-period">${esc(row.williams_r_period || row.williams_reason || 'Awaiting weekly OHLC history')}<br>Source fetched: ${esc(row.technical_fetched || 'Pending')}</p><h3>Moving averages</h3><p class="detail-description">${esc(row.technical_basis||'Cached Yahoo close history is awaiting retrieval.')} Reference close: ${esc(row.technical_asof||'Pending')}. Positive distance means above the average.</p><p class="detail-period">200-day: ${esc(row.sma_200d_period||'Pending')}<br>200-week: ${esc(row.sma_200w_period||'Pending')}<br>Custom: ${esc(row.sma_custom_period||'Pending')}</p>${growthDetails}${capitalReturnsHTML(row)}<div class="analysis-card"><span class="eyebrow">TAKE IT TO YOUR AI</span><h3>Analyse the whole business</h3><p>Financial statements, earnings trends, dividends and peer comparisons, with a detailed analysis prompt.</p><button id="open-ai-analysis" class="button primary">Create AI analysis pack ↗</button></div><h3>Dividend history</h3><p class="detail-description">Annual dividends per share, individual payments and growth from Yahoo’s earliest available record.</p><button id="open-dividends" class="button primary">Explore dividend history ↗</button><button id="refresh-profile" class="button secondary">↻ Refresh company data</button>${row.financial_error ? `<p class="detail-period negative">${esc(row.financial_error)}</p>` : !row.financial_fetched ? `<p class="detail-period">${isPublished ? 'Financial profile is not in this snapshot yet. Scheduled refreshes add more company data.' : 'Financial profile queued. It will update as data arrives.'}</p>` : `<p class="detail-period">Financials fetched ${esc(new Date(row.financial_fetched).toLocaleString('en-GB'))}</p>`}${row.description ? '<h3>About the business</h3><p class="detail-description">' + esc(row.description) + '</p>' : ''}<p class="detail-period"><a href="https://finance.yahoo.com/quote/${encodeURIComponent(symbol)}/" target="_blank" rel="noopener">View source on Yahoo Finance ↗</a></p>`;
   $('close-detail').onclick = () => { $('detail').hidden = true; selectedSymbol = null; };
   $('open-ai-analysis').onclick = () => openAnalysisPack(row, {columns:Object.values(fields)}, status, toast);
   $('open-dividends').onclick = () => openDividends(symbol);
@@ -245,6 +251,7 @@ function renderDividends() {
 }
 
 function bindEvents() {
+  $('weekly-oversold').onclick = () => { const filters=state.filters.filter(f=>f.field!=='williams_r'); if(!state.filters.some(f=>f.field==='williams_r'&&f.op==='lte'&&Number(f.value)===-80))filters.push({field:'williams_r',op:'lte',value:-80}); update({filters,preset:''}); };
   $('table-section').onclick = () => { showSection('table'); markEdited(); persist('atlas.last.v1',state); };
   $('quadrant-section').onclick = () => { showSection('quadrant'); markEdited(); persist('atlas.last.v1',state); };
   $('markets').onclick = e => { const code = e.target.closest('[data-region]')?.dataset.region; if (!code) return; update({ regions: code === 'all' ? [] : state.regions.includes(code) ? state.regions.filter(x => x !== code) : [...state.regions, code] }); };
@@ -272,7 +279,7 @@ function bindEvents() {
   $('presets').onclick = e => {
     const preset = e.target.closest('[data-preset]')?.dataset.preset; if (!preset) return;
     const sets = { all: [], dividend: [{ field: 'div_yield', op: 'gte', value: 1 }, { field: 'div_years', op: 'gte', value: 5 }], cash: [{ field: 'fcf', op: 'gt', value: 0 }, { field: 'fcf_change', op: 'gt', value: 0 }], quality: [{ field: 'net_margin', op: 'gte', value: 15 }, { field: 'pe', op: 'between', value: 0, value2: 25 }], watch: [] };
-    update({ filters: sets[preset], preset, watchOnly: preset === 'watch' });
+    update({ filters: [largeCapFilter(),...sets[preset]], preset, watchOnly: preset === 'watch' });
   };
   $('columns').onclick = () => { renderColumns(); $('columns-dialog').showModal(); };
   $('column-search').oninput = renderColumns;
@@ -287,7 +294,7 @@ function bindEvents() {
   $('save-view').onclick = () => { $('view-name').value = state.view; $('delete-view').hidden = !state.view; $('save-dialog').showModal(); };
   $('save-form').onsubmit = e => { e.preventDefault(); const name = $('view-name').value.trim(); if (!name) return; state.view = name; saved[name] = JSON.parse(JSON.stringify(state)); persist('atlas.views.v1', saved); persist('atlas.last.v1', state); renderSaved(); $('unsaved').hidden = true; $('save-dialog').close(); toast('Screen saved in this browser'); };
   $('delete-view').onclick = () => { delete saved[state.view]; state.view = ''; persist('atlas.views.v1', saved); renderSaved(); $('save-dialog').close(); toast('Saved screen removed'); };
-  $('saved-views').onchange = e => { const name = e.target.value; if (name && saved[name]) { Object.assign(state, { mainOnly: true, section:'table', quadrant:{...quadrantDefaults} }, saved[name], { page: 0, view: name }); $('page-size').value = state.pageSize; } else Object.assign(state, { view: '', columns: [...defaults], filters: [], search: '', regions: [], preset: 'all', watchOnly: false, mainOnly: true, sort: 'market_cap', direction: 'desc', page: 0, section:'table', quadrant:{...quadrantDefaults} }); showSection(state.section,false); $('unsaved').hidden = true; renderControls(); loadRows(); persist('atlas.last.v1', state); };
+  $('saved-views').onchange = e => { const name = e.target.value; if (name && saved[name]) { Object.assign(state, { mainOnly: true, section:'table', quadrant:{...quadrantDefaults} }, saved[name], { page: 0, view: name }); $('page-size').value = state.pageSize; } else Object.assign(state, { view: '', columns: [...defaults], filters: [largeCapFilter()], search: '', regions: [], preset: 'all', watchOnly: false, mainOnly: true, sort: 'market_cap', direction: 'desc', page: 0, section:'table', quadrant:{...quadrantDefaults} }); migrateLargeCapScreen(state); showSection(state.section,false); $('unsaved').hidden = true; renderControls(); loadRows(); persist('atlas.last.v1', state); };
   $('export').onclick = async () => { $('export-title').textContent='Export matching companies';$('export-description').textContent='All matching rows, your selected columns and reporting periods. Numbers use raw USD values.';$('download-csv').download='atlas-stocks-usd.csv';const p = params(); p.set('columns', [...new Set([...state.columns, ...(state.section === 'quadrant' ? [state.quadrant.x,state.quadrant.y] : [])])].join(',')); if (isPublished || [...state.columns,state.sort,...state.filters.map(f=>f.field),...(state.section==='quadrant'?[state.quadrant.x,state.quadrant.y]:[])].some(k=>k.startsWith('sma_custom'))) {
       $('export-dialog').showModal(); $('export-summary').textContent = 'Preparing your CSV…';
       $('download-csv').hidden = true; $('copy-csv').disabled = true;
@@ -317,6 +324,7 @@ function bindEvents() {
 async function boot() {
   schema = await api('/api/schema').then(r => r.json()); fields = Object.fromEntries(schema.columns.map(f => [f.key, f])); fields.symbol = { key: 'symbol', kind: 'text', label: 'Company' }; defaults = schema.columns.filter(f => f.default).map(f => f.key);
   const last = readStorage('atlas.last.v1', null); if (last) Object.assign(state, last, { page: 0 });
+  migrateLargeCapScreen(state);
   state.sma={window:200,interval:'daily',...state.sma};
   if(!['daily','weekly'].includes(state.sma.interval)||!Number.isInteger(state.sma.window)||state.sma.window<2||state.sma.window>(state.sma.interval==='daily'?500:260))state.sma={window:200,interval:'daily'};
   if(!readStorage('atlas.listing-policy.v4',false)){state.mainOnly=true;persist('atlas.listing-policy.v4',true);}

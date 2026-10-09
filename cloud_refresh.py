@@ -59,7 +59,7 @@ def cloud_batch(store, part, seconds=14400, limit=30000, force_quotes=False):
             state['rate_limited'] = growth.get('rate_limited', False)
             if not state['rate_limited']:
                 refresh_data.backfill_statements(store, seconds=min(60, seconds), limit=20)
-                refresh_data.backfill_technicals(store, seconds=min(60, seconds), limit=40)
+                # Technical history has its own daily step before financial requests.
         state['phase'] = 'finished'
         state['finished'] = model.now_iso()
     state['remaining_eligible'] = len(store.enrichment_candidates())

@@ -1,4 +1,4 @@
-"""Simple moving averages of split-adjusted, dividend-unadjusted Yahoo closes."""
+"""Moving averages and weekly Williams %R from split-adjusted Yahoo candles."""
 from datetime import date,datetime,timezone
 import pandas as pd
 
@@ -26,4 +26,43 @@ def technical_values(history,currency,today=None):
         result['sma_'+label+'_local']=average
         result['sma_'+label+'_distance']=(result['technical_price_local']/average-1)*100 if average and currency else None
         result['sma_'+label+'_period']=f'{series.index[-200].date()} to {series.index[-1].date()} · {currency}' if average else f'Needs 200 completed {kind} closes. {len(series)} available.'
+    result.update(weekly_williams(history, today))
     return result
+
+
+def weekly_williams(history, today):
+    """14 weekly OHLC bars, including a developing week through prior sessions."""
+    out = dict(williams_r=None, williams_zone=None, williams_r_period=None,
+        williams_asof=None, williams_provisional=None, williams_version=1,
+        williams_reason=None)
+    if not all(k in history for k in ('High', 'Low', 'Close')):
+        out['williams_reason'] = 'Yahoo OHLC history unavailable. Closes alone cannot calculate Williams %R.'
+        return out
+    candles = history[['High', 'Low', 'Close']].copy().sort_index()
+    candles.index = pd.to_datetime(candles.index)
+    if candles.index.tz is not None:
+        candles.index = candles.index.tz_localize(None)
+    candles = candles[candles.index.date < today]
+    if candles.empty:
+        out['williams_reason'] = 'No completed daily sessions available.'
+        return out
+    out['williams_asof'] = str(candles.index[-1].date())
+    # Do not silently skip corrupt daily bars or missing whole weeks.
+    valid = candles.notna().all(axis=1) & candles.apply(lambda col: col.map(lambda v: pd.notna(v) and abs(v) != float('inf'))).all(axis=1) & (candles['Low'] > 0) & (candles['High'] >= candles['Low']) & (candles['Close'] >= candles['Low']) & (candles['Close'] <= candles['High'])
+    weekly = candles.resample('W-FRI').agg({'High':'max', 'Low':'min', 'Close':'last'})
+    weekly.loc[~valid.resample('W-FRI').min().fillna(False).astype(bool), :] = float('nan')
+    window = weekly.tail(14)
+    out['williams_provisional'] = bool(weekly.index[-1].date() >= today)
+    out['williams_r_period'] = f"14 weekly candles ending {weekly.index[-1].date()} · through {out['williams_asof']} · " + ('developing week' if out['williams_provisional'] else 'completed week')
+    if len(window) < 14 or window.isna().any().any():
+        out['williams_reason'] = 'Needs 14 consecutive valid weekly High, Low and Close candles.'
+        return out
+    high, low, close = float(window.High.max()), float(window.Low.min()), float(window.Close.iloc[-1])
+    if high <= low:
+        out['williams_reason'] = 'Flat 14-week price range. Williams %R is undefined.'
+        return out
+    value = -100 * (high-close)/(high-low)
+    out.update(williams_r=value, williams_zone='Oversold' if value <= -80 else 'Overbought' if value >= -20 else 'Neutral',
+        williams_high_local=high, williams_low_local=low, williams_close_local=close,
+        williams_oversold_price_local=high-.8*(high-low), williams_overbought_price_local=high-.2*(high-low))
+    return out

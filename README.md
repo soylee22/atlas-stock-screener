@@ -251,3 +251,14 @@ The large stock index and cached price histories are also compressed on Pages. S
 The table reports USD per share at current cached reporting-currency FX. Its CSV automatically includes the EPS period, reporting currency and statement fetch time. Statement history retains local per-share observations for trends. No extra Yahoo request is made for this metric.
 
 Quarterly EPS can use different diluted weighted-average share counts. Their rolling sum is not a recalculated annual weighted-share ratio. Yahoo split treatment is retained. Different share denominations make absolute EPS unsuitable for comparing business quality or cheapness between companies. Use EPS trends alongside total income and valuation.
+
+
+## Large-cap scope and weekly Williams %R
+
+The published site contains listings with cached USD market cap at least $20bn. Confirmed primary ordinary listings remain the default. The table, quadrant, exports and peer cohorts use this smaller published population. Quote discovery still covers all twelve markets. The recovery archive keeps smaller companies and their previously collected histories. Automatic financial and technical collection targets confirmed primary companies above the floor. Existing screens receive a visible $20bn starting filter without losing their other filters or moving-average settings. Removing that filter cannot restore smaller companies absent from the published snapshot.
+
+Weekly Williams %R uses 14 consecutive weekly High, Low and Close candles from Yahoo. It calculates `-100 × (highest high − latest close) / (highest high − lowest low)`. Oversold includes -80 and lower. Overbought includes -20 and higher. The Weekly oversold button applies the same numeric filter in both sections. Williams defaults to lower preferred when selected as an axis. Quadrant zones still follow the selected median, quartile or custom targets. Use a custom -80 target for an exact oversold boundary.
+
+Candles include the developing week through the previous completed daily session. A source-date and period label identifies this provisional reading. This differs from an intraday chart and from an indicator restricted to completed weekly candles. Yahoo candles are split adjusted, without dividend adjustment. Missing highs or lows, insufficient history, missing weeks and flat ranges stay unavailable. A low Williams reading describes recent price position and does not establish business value. Source periods accompany CSV and ranked exports.
+
+A separate daily GitHub step refreshes large-cap technical history before financial requests, with a 20-minute budget and a maximum of 1,200 companies. It also runs on publication pushes to backfill a new indicator. Completed data survives provider failures through the existing cache and recovery archive. Williams does not add financial-statement requests.

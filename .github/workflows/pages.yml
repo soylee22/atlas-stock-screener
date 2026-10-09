@@ -58,6 +58,7 @@ jobs:
           node --experimental-default-type=module tests/test_analysis.mjs
           node --experimental-default-type=module tests/test_repairs.mjs
           node --experimental-default-type=module tests/test_snapshot_json.mjs
+          node --experimental-default-type=module tests/test_williams.mjs
           node --check static/quadrant.js
           node --check static/app.js
       - name: Restore market data cache
@@ -95,6 +96,8 @@ jobs:
       - name: Bootstrap added European markets
         if: github.event_name == 'push'
         run: python refresh_data.py --europe-only --seconds 300 --limit 600
+      - name: Refresh large-cap weekly Williams and moving averages
+        run: python refresh_data.py --technicals-only --seconds 1200 --limit 1200
       - name: Overnight Yahoo refresh, first half
         if: github.event_name != 'push'
         env:

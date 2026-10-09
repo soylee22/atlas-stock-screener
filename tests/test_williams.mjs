@@ -1,0 +1,15 @@
+import assert from 'node:assert/strict';
+import {migrateLargeCapScreen} from '../static/screen-policy.js';
+import {chartCoverage,selectSnapshot,snapshotCSV} from '../static/snapshot-engine.js';
+const state={filters:[{field:'roe',op:'gte',value:10}],columns:['net_income'],sma:{window:40,interval:'weekly'}};
+migrateLargeCapScreen(state);migrateLargeCapScreen(state);
+assert.equal(state.filters.length,2);assert.deepEqual(state.columns,['net_income','williams_r']);assert.equal(state.sma.window,40);
+const stronger={filters:[{field:'market_cap',op:'gte',value:50e9}],columns:['market_cap']};migrateLargeCapScreen(stronger);assert.equal(stronger.filters.length,1);
+const schema={columns:[{key:'williams_r',kind:'number',group:'Technicals',default:true},{key:'market_cap',kind:'usd'}],regions:{us:'US'}};
+const row={symbol:'TEST',name:'Test',active:true,main_listing:true,instrument:'stock',region_code:'us',market_cap:20e9,williams_r:-80,williams_zone:'Oversold',williams_r_period:'14 weekly candles',williams_asof:'2026-10-08'};
+const rows=[row,{...row,symbol:'LOW',market_cap:19e9},{...row,symbol:'NOT',williams_r:-79}];
+const params=new URLSearchParams({filters:JSON.stringify([...state.filters.filter(f=>f.field==='market_cap'),{field:'williams_r',op:'lte',value:-80}]),sort:'williams_r'});
+assert.deepEqual(selectSnapshot(rows,schema,params).map(r=>r.symbol),['TEST']);
+assert.deepEqual(chartCoverage([{williams_r:null},{williams_r:null,williams_version:1}], 'williams_r','williams_r',{}),{awaiting:1,unavailable:1});
+const csv=snapshotCSV([row],schema,'williams_r');assert.ok(csv.includes('williams_asof'));assert.ok(csv.includes('14 weekly candles'));assert.ok(csv.includes('-80'));
+console.log('Williams filters, source coverage, CSV and saved-state migration passed');

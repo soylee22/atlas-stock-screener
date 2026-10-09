@@ -24,14 +24,15 @@ EXTRA_FIELDS = {
     "statement_history", "statement_errors", "statement_version", "statement_fetched", "roic_proxy_inputs", "roic_proxy_reason", "roce_inputs", "roce_reason",
     "capital_returns_history", "capital_returns_version", "roic_proxy_5y_avg_reason", "roce_5y_avg_reason",
     "eps_diluted_local", "eps_reason", "eps_version",
+    "williams_version", "williams_reason", "williams_provisional", "williams_high_local", "williams_low_local", "williams_close_local", "williams_oversold_price_local", "williams_overbought_price_local",
     *(key + "_local" for key in model.MONETARY_FINANCIAL),
 }
 PUBLIC_FIELDS = EXTRA_FIELDS | set(model.FIELDS)
 INDEX_FIELDS = list(dict.fromkeys([
     "symbol", "name", "region_code", "instrument", "active", "main_listing", "listing_reason",
-    "financial_error", "financial_quality_note", "technical_version", "detail_key", "logo_url", "annual_growth_missing", "annual_growth_version", "income_fetched", "dividend_fetched", "statement_version", "eps_version", *[field["key"] for field in model.COLUMNS],
+    "financial_error", "financial_quality_note", "technical_version", "williams_version", "williams_reason", "williams_provisional", "detail_key", "logo_url", "annual_growth_missing", "annual_growth_version", "income_fetched", "dividend_fetched", "statement_version", "eps_version", *[field["key"] for field in model.COLUMNS],
 ]))
-META_KEYS = ["coverage", "fx", "quote_completed", "last_quote_run", "quote_error", "last_financial", "refresh_health", "annual_growth_backfill", "statement_backfill", "cloud_refresh", "profile_seed"]
+META_KEYS = ["coverage", "fx", "quote_completed", "last_quote_run", "quote_error", "last_financial", "refresh_health", "annual_growth_backfill", "statement_backfill", "cloud_refresh", "profile_seed", "technical_backfill"]
 ICON_FILE = re.compile(r"[a-f0-9]{64}\.(png|jpg|gif|webp|ico)")
 
 
@@ -84,7 +85,7 @@ def snapshot_status(rows, metadata, icon_count, built):
         refreshing=False, completed=metadata.get("quote_completed"), error=metadata.get("quote_error"),
         last_financial=metadata.get("last_financial"), refresh_health=metadata.get("refresh_health"),
         annual_growth_backfill=metadata.get("annual_growth_backfill"), statement_backfill=metadata.get("statement_backfill"),
-        cloud_refresh=metadata.get("cloud_refresh"), profile_seed=metadata.get("profile_seed"),
+        cloud_refresh=metadata.get("cloud_refresh"), profile_seed=metadata.get("profile_seed"), technical_backfill=metadata.get("technical_backfill"),
         missing_fx=sum(r.get("market_cap_local") is not None and r.get("market_cap") is None for r in rows),
         logos=dict(cached=icon_count, queued=0, downloading=0), snapshot=dict(built=built, version=1,
             cadence="Nightly at 01:23 UK time. Quotes daily, company profiles on a seven-day cache.",
@@ -110,7 +111,7 @@ def make_seed(destination, rows, metadata, assets, icon_root):
                     archive.addfile(member, source)
 
 
-def build_site(database, output, seed=None, compress_details=False, compress_data=False):
+def build_site(database, output, seed=None, compress_details=False, compress_data=False, minimum_market_cap=0):
     store = model.Store(database)
     # Recompute quote-derived values when upgrading a cached snapshot.
     store.recalibrate_fx()
@@ -124,6 +125,8 @@ def build_site(database, output, seed=None, compress_details=False, compress_dat
     active = [r for r in rows if r.get("active")]
     if not active or not all(any(r["region_code"] == code for r in active) for code in model.REGIONS):
         raise ValueError("Publish only a snapshot containing every configured market")
+    # Keep every source row in the recovery seed, but only publish the large-cap scope.
+    active = [r for r in active if (r.get('market_cap') or 0) >= minimum_market_cap]
     output = Path(output).resolve()
     protected = [model.ROOT.resolve(), store.path.parent.resolve()]
     if any(output == path or output in path.parents for path in protected):
@@ -178,14 +181,14 @@ def build_site(database, output, seed=None, compress_details=False, compress_dat
         shutil.copyfile(icon_root / asset["filename"], output / "logos" / asset["filename"])
     built = model.now_iso()
     write_data_json(output / "data" / "technicals.json", dict(built=built,
-        technicals={r['symbol']:r['technical_history'] for r in rows if r.get('technical_history')},
-        currencies={r['symbol']:r.get('technical_currency') for r in rows if r.get('technical_history')}), compress_data)
+        technicals={r['symbol']:r['technical_history'] for r in active if r.get('technical_history')},
+        currencies={r['symbol']:r.get('technical_currency') for r in active if r.get('technical_history')}), compress_data)
     # CSV calculations use this same database and FX snapshot.
     model.store = store
     for row in active:
         asset = by_domain.get(model.company_domain(row.get("website")))
         row["logo_url"] = "logos/" + asset["filename"] if asset else None
-        has_details = bool(row.get("financial_fetched") or row.get("statement_history") or row.get("annual_growth_version") or row.get("dividend_events") or row.get("description"))
+        has_details = bool(row.get("technical_version") or row.get("financial_fetched") or row.get("statement_history") or row.get("annual_growth_version") or row.get("dividend_events") or row.get("description"))
         row["detail_key"] = hashlib.sha256(row["symbol"].encode()).hexdigest() if has_details else None
         if has_details:
             detail = dict(row)
@@ -204,6 +207,8 @@ def build_site(database, output, seed=None, compress_details=False, compress_dat
     write_json(output / "data" / "schema.json", dict(columns=model.COLUMNS, regions=model.REGIONS))
     write_data_json(output / "data" / "stocks.json", dict(version=1, built=built, fields=INDEX_FIELDS, rows=[[r.get(key) for key in INDEX_FIELDS] for r in active]), compress_data)
     status = snapshot_status(active, metadata, len(assets), built)
+    status['snapshot']['minimum_market_cap'] = minimum_market_cap
+    status['snapshot']['source_records'] = len(rows)
     status['snapshot']['detail_compression'] = 'gzip' if compress_details else None
     status['snapshot']['index_compression'] = status['snapshot']['technical_compression'] = 'gzip' if compress_data else None
     write_json(output / "data" / "status.json", status)
@@ -226,8 +231,11 @@ def main():
     parser.add_argument("--seed", type=Path)
     parser.add_argument("--compress-details", action="store_true")
     parser.add_argument("--compress-data", action="store_true")
+    parser.add_argument("--minimum-market-cap", type=float, default=20_000_000_000)
     args = parser.parse_args()
-    build_site(args.database, args.output, args.seed, args.compress_details, args.compress_data)
+    if args.minimum_market_cap < 0:
+        parser.error("Minimum market cap must be non-negative")
+    build_site(args.database, args.output, args.seed, args.compress_details, args.compress_data, args.minimum_market_cap)
 
 
 if __name__ == "__main__":

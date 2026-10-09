@@ -212,3 +212,5 @@ td { height: 56px; padding: 7px 14px; font-size: 16px; line-height: 22px; color:
 
 /* Keep all twelve market selectors accessible on desktop and mobile. */
 @media(min-width:751px){.market-strip{flex-wrap:wrap;row-gap:10px}.market-caption{margin-left:auto}}
+
+#weekly-oversold.active { color: var(--accent, #b5e76d); border-color: #77964d; background: #25321c; }

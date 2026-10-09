@@ -314,7 +314,7 @@ def backfill_statements(store, seconds=180, limit=60):
             AND COALESCE(json_extract(data,'$.statement_attempted'),0)<?
             AND (json_extract(data,'$.annual_income_history.currency') IS NOT NULL
                 OR json_extract(data,'$.financial_fetched') IS NOT NULL)
-            ORDER BY json_extract(data,'$.market_cap') DESC""",(time.time()-6*3600,))]
+            """ + model.COLLECTION_SCOPE + """ ORDER BY json_extract(data,'$.market_cap') DESC""",(time.time()-6*3600,))]
     # Seed familiar companies, then keep each market represented.
     priority = {'AAPL','MSFT','NVDA','GOOG','KO','PEP','JNJ','PG','O','JPM','HSBA.L','RY.TO','7203.T','005930.KS','2330.TW','241560.KS'}
     first = [r for r in candidates if r['symbol'] in priority]
@@ -363,22 +363,22 @@ def backfill_technicals(store,seconds=180,limit=120):
         rows=[json.loads(r[0]) for r in conn.execute("""SELECT data FROM stocks WHERE
             json_extract(data,'$.active')=1 AND json_extract(data,'$.main_listing')=1
             AND COALESCE(json_extract(data,'$.technical_attempted'),0)<?
-            AND (COALESCE(json_extract(data,'$.technical_version'),0)<1 OR COALESCE(json_extract(data,'$.technical_fetched'),'')<?)
-            ORDER BY json_extract(data,'$.market_cap') DESC""",(time.time()-6*3600,model.datetime.fromtimestamp(time.time()-86400,model.timezone.utc).isoformat()))]
+            AND (COALESCE(json_extract(data,'$.williams_version'),0)<1 OR COALESCE(json_extract(data,'$.technical_fetched'),'')<?)
+            """ + model.COLLECTION_SCOPE + """ ORDER BY json_extract(data,'$.market_cap') DESC""",(time.time()-6*3600,model.datetime.fromtimestamp(time.time()-86400,model.timezone.utc).isoformat()))]
     priority={'AAPL','MSFT','NVDA','GOOG','KO','PEP','JNJ','PG','O','JPM','HSBA.L','RY.TO','7203.T','005930.KS','2330.TW','241560.KS'}
     queue=[r for r in rows if r['symbol'] in priority]
     buckets={c:[r for r in rows if r['region_code']==c and r['symbol'] not in priority] for c in model.REGIONS}
     balanced=[buckets[c][i] for i in range(max((len(v) for v in buckets.values()),default=0)) for c in model.REGIONS if i<len(buckets[c])]
     from collections import deque
-    missing=deque(r for r in balanced if not r.get('technical_version'))
-    stale=deque(r for r in balanced if r.get('technical_version'))
+    missing=deque(r for r in balanced if not r.get('williams_version'))
+    stale=deque(r for r in balanced if r.get('williams_version'))
     # Reserve three slots for first fetches and one for refreshing cached histories.
     # Otherwise the largest stale stocks can consume every daily batch indefinitely.
     step=0
     while missing or stale:
         chosen=stale if step%4==3 and stale else missing if missing else stale
         queue.append(chosen.popleft());step+=1
-    counts=dict(attempted=0,succeeded=0,failed=0)
+    counts=dict(attempted=0,succeeded=0,failed=0,williams_available=0)
     for row in queue[:limit]:
         if time.monotonic()>deadline: break
         counts['attempted']+=1
@@ -387,6 +387,7 @@ def backfill_technicals(store,seconds=180,limit=120):
             ticker=model.yf.Ticker(row['symbol'])
             history=ticker.history(start=model.date.fromtimestamp(time.time()-7*366*86400).isoformat(),auto_adjust=False,actions=False,raise_errors=True,timeout=15)
             values=technical_values(history,ticker.get_history_metadata().get('currency'))
+            counts['williams_available'] += int(values['williams_r'] is not None)
             values.update(symbol=row['symbol'],region_code=row['region_code'])
             store.upsert_many([values])
             counts['succeeded']+=1
@@ -446,6 +447,7 @@ def main():
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO)
     store = model.Store(args.database)
+    store.set_meta('collection_min_market_cap', 20_000_000_000)
     if args.seed_only:
         restored=restore_published_seed(store) if args.published_fallback else False
         print(json.dumps(dict(seed_restored=restore_seed(store, args.seed) or restored)))

@@ -54,7 +54,7 @@ def test_rolling_technical_queue_advances_missing_data_and_refreshes_stale(tmp_p
     store=app.Store(tmp_path/'queue.sqlite')
     for i in range(6):
         store.upsert_many([dict(symbol=f'T{i}',name=f'Test {i}',region_code='us',exchange='NYSE',instrument='stock',active=True,
-             quote_currency='USD',market_cap_local=(100-i)*1e9,technical_version=1 if i<3 else 0,technical_fetched='2000-01-01')])
+             quote_currency='USD',market_cap_local=(100-i)*1e9,technical_version=1 if i<3 else 0,williams_version=1 if i<3 else 0,technical_fetched='2000-01-01')])
     requested=[]
     class Ticker:
         def __init__(self,symbol):requested.append(symbol)

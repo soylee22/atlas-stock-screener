@@ -15,7 +15,7 @@
   </header>
   <main>
     <section class="heading-row">
-      <div><div class="eyebrow">GLOBAL EQUITIES</div><h1>Stock screener<span class="heading-dot">.</span></h1><p class="subheading">USD figures across twelve listing markets.</p></div>
+      <div><div class="eyebrow">GLOBAL EQUITIES</div><h1>Stock screener<span class="heading-dot">.</span></h1><p class="subheading">Companies from $20bn · USD figures across twelve listing markets.</p></div>
       <div class="heading-actions"><span id="refresh-status" class="refresh-status">Connecting to Yahoo…</span><button id="refresh" class="button secondary"><span class="refresh-icon">↻</span> Refresh data</button></div>
     </section>
     <section class="market-strip" aria-label="Market selection" id="markets"></section>
@@ -29,7 +29,7 @@
         <label class="search"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg><input id="search" placeholder="Search company or ticker" autocomplete="off" aria-label="Search company or ticker"><kbd>/</kbd></label>
         <button id="add-filter" class="button filter-button">＋ Add filter</button>
         <label class="listing-switch" title="Show confirmed primary ordinary listings. Hide foreign quotations, wrappers and unconfirmed listings."><input type="checkbox" id="main-only" checked><span>Main listings only</span></label>
-        <button id="moving-averages" class="button secondary">Moving averages</button><span id="sma-setting-note" class="helper"></span><div class="quick-filters" id="quick-filters"><button data-field="market_cap">Market cap <span>⌄</span></button><button data-field="div_yield">Div yield <span>⌄</span></button><button data-field="sector">Sector <span>⌄</span></button><button data-field="fcf">Free cash flow <span>⌄</span></button></div>
+        <button id="weekly-oversold" class="button secondary" aria-pressed="false" title="14-week Williams %R at or below -80">Weekly oversold</button><button id="moving-averages" class="button secondary">Moving averages</button><span id="sma-setting-note" class="helper"></span><div class="quick-filters" id="quick-filters"><button data-field="market_cap">Market cap <span>⌄</span></button><button data-field="div_yield">Div yield <span>⌄</span></button><button data-field="sector">Sector <span>⌄</span></button><button data-field="fcf">Free cash flow <span>⌄</span></button></div>
         <button id="reset" class="text-button" hidden>Reset</button>
       </div>
       <div id="active-filters" class="active-filters" hidden></div>
