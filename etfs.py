@@ -11,6 +11,7 @@ import math
 from pathlib import Path
 import re
 import time
+from functools import lru_cache
 
 import pandas as pd
 import requests
@@ -164,6 +165,35 @@ def identity_error(row, metadata):
     return None
 
 
+@lru_cache(maxsize=1)
+def close_checkpoint():
+    path = ROOT / 'seed' / 'etf-close-checkpoint-2026-10-09.json'
+    return json.loads(path.read_text()).get('rows', {}) if path.exists() else {}
+
+
+def retain_reported_closes(row, history):
+    """Reuse recorded Yahoo closes only when nearby prices confirm the same units."""
+    known = {}
+    checkpoint = close_checkpoint().get(row['symbol'], {})
+    if checkpoint.get('currency') == row.get('quote_currency'):
+        known.update(checkpoint.get('closes', {}))
+    if row.get('mapping_status') == 'Verified':
+        daily = row.get('technical_history', {}).get('daily', {})
+        known.update(zip(daily.get('dates', []), daily.get('closes', [])))
+    used = []
+    for day in history.index[history.Close.isna()]:
+        value = number(known.get(str(day.date())))
+        if value is None or value <= 0:
+            continue
+        anchors = [(d, float(v)) for d,v in history.loc[:day, 'Close'].dropna().items()
+                   if str(d.date()) in known][-2:]
+        if len(anchors) < 2 or not all(math.isclose(v, known[str(d.date())], rel_tol=1e-6, abs_tol=1e-7) for d,v in anchors):
+            continue
+        history.loc[day, 'Close'] = value
+        used.append(str(day.date()))
+    return used
+
+
 def apply_history(row, history, metadata, today=None, *, asof=None):
     error = identity_error(row, metadata)
     if error:
@@ -172,6 +202,7 @@ def apply_history(row, history, metadata, today=None, *, asof=None):
     history.index = pd.to_datetime(history.index)
     if history.index.tz is not None:
         history.index = history.index.tz_localize(None)
+    retained_closes = retain_reported_closes(row, history)
     cutoff = SessionCutoff(today, asof=asof, metadata=metadata, region='gb')
     today = cutoff.today
     complete = cutoff.completed(history).dropna(subset=['Close']).sort_index()
@@ -187,12 +218,31 @@ def apply_history(row, history, metadata, today=None, *, asof=None):
     jumps = complete.index[(ratios < .05) | (ratios > 20)]
     regime_start = jumps[-1] if len(jumps) else None
     coherent = history[history.index >= regime_start] if regime_start is not None else history
+    omitted_tail = [str(d.date()) for d in coherent.index if d > complete.index[-1]]
+    coherent = coherent.loc[:complete.index[-1]]
     currency = metadata['currency']
     out = dict(row, mapping_status='Verified', mapping_reason=None, yahoo_name=metadata.get('longName') or metadata.get('shortName'),
         exchange='LSE', region='UK / London', quote_currency=currency, yahoo_instrument_type=metadata.get('instrumentType'))
     out.update(technical_values(coherent, currency, validate_daily_close=False, asof=cutoff.asof, metadata=metadata, region='gb'))
+    for prefix, months in [('williams', False), ('williams_monthly', True)]:
+        if retained_closes and out.get(prefix+'_r_period'):
+            last = pd.Timestamp(out[prefix+'_asof'])
+            start = (last.to_period('M')-13).start_time if months else last-pd.Timedelta(weeks=14)
+            dates = [d for d in retained_closes if pd.Timestamp(d)>=start]
+            if dates:
+                note = 'Reused previously returned Yahoo Close for '+', '.join(dates)+'. Latest download omitted it. Values are recorded source data, not estimates.'
+                out[prefix+'_source_note'] = ' '.join(filter(None, [out.get(prefix+'_source_note'), note]))
+        if out.get(prefix+'_r') is None and isinstance(row.get(prefix+'_r'), (int,float)):
+            for key,value in row.items():
+                if key.startswith(prefix+'_') and (months or not key.startswith('williams_monthly_')):
+                    out[key] = value
+            out[prefix+'_source_note'] = ' '.join(filter(None, [row.get(prefix+'_source_note'), 'Latest Yahoo history is incomplete. Retained the previous dated reading from '+str(row.get('technical_fetched'))+'.']))
+            if 'retained reading' not in (out.get(prefix+'_r_period') or ''):
+                out[prefix+'_r_period'] = (out.get(prefix+'_r_period') or '')+' · retained reading'
     out['history_regime_start'] = str(regime_start.date()) if regime_start is not None else None
     out['history_quality_note'] = 'A price discontinuity above twenty-fold was detected. Indicators use only the subsequent consistent segment. No unit correction is guessed.' if regime_start is not None else None
+    if omitted_tail:
+        out['history_quality_note'] = ' '.join(filter(None, [out['history_quality_note'], 'Yahoo omitted Close for trailing candle(s): '+', '.join(omitted_tail)+'. Indicators end at the latest recorded close.']))
     candles=coherent[['High','Low','Close']]
     out['williams_input_note']='Weekly and monthly extrema use reported daily High and Low, with the latest reported Close. Intermediate closes outside intraday ranges do not change these extrema. No prices are estimated or clamped.'
     out['williams_daily_range_discrepancies']=int(((candles.Close<candles.Low)|(candles.Close>candles.High)).tail(80).sum())
@@ -256,8 +306,8 @@ def refresh(cache_path=CACHE, seconds=1200, limit=1000, fetcher=None):
     cutoff = datetime.now(timezone.utc) - timedelta(hours=20)
     retry = datetime.now(timezone.utc) - timedelta(hours=6)
     session_date, session_ready = SessionCutoff(region='gb').latest_session()
-    due = lambda row: row.get('etf_history_version') != 5 or not row.get('technical_fetched') or datetime.fromisoformat(row['technical_fetched']) < cutoff or (row.get('technical_asof') or '') < session_date
-    ready = lambda row: (row.get('technical_fetched') and row.get('etf_history_version')!=5) or not row.get('history_attempted') or datetime.fromisoformat(row['history_attempted']) < retry or (row.get('technical_fetched') and datetime.fromisoformat(row['history_attempted']) < session_ready)
+    due = lambda row: row.get('etf_history_version') != 6 or not row.get('technical_fetched') or datetime.fromisoformat(row['technical_fetched']) < cutoff or (row.get('technical_asof') or '') < session_date
+    ready = lambda row: (row.get('technical_fetched') and row.get('etf_history_version')!=6) or not row.get('history_attempted') or datetime.fromisoformat(row['history_attempted']) < retry or (row.get('technical_fetched') and datetime.fromisoformat(row['history_attempted']) < session_ready)
     candidates = sorted([r for r in cache['rows'] if due(r) and ready(r)], key=lambda r: (bool(r.get('technical_fetched')), r.get('technical_fetched') or '', -(r.get('aum_local') or 0), r['symbol']))
     deadline = time.monotonic() + seconds
     for row in candidates[:limit]:
@@ -274,7 +324,7 @@ def refresh(cache_path=CACHE, seconds=1200, limit=1000, fetcher=None):
                 metadata = ticker.history_metadata
             refreshed = apply_history(row, history, metadata)
             refreshed['history_error'] = None
-            refreshed['etf_history_version'] = 5
+            refreshed['etf_history_version'] = 6
             row.clear()
             row.update(refreshed)
             checkpoint['succeeded'] += 1

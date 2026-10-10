@@ -129,3 +129,52 @@ def test_fund_monthly_history_uses_existing_unit_guard_and_survives_publication(
     assert published['williams_monthly_r']==-50
     assert published['williams_monthly_version']==1
     assert published['williams_monthly_r_period']==computed['williams_monthly_r_period']
+
+
+def test_fund_reuses_recorded_close_only_with_matching_price_anchors(monkeypatch):
+    import etfs
+    row=etfs.import_catalogue()[0]
+    row=dict(row,catalogue_price_local=15)
+    meta=dict(symbol=row['yahoo_symbol'],exchangeName='LSE',instrumentType='ETF',currency=row['quote_currency'],longName=row['name'])
+    old=etfs.apply_history(row,history(),meta,today=date(2026,10,10))
+    fresh=history();fresh.loc['2026-10-09','Close']=None
+    result=etfs.apply_history(old,fresh,meta,today=date(2026,10,10))
+    assert result['williams_monthly_r']==-50
+    assert result['williams_r']==-50
+    assert result['technical_asof']=='2026-10-09'
+    assert 'previously returned Yahoo Close' in result['williams_monthly_source_note']
+    assert '2026-10-09' in result['williams_source_note']
+    changed=fresh.copy();changed.loc[:'2026-10-08','Close']=10
+    assert etfs.retain_reported_closes(old,changed)==[]
+    assert pd.isna(changed.loc['2026-10-09','Close'])
+    incomplete=etfs.apply_history(old,changed,meta,today=date(2026,10,10))
+    assert incomplete['williams_monthly_r']==-100
+    assert incomplete['williams_monthly_asof']=='2026-10-08'
+    changed.loc['2026-09-01','High']=None
+    incomplete=etfs.apply_history(old,changed,meta,today=date(2026,10,10))
+    assert incomplete['williams_monthly_r']==-50
+    assert 'retained reading' in incomplete['williams_monthly_r_period']
+    assert 'Retained the previous dated reading' in incomplete['williams_monthly_source_note']
+    monkeypatch.setattr(etfs,'close_checkpoint',lambda:{row['symbol']:dict(currency=row['quote_currency'],closes={'2026-10-07':15.,'2026-10-08':15.,'2026-10-09':15.})})
+    recovered=etfs.apply_history(row,fresh,meta,today=date(2026,10,10))
+    assert recovered['williams_monthly_r']==-50
+    assert recovered['technical_asof']=='2026-10-09'
+    wrong=dict(row,quote_currency='wrong')
+    assert etfs.retain_reported_closes(wrong,fresh.copy())==[]
+
+
+def test_fund_missing_trailing_close_uses_dated_available_history_not_invented_price(monkeypatch):
+    import etfs
+    monkeypatch.setattr(etfs,'close_checkpoint',lambda:{})
+    row=dict(etfs.import_catalogue()[0],catalogue_price_local=15)
+    meta=dict(symbol=row['yahoo_symbol'],exchangeName='LSE',instrumentType='ETF',currency=row['quote_currency'],longName=row['name'])
+    frame=history();frame.loc['2026-10-09','Close']=None
+    result=etfs.apply_history(row,frame,meta,asof='2026-10-10T10:00:00Z')
+    assert result['williams_monthly_r']==-50
+    assert result['williams_monthly_asof']=='2026-10-08'
+    assert result['technical_asof']=='2026-10-08'
+    assert '2026-10-09' in result['williams_monthly_source_note']
+    assert 'trailing candle' in result['history_quality_note']
+    frame.loc['2026-09-01','Close']=None
+    invalid=etfs.apply_history(row,frame,meta,asof='2026-10-10T10:00:00Z')
+    assert invalid['williams_monthly_r'] is None
