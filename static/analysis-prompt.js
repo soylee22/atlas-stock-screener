@@ -54,6 +54,8 @@ Construct transparent bear, base and bull earnings scenarios if the evidence is 
 
 If the data cannot support valuation scenarios, say so and specify the missing operands. Avoid arbitrary discount rates, unsupported terminal growth and a false-precision DCF. If you produce a DCF, distinguish FCFF from FCFE, reinvestment needs from capex alone and equity from enterprise value. Show the key sensitivities and external evidence for material inputs. Explain whether low valuation compensates for observable risks rather than declaring a stock cheap solely because it falls below a sector median.
 
+Where supplied, assess weekly and monthly Williams %R separately. Both use a 14-candle range with oversold at -80 or below and overbought at -20 or above. Retain each timeframe's period, source gaps and developing-period flag. The monthly reading includes the current calendar month through completed daily sessions. Oversold can persist and does not establish intrinsic undervaluation. Compare technical position with the earnings and valuation evidence.
+
 8. PLOTS THAT EXPLAIN THE BUSINESS
 Create charts from actual observations if plotting tools are available. Prefer: annual net income and revenue with separate labelled scales or separate panels; net margin and operating margin over time; quarterly net income with same-quarter comparisons; net income, operating cash flow and FCF over matched periods; annual DPS with incomplete years visually distinguished; share count versus EPS; and debt, cash and equity over time. Use zero-aware or signed-log axes for losses. Do not remove inconvenient years, bridge missing periods as though observations exist or smooth away a turn in earnings. State source, currency and period on each plot.
 

@@ -97,7 +97,7 @@ jobs:
       - name: Bootstrap added European markets
         if: github.event_name == 'push'
         run: python refresh_data.py --europe-only --seconds 300 --limit 600
-      - name: Refresh large-cap weekly Williams and moving averages
+      - name: Refresh large-cap weekly/monthly Williams and moving averages
         run: python refresh_data.py --technicals-only --seconds 1200 --limit 1200
       - name: Refresh ETF price histories and retain the fund catalogue
         run: python etfs.py --restore --seconds 1200 --limit 1000

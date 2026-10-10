@@ -3,7 +3,7 @@ import { quadrantModel, ZONES, validViewport, zoomViewport, panViewport, centreV
 import { escapeHtml as esc, parseNumber } from './format.js';
 
 export const quadrantDefaults = { x:'net_income', y:'div_years', xPrefer:'higher', yPrefer:'higher', xScale:'symlog', yScale:'linear', split:'median', xCut:0, yCut:10, fit:true, zone:'all', pareto:true, frontierOnly:false, order:'balanced', viewport:null };
-const lowerDefault = new Set(['pe','forward_pe','price_book','debt','delay','below_52w_high','williams_r','expense_ratio']);
+const lowerDefault = new Set(['pe','forward_pe','price_book','debt','delay','below_52w_high','williams_r','williams_monthly_r','expense_ratio']);
 const number = n => n.toLocaleString('en-GB');
 export function createQuadrant(root, { fields, defaults=quadrantDefaults, noun='stock', settings, loadData, onChange, onDetail, onExport, format }) {
   const numeric = Object.values(fields).filter(f=>f.kind !== 'text');
@@ -31,6 +31,7 @@ export function createQuadrant(root, { fields, defaults=quadrantDefaults, noun='
     el('quad-metric-note').textContent = ([options.x, options.y].some(k => /^(revenue|net_income)_growth_/.test(k)) ? 'Growth uses completed fiscal years in reporting currency. 1Y is annual YoY. 3Y, 5Y and 10Y are CAGR. Yahoo usually supplies four annual records, so longer horizons remain unavailable until enough history is cached. ' : '') + ([options.x, options.y].includes('below_52w_high') ? 'Below 52W high: 0% is at the high. Lower values are closer. Negative values mean above the quoted high.' : '');
     el('quad-metric-note').textContent += ([options.x,options.y].some(k=>k.startsWith('sma_'))?' SMA distances: positive above, negative below. Uses the latest completed daily close and completed weeks. Change the custom window using Moving averages above. Cached price history loads progressively.':'');
     el('quad-metric-note').textContent += ([options.x,options.y].includes('williams_r')?' Weekly Williams %R: 14 weekly High/Low/Close candles through the latest completed exchange session, including the developing week. Oversold ≤ -80, overbought ≥ -20. Lower values favour oversold position, not intrinsic value.':'');
+    el('quad-metric-note').textContent += ([options.x,options.y].includes('williams_monthly_r')?' Monthly Williams %R: 14 calendar-month High/Low/Close candles through the latest completed exchange session, including the developing month. Oversold ≤ -80, overbought ≥ -20. Lower values favour oversold position, not intrinsic value.':'');
     el('quad-metric-note').textContent += ([options.x,options.y].includes('eps_diluted')?' Diluted EPS: USD per share at current FX. TTM sums reported quarterly EPS, otherwise latest FY. Share denominations differ, so higher EPS alone does not establish business quality or value.':'');
     if([options.x,options.y].includes('nav_return_3y'))el('quad-metric-note').textContent+=' NAV total return 3Y is cumulative and imported on 9 October 2026. Its currency and exact endpoints are unknown. Compare like exposures and verified return currencies.';
     el('quad-metric-note').hidden = !el('quad-metric-note').textContent;

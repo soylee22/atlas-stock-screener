@@ -370,7 +370,7 @@ def backfill_technicals(store,seconds=180,limit=120):
         if venue not in cutoffs:
             cutoffs[venue] = SessionCutoff(metadata={'exchange':venue[0]}, region=venue[1]).latest_session()
         session_date, session_ready = cutoffs[venue]
-        upgrade = (row.get('williams_version') or 0) < 2
+        upgrade = (row.get('williams_version') or 0) < 2 or not row.get('williams_monthly_version')
         stale = (row.get('technical_fetched') or '') < model.datetime.fromtimestamp(time.time()-86400,model.timezone.utc).isoformat()
         new_session = session_date and (row.get('technical_asof') or '') < session_date
         ready = upgrade or row.get('technical_attempted',0) < time.time()-6*3600 or (session_ready is not None and row.get('technical_attempted',0) < session_ready.timestamp())
@@ -389,7 +389,7 @@ def backfill_technicals(store,seconds=180,limit=120):
     while missing or stale:
         chosen=stale if step%4==3 and stale else missing if missing else stale
         queue.append(chosen.popleft());step+=1
-    counts=dict(attempted=0,succeeded=0,failed=0,williams_available=0)
+    counts=dict(attempted=0,succeeded=0,failed=0,williams_available=0,williams_monthly_available=0)
     for row in queue[:limit]:
         if time.monotonic()>deadline: break
         counts['attempted']+=1
@@ -400,6 +400,7 @@ def backfill_technicals(store,seconds=180,limit=120):
             metadata=ticker.get_history_metadata()
             values=technical_values(history,metadata.get('currency'),metadata=metadata,region=row['region_code'])
             counts['williams_available'] += int(values['williams_r'] is not None)
+            counts['williams_monthly_available'] += int(values['williams_monthly_r'] is not None)
             values.update(symbol=row['symbol'],region_code=row['region_code'])
             store.upsert_many([values])
             counts['succeeded']+=1

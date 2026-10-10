@@ -60,9 +60,16 @@ class SessionCutoff:
             ready = self.calendar.session_close(session) + CLOSE_ALLOWANCE
         return str(session.date()), ready
 
+    def month_complete(self, month_end):
+        end = pd.Timestamp(month_end).normalize()
+        if self.calendar is None:
+            return end.date() < self.today
+        sessions = self.calendar.sessions_in_range(end.replace(day=1), end)
+        return not len(sessions) or self.calendar.session_close(sessions[-1]) + CLOSE_ALLOWANCE <= self.asof
+
     def source_note(self, candles, start):
         if self.calendar is None:
-            return 'Exchange calendar unknown. Current-day bars are excluded and weekly completion is conservative.'
+            return 'Exchange calendar unknown. Current-day bars are excluded and period completion is conservative.'
         sessions = self.calendar.sessions_in_range(pd.Timestamp(start).normalize(), str(self.today))
         completed = [s for s in sessions if self.calendar.session_close(s) + CLOSE_ALLOWANCE <= self.asof]
         observed = set(candles.dropna(subset=['High','Low','Close']).index.normalize())

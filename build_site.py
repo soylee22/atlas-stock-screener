@@ -28,11 +28,14 @@ EXTRA_FIELDS = {
     *(key + "_local" for key in model.MONETARY_FINANCIAL),
 }
 PUBLIC_FIELDS = EXTRA_FIELDS | set(model.FIELDS)
+MONTHLY_FIELDS = {'williams_monthly_'+key for key in ('r', 'r_period', 'asof', 'zone', 'version', 'reason', 'provisional', 'source_note', 'high_local', 'low_local', 'close_local', 'oversold_price_local', 'overbought_price_local')}
+PUBLIC_FIELDS |= MONTHLY_FIELDS
 INDEX_FIELDS = list(dict.fromkeys([
     "symbol", "name", "region_code", "instrument", "active", "main_listing", "listing_reason",
     "financial_error", "financial_quality_note", "technical_version", "technical_calendar", "williams_source_note", "williams_version", "williams_reason", "williams_provisional", "detail_key", "logo_url", "annual_growth_missing", "annual_growth_version", "income_fetched", "dividend_fetched", "statement_version", "eps_version", *[field["key"] for field in model.COLUMNS],
 ]))
 META_KEYS = ["coverage", "fx", "quote_completed", "last_quote_run", "quote_error", "last_financial", "refresh_health", "annual_growth_backfill", "statement_backfill", "cloud_refresh", "profile_seed", "technical_backfill"]
+INDEX_FIELDS = list(dict.fromkeys(INDEX_FIELDS + sorted(MONTHLY_FIELDS - {key for key in MONTHLY_FIELDS if key.endswith('_local')})))
 ICON_FILE = re.compile(r"[a-f0-9]{64}\.(png|jpg|gif|webp|ico)")
 
 

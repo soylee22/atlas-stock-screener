@@ -79,6 +79,10 @@ COLUMNS = [
     col("williams_zone", "Williams zone", "text", group="Technicals"),
     col("williams_r_period", "Williams period", "text", group="Technicals"),
     col("williams_asof", "Williams source date", "text", group="Technicals"),
+    col("williams_monthly_r", "Monthly Williams %R", "number", True, "Technicals", "14 calendar-month High/Low/Close candles through the latest completed exchange session, including the developing month. Oversold <= -80, overbought >= -20. Price position, not intrinsic value."),
+    col("williams_monthly_zone", "Monthly Williams zone", "text", group="Technicals"),
+    col("williams_monthly_r_period", "Monthly Williams period", "text", group="Technicals"),
+    col("williams_monthly_asof", "Monthly Williams source date", "text", group="Technicals"),
     col("change", "Day change", "percent", group="Performance"),
     col("revenue", "Revenue", "usd", group="Financials"),
     col("eps_diluted", "Diluted EPS", "price", group="Financials", description="Reported earnings per diluted share in USD at current FX. Sum of four consecutive quarterly EPS values, otherwise latest FY. Check its own period. Not a valuation measure and not comparable across different share denominations."),
@@ -1178,7 +1182,7 @@ def chart(x: str = "net_income", y: str = "div_years", search: str = "", regions
         raise HTTPException(400, str(exc)) from exc
     keys = sorted({"symbol", "name", "region", "region_code", "sector", "industry", "exchange",
                    "income_period", "cf_period", "fcf_growth_period", "financial_fetched", "quote_time", x, y,
-                   "technical_asof", "technical_calendar", "williams_source_note", "williams_provisional", "williams_asof", "williams_zone", "williams_version", "eps_version", "eps_fetched", "eps_currency", *[key.removesuffix("_distance") + "_period" for key in (x, y) if key in GROWTH_KEYS or key in CAPITAL_KEYS or key in {"eps_diluted", "williams_r"} or key.startswith("sma_")]})
+                   "williams_monthly_version", "williams_monthly_reason", "williams_monthly_asof", "williams_monthly_zone", "williams_monthly_provisional", "williams_monthly_source_note", "technical_asof", "technical_calendar", "williams_source_note", "williams_provisional", "williams_asof", "williams_zone", "williams_version", "eps_version", "eps_fetched", "eps_currency", *[key.removesuffix("_distance") + "_period" for key in (x, y) if key in GROWTH_KEYS or key in CAPITAL_KEYS or key in {"eps_diluted", "williams_r", "williams_monthly_r"} or key.startswith("sma_")]})
     # Project only plot fields and paired values. Do not load every dividend event or description.
     projection = "json_object(" + ",".join(f"'{key}',json_extract(data,'$.{key}')" for key in keys) + ")"
     paired = " AND ".join(f"json_type(data,'$.{key}') IN ('integer','real')" for key in {x, y})
@@ -1186,6 +1190,8 @@ def chart(x: str = "net_income", y: str = "div_years", search: str = "", regions
         missing = f"COALESCE(json_type(data,'$.{key}') IN ('integer','real'),0)=0"
         if key == "williams_r":
             source = "COALESCE(json_extract(data,'$.williams_version'),0)<1"
+        elif key == "williams_monthly_r":
+            source = "COALESCE(json_extract(data,'$.williams_monthly_version'),0)<1"
         elif key.startswith("sma_"):
             source = "COALESCE(json_extract(data,'$.technical_version'),0)<1"
         elif key in GROWTH_KEYS:
@@ -1217,7 +1223,7 @@ def chart(x: str = "net_income", y: str = "div_years", search: str = "", regions
 def technical_screen():
     # Custom SMA screening uses the same browser calculation in local and Pages modes.
     store.classify_listings()
-    keys = sorted(set(["symbol","name","region_code","instrument","active","main_listing","listing_reason","annual_growth_version","income_fetched","statement_version","technical_version", "technical_calendar", "williams_source_note", "williams_provisional", *FIELDS]))
+    keys = sorted(set(["symbol","name","region_code","instrument","active","main_listing","listing_reason","annual_growth_version","income_fetched","statement_version","technical_version", "technical_calendar", "williams_source_note", "williams_provisional", "williams_monthly_version", "williams_monthly_reason", "williams_monthly_provisional", "williams_monthly_source_note", *FIELDS]))
     parts = ["json_object("+','.join(f"'{k}',json_extract(data,'$.{k}')" for k in keys[i:i+32])+")" for i in range(0,len(keys),32)]
     projection = parts[0]
     for part in parts[1:]: projection = "json_patch("+projection+","+part+")"
@@ -1317,9 +1323,10 @@ def export(search: str = "", regions: str = "", filters: str = "[]", sort: str =
     if not all(k in FIELDS for k in selected):
         raise HTTPException(400, "Unknown export column")
     selected = list(dict.fromkeys(["symbol", "name"] + selected + ["income_period", "cf_period", "fcf_growth_period", "quote_time", "financial_fetched"]
-                                 + [key.removesuffix("_distance") + "_period" for key in selected if key in GROWTH_KEYS or key in CAPITAL_KEYS or key in {"eps_diluted", "williams_r"} or key.startswith("sma_")]
+                                 + [key.removesuffix("_distance") + "_period" for key in selected if key in GROWTH_KEYS or key in CAPITAL_KEYS or key in {"eps_diluted", "williams_r", "williams_monthly_r"} or key.startswith("sma_")]
                                  + (["eps_currency", "eps_fetched"] if "eps_diluted" in selected else [])
-                                 + (["williams_asof", "williams_zone"] if "williams_r" in selected else [])
+                                 + (["williams_asof", "williams_zone", "williams_provisional", "williams_source_note", "technical_calendar"] if "williams_r" in selected else [])
+                                 + (["williams_monthly_asof", "williams_monthly_zone", "williams_monthly_provisional", "williams_monthly_source_note", "technical_calendar"] if "williams_monthly_r" in selected else [])
                                  + (["technical_asof"] if any(key.startswith("sma_") for key in selected) else [])
                                  + (["annual_growth_fetched"] if any(key in GROWTH_KEYS for key in selected) else [])
                                  + (["statement_fetched"] if any(key in CAPITAL_KEYS for key in selected) else [])))

@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
 import {migrateLargeCapScreen} from '../static/screen-policy.js';
 import {chartCoverage,selectSnapshot,snapshotCSV} from '../static/snapshot-engine.js';
+import {rankedCSV} from '../static/ranked-export.js';
+import {metricPeriodKey} from '../static/sma-math.js';
+import {buildAnalysisPack} from '../static/analysis-pack.js';
+import {williamsSourceKeys} from '../static/williams.js';
 const state={filters:[{field:'roe',op:'gte',value:10}],columns:['net_income'],sma:{window:40,interval:'weekly'}};
 migrateLargeCapScreen(state);migrateLargeCapScreen(state);
 assert.equal(state.filters.length,2);assert.deepEqual(state.columns,['net_income','williams_r']);assert.equal(state.sma.window,40);
@@ -14,3 +18,24 @@ assert.deepEqual(chartCoverage([{williams_r:null},{williams_r:null,williams_vers
 const csv=snapshotCSV([row],schema,'williams_r');assert.ok(csv.includes('williams_asof'));assert.ok(csv.includes('14 weekly candles'));assert.ok(csv.includes('-80'));
 assert.ok(csv.includes('Yahoo missing 2026-10-08'));assert.ok(csv.includes('williams_provisional'));
 console.log('Williams filters, source coverage, CSV and saved-state migration passed');
+
+const monthly={...row,williams_monthly_r:-95,williams_monthly_version:1,williams_monthly_r_period:'14 monthly candles ending 2026-10-31',williams_monthly_asof:'2026-10-09',williams_monthly_provisional:true,williams_monthly_source_note:'Yahoo missing 2025-09-02',williams_monthly_high_local:100};
+const monthlySchema={...schema,columns:[...schema.columns,{key:'williams_monthly_r',kind:'number',group:'Technicals',label:'Monthly Williams %R',default:true}]};
+assert.equal(metricPeriodKey('williams_monthly_r'),'williams_monthly_r_period');
+assert.deepEqual(chartCoverage([{williams_version:2},{williams_version:2,williams_monthly_version:1}],'williams_monthly_r','williams_monthly_r',{}),{awaiting:1,unavailable:1});
+const monthlyParams=new URLSearchParams({sort:'williams_monthly_r',direction:'asc',filters:JSON.stringify([{field:'williams_monthly_r',op:'lte',value:-80}])});
+assert.deepEqual(selectSnapshot([monthly,{...monthly,symbol:'BOUNDARY',williams_monthly_r:-80},{...monthly,symbol:'OUT',williams_monthly_r:-79}],monthlySchema,monthlyParams).map(r=>r.symbol),['TEST','BOUNDARY']);
+for (const universe of [undefined,'etf']) {
+  const text=snapshotCSV([monthly],{...monthlySchema,universe},'williams_monthly_r');
+  for(const key of williamsSourceKeys('williams_monthly_r'))assert.ok(text.includes(key),key);
+  assert.ok(text.includes('Yahoo missing 2025-09-02'));
+  assert.ok(text.includes('14 monthly candles ending 2026-10-31'));
+}
+const ranked=rankedCSV([{row:monthly,x:20e9,y:-95,zone:'dream',pareto:true,score:1}],{x:'market_cap',y:'williams_monthly_r',xPrefer:'higher',yPrefer:'lower',order:'balanced'});
+assert.ok(ranked.includes('williams_monthly_asof')&&ranked.includes('Yahoo missing 2025-09-02')&&ranked.includes('14 monthly candles'));
+const packet=buildAnalysisPack(monthly,[monthly],monthlySchema,{},{now:'2026-10-10'});
+assert.equal(packet.data.current_stock.williams_monthly_r,-95);
+assert.equal(packet.data.current_stock.williams_monthly_provisional,true);
+assert.equal(packet.data.current_stock.williams_monthly_high_local,100);
+assert.equal(packet.data.peers.sector.metrics.williams_monthly_r.preference,'lower');
+console.log('Monthly numeric filters, separate coverage, stock/fund CSV, ranked export and AI source metadata passed');

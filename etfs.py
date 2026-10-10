@@ -44,6 +44,7 @@ COLUMNS = [
     column('exposure', 'Exposure', default=False, description='Leveraged or inverse only where explicitly named. Standard / unspecified is not a certified exclusion of leverage.'),
     column('nav_return_3y', 'NAV total return 3Y', 'percent', description='Cumulative three-year NAV total return imported on 9 October 2026. Return currency is not supplied. Not CAGR or market-price return.'),
     column('williams_r', 'Williams %R · weekly', 'number', True, 'Technicals', '14 weekly Yahoo OHLC candles. Oversold <= -80. Includes the developing week through the latest completed exchange session.'),
+    column('williams_monthly_r', 'Williams %R · monthly', 'number', True, 'Technicals', '14 calendar-month Yahoo OHLC candles. Oversold <= -80. Includes the developing month through the latest completed exchange session.'),
     column('holdings', 'Holdings', 'integer', False),
     column('quote_currency', 'Quote currency', default=False),
     column('change', 'Session change', 'percent', False, 'Price', 'Change between the last two completed Yahoo daily closes. CSV 1-day change is the fallback.'),
@@ -62,7 +63,7 @@ COLUMNS = [
 ]
 
 # Put entry position and performance beside size and fees in the initial layout.
-_front=['aum','price','expense_ratio','williams_r','nav_return_3y','asset_class','focus','specialism']
+_front=['aum','price','expense_ratio','williams_r','williams_monthly_r','nav_return_3y','asset_class','focus','specialism']
 COLUMNS.sort(key=lambda field: _front.index(field['key']) if field['key'] in _front else len(_front))
 
 def now():
@@ -193,7 +194,7 @@ def apply_history(row, history, metadata, today=None, *, asof=None):
     out['history_regime_start'] = str(regime_start.date()) if regime_start is not None else None
     out['history_quality_note'] = 'A price discontinuity above twenty-fold was detected. Indicators use only the subsequent consistent segment. No unit correction is guessed.' if regime_start is not None else None
     candles=coherent[['High','Low','Close']]
-    out['williams_input_note']='Weekly extrema use reported daily High and Low, with the latest reported Close. Intermediate closes outside intraday ranges do not change these extrema. No prices are estimated or clamped.'
+    out['williams_input_note']='Weekly and monthly extrema use reported daily High and Low, with the latest reported Close. Intermediate closes outside intraday ranges do not change these extrema. No prices are estimated or clamped.'
     out['williams_daily_range_discrepancies']=int(((candles.Close<candles.Low)|(candles.Close>candles.High)).tail(80).sum())
     out.update(price_local=float(complete.Close.iloc[-1]), price_period=f'Yahoo daily close {complete.index[-1].date()} · {currency}',
         price_source='Yahoo Finance', price_fetched=now(), quote_time=complete.index[-1].isoformat(),
@@ -255,8 +256,8 @@ def refresh(cache_path=CACHE, seconds=1200, limit=1000, fetcher=None):
     cutoff = datetime.now(timezone.utc) - timedelta(hours=20)
     retry = datetime.now(timezone.utc) - timedelta(hours=6)
     session_date, session_ready = SessionCutoff(region='gb').latest_session()
-    due = lambda row: row.get('etf_history_version') != 4 or not row.get('technical_fetched') or datetime.fromisoformat(row['technical_fetched']) < cutoff or (row.get('technical_asof') or '') < session_date
-    ready = lambda row: (row.get('technical_fetched') and row.get('etf_history_version')!=4) or not row.get('history_attempted') or datetime.fromisoformat(row['history_attempted']) < retry or (row.get('technical_fetched') and datetime.fromisoformat(row['history_attempted']) < session_ready)
+    due = lambda row: row.get('etf_history_version') != 5 or not row.get('technical_fetched') or datetime.fromisoformat(row['technical_fetched']) < cutoff or (row.get('technical_asof') or '') < session_date
+    ready = lambda row: (row.get('technical_fetched') and row.get('etf_history_version')!=5) or not row.get('history_attempted') or datetime.fromisoformat(row['history_attempted']) < retry or (row.get('technical_fetched') and datetime.fromisoformat(row['history_attempted']) < session_ready)
     candidates = sorted([r for r in cache['rows'] if due(r) and ready(r)], key=lambda r: (bool(r.get('technical_fetched')), r.get('technical_fetched') or '', -(r.get('aum_local') or 0), r['symbol']))
     deadline = time.monotonic() + seconds
     for row in candidates[:limit]:
@@ -273,7 +274,7 @@ def refresh(cache_path=CACHE, seconds=1200, limit=1000, fetcher=None):
                 metadata = ticker.history_metadata
             refreshed = apply_history(row, history, metadata)
             refreshed['history_error'] = None
-            refreshed['etf_history_version'] = 4
+            refreshed['etf_history_version'] = 5
             row.clear()
             row.update(refreshed)
             checkpoint['succeeded'] += 1
@@ -286,7 +287,7 @@ def refresh(cache_path=CACHE, seconds=1200, limit=1000, fetcher=None):
                 row.update(imported, history_attempted=attempted, history_quality_note=message)
             row['history_error'] = 'Yahoo refresh failed. Previous data retained.' if row.get('technical_fetched') else 'Yahoo history unavailable or mapping unconfirmed.'
             if not row.get('technical_fetched'):
-                row.update(mapping_status='Unavailable / unconfirmed', mapping_reason=message[:250], williams_version=1, williams_reason=row['history_error'])
+                row.update(mapping_status='Unavailable / unconfirmed', mapping_reason=message[:250], williams_version=1, williams_reason=row['history_error'], williams_monthly_version=1, williams_monthly_reason=row['history_error'])
             checkpoint['failed'] += 1
             if '429' in message or 'rate limit' in message.lower() or type(exc).__name__ == 'YFRateLimitError':
                 checkpoint['rate_limited'] = True
@@ -335,14 +336,15 @@ def publish(output, fx, built, cache_path=CACHE, compress=True):
         'catalogue_source','catalogue_price_local','price_source','history_error','mapping_reason','nav_return_currency','nav_return_3y_period',
         'aum_period','expense_ratio_period','price_local','aum_local','aum_currency','turnover_local','turnover_currency','quote_time','technical_version','technical_asof',
         'history_quality_note','history_regime_start','williams_input_note','williams_daily_range_discrepancies','technical_calendar','williams_source_note','williams_version','williams_reason','williams_asof','williams_zone','williams_r_period','williams_provisional',
-        'sma_200d_period','sma_200w_period','below_52w_high_period', *[c['key'] for c in COLUMNS]]
+        'sma_200d_period','sma_200w_period','below_52w_high_period',
+        *['williams_monthly_'+k for k in ['r_period','asof','zone','version','reason','provisional','source_note']], *[c['key'] for c in COLUMNS]]
     fields = list(dict.fromkeys(fields))
     write('schema.json', dict(universe='etf', columns=COLUMNS, regions=REGIONS))
     write('stocks.json', dict(version=1, built=built, fields=fields, rows=[[r.get(k) for k in fields] for r in rows]), compress)
     write('technicals.json', dict(built=built, technicals={r['symbol']:r['technical_history'] for r in rows if r.get('technical_history')}, currencies={r['symbol']:r.get('technical_currency') for r in rows if r.get('technical_history')}), compress)
     valid = sum(r.get('williams_r') is not None for r in rows)
     status = dict(counts=[dict(region='gb', stocks=len(rows), main_stocks=len(rows), enriched=valid, main_enriched=valid)],
-        fx=fx, etfs=dict(total=len(rows), williams=valid, verified=sum(r.get('mapping_status') == 'Verified' for r in rows),
+        fx=fx, etfs=dict(total=len(rows), williams=valid, williams_monthly=sum(r.get('williams_monthly_r') is not None for r in rows), verified=sum(r.get('mapping_status') == 'Verified' for r in rows),
             fees=sum(r.get('expense_ratio') is not None for r in rows), aum=sum(r.get('aum') is not None for r in rows),
             nav_return_3y=sum(r.get('nav_return_3y') is not None for r in rows), catalogue_date=CATALOGUE_DATE, refresh=cache.get('refresh')),
         snapshot=dict(built=built, index_compression='gzip' if compress else None, technical_compression='gzip' if compress else None,

@@ -1,3 +1,4 @@
+import { williamsSourceKeys, williamsMetrics } from './williams.js';
 import { ANALYSIS_PROMPT } from './analysis-prompt.js';
 import { annualDividends } from './format.js';
 
@@ -6,7 +7,7 @@ const value = (row, ...keys) => { for (const key of keys) if (finite(row?.[key])
 const dayGap = (a,b) => (Date.parse(a)-Date.parse(b))/86400000;
 const percent = (current,base) => finite(current) && finite(base) && base>0 ? (current/base-1)*100 : null;
 const quantile = (values,p) => { const i=(values.length-1)*p,lo=Math.floor(i),hi=Math.ceil(i); return values.length ? values[lo]+(values[hi]-values[lo])*(i-lo):null; };
-const lowerPreferred = new Set(['pe','forward_pe','price_book','below_52w_high','williams_r']);
+const lowerPreferred = new Set(['pe','forward_pe','price_book','below_52w_high','williams_r','williams_monthly_r']);
 const positiveRatios = new Set(['pe','forward_pe','price_book']);
 
 export function annualTrends(row,frequency='annual') {
@@ -72,7 +73,7 @@ export function peerContext(rows,target,schema,population) {
   const relevant=industry.filter(r=>r.symbol!==target.symbol).length>=3?industry:sector;
   const distance=r=>r.market_cap>0&&target.market_cap>0?Math.abs(Math.log(r.market_cap/target.market_cap)):Infinity;
   const selected=relevant.filter(r=>r.symbol!==target.symbol).sort((a,b)=>distance(a)-distance(b)||a.symbol.localeCompare(b.symbol)).slice(0,24);
-  const keys=['symbol','name','region_code','sector','industry','exchange','financial_currency','income_fetched','williams_reason','williams_provisional','technical_fetched',...schema.columns.map(f=>f.key)];
+  const keys=['symbol','name','region_code','sector','industry','exchange','financial_currency','income_fetched','williams_reason','williams_provisional','technical_fetched',...williamsMetrics.flatMap(williamsSourceKeys),...['high_local','low_local','close_local','oversold_price_local','overbought_price_local'].map(k=>'williams_monthly_'+k),...schema.columns.map(f=>f.key)];
   const safe=r=>Object.fromEntries([...new Set(keys)].filter(k=>r[k]!==undefined).map(k=>[k,r[k]]));
   return {scope:'All active main stock listings within the published market-cap scope across the twelve cached markets, independent of current table or chart filters.',population:population||{total:universe.length,sector_classified:known.length},industry_name:target.industry||null,sector_name:target.sector||null,industry:summary(industry,target,schema),sector:summary(sector,target,schema),selection_basis:relevant===industry?'same industry':'same sector',selection_method:'Up to 24 non-target companies closest by log market cap. Cohort summaries use every known member, including the target. Exact normalised names and industries are deduplicated, preferring the target or largest market cap. This is not a certified issuer mapping. Positive P/E, forward P/E and price/book only. Each metric has its own coverage denominator.',selected_peers:selected.map(safe)};
 }
@@ -87,7 +88,7 @@ function convertedStatements(row,fx) {
 }
 export function buildAnalysisPack(row,rows,schema,status,options={}) {
   const now=options.now||new Date().toISOString(),year=Number(now.slice(0,4));
-  const allowed=new Set(['symbol','name','region_code','instrument','active','main_listing','domicile','description','website','source','quote_fetched','dividend_fetched','dividend_history_start','dividend_end_year','annual_growth_fetched','statement_fetched','income_fetched','williams_reason','williams_provisional','technical_fetched',...schema.columns.map(f=>f.key)]);
+  const allowed=new Set(['symbol','name','region_code','instrument','active','main_listing','domicile','description','website','source','quote_fetched','dividend_fetched','dividend_history_start','dividend_end_year','annual_growth_fetched','statement_fetched','income_fetched','williams_reason','williams_provisional','technical_fetched',...williamsMetrics.flatMap(williamsSourceKeys),...['high_local','low_local','close_local','oversold_price_local','overbought_price_local'].map(k=>'williams_monthly_'+k),...schema.columns.map(f=>f.key)]);
   const stock=Object.fromEntries(Object.entries(row).filter(([k])=>allowed.has(k)));
   const rawCurrency=row.dividend_currency||row.quote_currency,currency={GBp:'GBP',GBX:'GBP',ZAc:'ZAR',ILA:'ILS'}[rawCurrency]||rawCurrency,unit=['GBp','GBX','ZAc','ILA'].includes(rawCurrency)?.01:1;
   const rate=status.fx?.[currency]?.rate,events=(row.dividend_events||[]).map(e=>({date:e.date,dividend_per_share:e.amount*unit,dividend_per_share_usd:finite(rate)?e.amount*unit*rate:null}));
