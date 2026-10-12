@@ -1131,7 +1131,7 @@ def status():
         fx_missing = conn.execute("SELECT COUNT(*) FROM stocks WHERE json_extract(data,'$.market_cap_local') IS NOT NULL AND json_extract(data,'$.market_cap') IS NULL").fetchone()[0]
     return dict(counts=[dict(r) for r in counts], coverage=store.meta("coverage", {}), fx=store.meta("fx", {}),
                 refreshing=store.meta("refreshing", False), completed=store.meta("quote_completed"),
-                error=store.meta("quote_error"), last_financial=store.meta("last_financial"), missing_fx=fx_missing,
+                error=store.meta("quote_error"), quote_refresh=store.meta("quote_refresh"), last_financial=store.meta("last_financial"), missing_fx=fx_missing,
                 logos=logos.status())
 
 

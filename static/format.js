@@ -28,3 +28,8 @@ export function annualDividends(events, currentYear = new Date().getFullYear()) 
     return { year, ...entry, growth: year < currentYear && prev?.total > 0 ? (entry.total / prev.total - 1) * 100 : null, incomplete: year === currentYear };
   });
 }
+
+export function quoteStatusSuffix(status) {
+  if (status.quote_refresh?.mode === 'partial') return ' · Quotes updated, partial coverage';
+  return status.error ? ' · Cached quotes, refresh failed' : '';
+}

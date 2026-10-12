@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { parseNumber, annualDividends, compact, escapeHtml } from '../static/format.js';
+import { parseNumber, annualDividends, compact, escapeHtml, quoteStatusSuffix } from '../static/format.js';
 assert.equal(parseNumber('10B'), 10000000000);
 assert.equal(parseNumber('$100M'), 100000000);
 assert.equal(parseNumber('3.5%'), 3.5);
@@ -15,4 +15,8 @@ assert.equal(annual[1].growth, -100);
 assert.equal(annual[2].growth, null);
 assert.equal(annual[3].incomplete, true);
 assert.equal(annual[3].growth, null);
-console.log('14 formatting and dividend assertions passed');
+assert.equal(quoteStatusSuffix({}), '');
+assert.equal(quoteStatusSuffix({error:'failed'}), ' · Cached quotes, refresh failed');
+assert.equal(quoteStatusSuffix({error:'partial',quote_refresh:{mode:'partial'}}), ' · Quotes updated, partial coverage');
+assert.equal(quoteStatusSuffix({quote_refresh:{mode:'complete'}}), '');
+console.log('18 formatting, dividend and refresh-status assertions passed');

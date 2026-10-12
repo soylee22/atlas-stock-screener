@@ -119,8 +119,69 @@ def restore_published_seed(store):
         return False
 
 
+QUOTE_FIELDS = [
+    'symbol', 'region_code', 'quote_currency', 'quote_type', 'price_local', 'market_cap_local',
+    'volume', 'avg_volume', 'change', 'div_yield', 'pe', 'forward_pe', 'price_book',
+    'low_52w_local', 'high_52w_local', 'change_52w', 'quote_time', 'quote_timestamp',
+    'quote_fetched', 'delay', 'market_state', 'source',
+]
+
+
+def partial_quotes(store, backup):
+    """Recover validated observations without importing scan membership or financials."""
+    projection = 'json_object(' + ','.join(
+        f"'{key}',json_extract(fresh.data,'$.{key}')" for key in QUOTE_FIELDS) + ')'
+    retained = []
+    with store.connect() as conn:
+        conn.execute('ATTACH DATABASE ? AS prior', (str(backup),))
+        query = f"""SELECT {projection} AS quote,
+            json_extract(old.data,'$.quote_currency') AS currency,
+            json_extract(old.data,'$.quote_timestamp') AS timestamp,
+            old.region AS region
+            FROM stocks AS fresh JOIN prior.stocks AS old USING(symbol)
+            WHERE json_extract(old.data,'$.active')=1
+            AND json_extract(old.data,'$.instrument')='stock'
+            AND COALESCE(json_extract(fresh.data,'$.quote_fetched'),'') >
+                COALESCE(json_extract(old.data,'$.quote_fetched'),'')"""
+        for record in conn.execute(query):
+            quote = json.loads(record['quote'])
+            price, cap, stamp = (model.number(quote.get(k)) for k in
+                                 ('price_local', 'market_cap_local', 'quote_timestamp'))
+            old_stamp = model.number(record['timestamp'])
+            try:
+                source_time = datetime.fromisoformat(quote['quote_time'])
+                fetched_time = datetime.fromisoformat(quote['quote_fetched'])
+                if source_time.tzinfo is None or fetched_time.tzinfo is None or fetched_time.timestamp() > time.time() + 300:
+                    continue
+                source_stamp = source_time.timestamp()
+            except (TypeError, ValueError, KeyError):
+                continue
+            if (quote['region_code'] != record['region'] or not quote['quote_currency']
+                    or (record['currency'] and quote['quote_currency'] != record['currency'])
+                    or quote.get('quote_type') not in (None, 'EQUITY')
+                    or price is None or price <= 0 or cap is None or cap <= 0
+                    or stamp is None or stamp <= 0 or stamp > time.time() + 300
+                    or abs(source_stamp - stamp) > 1
+                    or (old_stamp is not None and stamp < old_stamp)):
+                continue
+            retained.append(quote)
+    return retained
+
+
+def retained_fx(previous, incoming):
+    """Keep dated positive FX observations independently of universe completeness."""
+    result = dict(previous)
+    for currency, value in incoming.items():
+        rate = model.number(value.get('rate')) if isinstance(value, dict) else None
+        if rate is not None and rate > 0 and value.get('date') and value.get('fetched'):
+            if value['fetched'] >= result.get(currency, {}).get('fetched', ''):
+                result[currency] = value
+    return result
+
+
 def refresh_quotes(pipeline):
     store = pipeline.store
+    started = model.now_iso()
     with store.connect() as conn:
         before = dict(conn.execute("SELECT region,COUNT(*) FROM stocks WHERE json_extract(data,'$.active')=1 GROUP BY region"))
     temporary = tempfile.NamedTemporaryFile(dir=store.path.parent, suffix=".sqlite", delete=False)
@@ -142,12 +203,30 @@ def refresh_quotes(pipeline):
             raise ValueError("Yahoo scan lost more than 3% of a cached market")
         store.set_meta("last_quote_run", time.time())
         store.set_meta("quote_error", None)
+        store.set_meta('quote_refresh', dict(mode='complete', started=started,
+            finished=model.now_iso(), updated=sum(after.values()), cached=0))
         return True
     except Exception as exc:
+        observations = partial_quotes(store, backup)
+        scanned = store.meta('coverage', {})
+        incoming_fx = store.meta('fx', {})
         with sqlite3.connect(backup) as source, store.connect() as destination:
             source.backup(destination)
-        store.set_meta("quote_error", "Yahoo quote refresh failed. Previous quotes retained.")
-        logging.warning("Quote refresh retained the previous snapshot: %s", exc)
+        mode = 'partial' if observations else 'failed'
+        if observations:
+            store.set_meta('fx', retained_fx(store.meta('fx', {}), incoming_fx))
+            store.upsert_many(observations)
+            # Membership and financial/technical sources come from the checkpoint.
+            # quote_completed records a completed attempt, not a market timestamp.
+            store.set_meta('quote_completed', model.now_iso())
+            store.set_meta('last_quote_run', time.time())
+        store.set_meta('quote_refresh', dict(mode=mode, started=started,
+            finished=model.now_iso(), updated=len(observations),
+            cached=sum(before.values()) - len(observations), scan=scanned))
+        store.set_meta("quote_error", "Some quotes remain cached after an incomplete Yahoo scan."
+            if observations else "Yahoo quote refresh failed. Previous quotes retained.")
+        logging.warning("Quote scan incomplete; retained %s fresh quotes without removing listings: %s",
+            len(observations), exc)
         return False
     finally:
         backup.unlink(missing_ok=True)

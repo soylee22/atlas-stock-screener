@@ -280,3 +280,13 @@ Checks: `python -m pytest -q tests` and `node tests/test_etfs.mjs`, alongside ex
 Stocks and ETFs offer Monthly Williams %R in columns, numeric filters, both quadrant axes, details and exports. Monthly oversold applies <= -80 independently of the weekly shortcut. Selecting both shortcuts requires both conditions. Existing saved layouts remain intact.
 
 The indicator uses 14 consecutive calendar-month High, Low and Close candles aggregated from the same Yahoo daily history. It includes the developing month through the latest completed daily session. Its separate source date, period, provisional flag and gap warning travel with table CSV, ranked CSV and AI packets. Month completion follows the final scheduled exchange session plus 30 minutes, including weekend and holiday month ends. No missing prices are estimated. Missing whole months, invalid ranges and insufficient history remain unavailable. Stock validation and ETF unit-discontinuity guards remain in force. Nightly collection updates both timeframes in one history request.
+
+## Partial quote refreshes
+
+An incomplete Yahoo universe scan preserves all existing listings and financial histories.
+Validated newly received quotes for known active stocks survive the membership safeguard.
+Quotes require a positive price and market cap, matching currency and region, and a non-regressing market timestamp.
+Missing or invalid observations retain their previous values and dates.
+The snapshot reports partial quote coverage separately from publication success.
+The data panel counts newly received and cached published quotes. Each company retains its own market quote time.
+No missing prices are estimated. Primary-listing classification and the $20bn floor still apply.
