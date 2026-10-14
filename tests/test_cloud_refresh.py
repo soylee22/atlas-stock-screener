@@ -14,7 +14,7 @@ import build_site
 
 def row(symbol, region='us', **extra):
     return dict(symbol=symbol, region_code=region, active=True, instrument='stock',
-        main_listing=True, market_cap_local=1000, **extra)
+        main_listing=True, market_cap_local=1000, **{'statement_version':1, **extra})
 
 
 def test_new_main_profiles_precede_stale_and_rotate_markets(tmp_path):
@@ -49,6 +49,17 @@ def test_cloud_limit_counts_real_claims_and_keeps_completed_rows(tmp_path,monkey
     assert result['stop_reason']=='queue_complete'
     assert result['remaining_eligible']==0
     assert store.get('ONE')['financial_fetched']
+
+
+def test_recent_legacy_profiles_with_missing_statements_become_due(tmp_path):
+    store = model.Store(tmp_path/'test.sqlite')
+    store.upsert_many([row('LEGACY', annual_growth_version=1, statement_version=0),
+                      row('COMPLETE', annual_growth_version=1, statement_version=1)], enriched=True)
+    with store.connect() as conn:
+        conn.execute('UPDATE stocks SET attempted=0')
+    assert store.enrichment_candidates() == ['LEGACY']
+    assert store.claim_enrichment('LEGACY')
+    assert not store.claim_enrichment('LEGACY')
 
 
 def test_full_profile_rate_limit_stops_queue_and_preserves_old_values(tmp_path,monkeypatch):

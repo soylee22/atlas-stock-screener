@@ -51,6 +51,7 @@ def col(key, label, kind="number", default=False, group="Overview", description=
 
 
 CAPITAL_KEYS = ("roic_proxy", "roce", "roic_proxy_5y_avg", "roce_5y_avg")
+from dividend_quality import METRICS as DIVIDEND_QUALITY_KEYS, quality_values
 GROWTH_HORIZONS = (1, 3, 5, 10)
 GROWTH_KEYS = [f"{metric}_growth_{years}y" for metric in ("revenue", "net_income") for years in GROWTH_HORIZONS]
 GROWTH_COLUMNS = [col(key, f"{'Revenue' if key.startswith('revenue') else 'Net income'} {'growth 1Y' if years == 1 else 'CAGR ' + str(years) + 'Y'}",
@@ -93,6 +94,18 @@ COLUMNS = [
     col("operating_cf", "Operating cash flow", "usd", group="Cash flow"),
     col("fcf_delta", "FCF change $", "usd", group="Cash flow", description="Latest FY less preceding FY, converted using the current cached FX rate."),
     col("fcf_yield", "FCF yield", "percent", group="Cash flow", description="Reported FCF divided by current USD market cap. Period may be TTM or FY."),
+    *[col(f"fcf_growth_{n}y", f"FCF {'growth' if n == 1 else 'CAGR'} {n}Y", "percent", group="Dividend quality", description="Total operating cash flow less absolute capex over consecutive completed fiscal years in one reporting currency. Positive starting FCF required. No shorter-horizon substitution. Withheld for financial companies.") for n in GROWTH_HORIZONS],
+    *[col(f"div_fiscal_growth_{n}y", f"Dividend FY {'growth' if n == 1 else 'CAGR'} {n}Y", "percent", group="Dividend quality", description="Local-currency dividends per share grouped into the same completed fiscal-year windows as FCF. Special dividends can affect growth. Distinct from the calendar-year dividend CAGR.") for n in GROWTH_HORIZONS],
+    *[col(f"fcf_div_growth_gap_{n}y", f"FCF minus dividend growth {n}Y", "percent", group="Dividend quality", description="FCF CAGR minus dividends-per-share CAGR over matched fiscal windows, in percentage points. >= 0 means total FCF grew at least as fast. Share-count changes still need review. Historical screen, not a sustainability forecast.") for n in GROWTH_HORIZONS],
+    col("fcf_payout", "FCF payout ratio", "percent", group="Dividend quality", description="Absolute common dividend cash outflow / positive FCF for the same four reported quarters, otherwise latest FY. Total cash dividends used if common line is absent, with explicit basis. Excludes financial companies."),
+    col("current_ratio", "Current ratio", group="Dividend quality", description="Current assets / positive current liabilities in the latest verified balance sheet. Excludes financial businesses. Interpret by sector."),
+    *[col(k+"_period", k.replace('_',' ').title()+" period", "text", group="Dividend quality") for k in DIVIDEND_QUALITY_KEYS],
+    col("fcf_payout_basis", "FCF payout dividend basis", "text", group="Dividend quality"),
+    col("fair_value", "Entered fair value", "price", group="Valuation", description="Your dated USD per-share fair-value estimate, saved in this browser. Not a Yahoo analyst target or automatically verified valuation."),
+    col("margin_of_safety", "Margin of safety", "percent", group="Valuation", description="100 × (1 − current USD share price / your entered USD fair value). Negative means above the estimate. Unavailable without an entered valuation."),
+    col("fair_value_period", "Fair value date", "text", group="Valuation"),
+    col("margin_of_safety_period", "Margin of safety basis", "text", group="Valuation"),
+    col("fair_value_source", "Fair value source", "text", group="Valuation"),
     col("pe", "P/E", group="Valuation"), col("forward_pe", "Forward P/E", group="Valuation"),
     col("price_book", "Price / book", group="Valuation"),
     col("roe", "Return on equity", "percent", group="Financials"),
@@ -429,6 +442,7 @@ def dollarise(row, fx):
     row["fcf_yield"] = fcf / cap * 100 if cap and cap > 0 and fcf is not None else None
     price, high = number(row.get("price_local")), number(row.get("high_52w_local"))
     row["below_52w_high"] = (1 - price / high) * 100 if high is not None and high > 0 and price is not None and price >= 0 else None
+    row.update(quality_values(row))
     return row
 
 
@@ -706,7 +720,7 @@ class Store:
         """Scan once, serving never-fetched main companies before weekly refreshes."""
         with self.connect() as conn:
             rows = conn.execute("""SELECT symbol,region,enriched FROM stocks WHERE
-                (enriched < ? OR COALESCE(json_extract(data,'$.annual_growth_version'),0)<1)
+                (enriched < ? OR COALESCE(json_extract(data,'$.annual_growth_version'),0)<1 OR COALESCE(json_extract(data,'$.statement_version'),0)<1)
                 AND attempted < ? AND json_extract(data,'$.instrument')='stock'
                 AND json_extract(data,'$.active')=1 AND COALESCE(json_extract(data,'$.main_listing'),1)=1
                 """ + COLLECTION_SCOPE + """ ORDER BY (enriched=0) DESC, json_extract(data,'$.market_cap') DESC""",
@@ -725,7 +739,7 @@ class Store:
     def claim_enrichment(self, symbol):
         with self.connect() as conn:
             cursor = conn.execute("""UPDATE stocks SET attempted=? WHERE symbol=?
-                AND (enriched < ? OR COALESCE(json_extract(data,'$.annual_growth_version'),0)<1)
+                AND (enriched < ? OR COALESCE(json_extract(data,'$.annual_growth_version'),0)<1 OR COALESCE(json_extract(data,'$.statement_version'),0)<1)
                 AND attempted < ? AND json_extract(data,'$.instrument')='stock'
                 AND json_extract(data,'$.active')=1 AND COALESCE(json_extract(data,'$.main_listing'),1)=1""" + COLLECTION_SCOPE,
                 (time.time(), symbol, time.time()-7*86400, time.time()-6*3600))
@@ -735,7 +749,7 @@ class Store:
         with self.connect() as conn:
             conn.execute("BEGIN IMMEDIATE")
             row = conn.execute("""SELECT symbol FROM stocks WHERE
-                (enriched < ? OR COALESCE(json_extract(data,'$.annual_growth_version'),0)<1) AND attempted < ?
+                (enriched < ? OR COALESCE(json_extract(data,'$.annual_growth_version'),0)<1 OR COALESCE(json_extract(data,'$.statement_version'),0)<1) AND attempted < ?
                 AND json_extract(data,'$.instrument')='stock' AND json_extract(data,'$.active')=1
                 AND COALESCE(json_extract(data,'$.main_listing'),1)=1
                 """ + COLLECTION_SCOPE + """ ORDER BY (json_extract(data,'$.main_listing')=1) DESC,
@@ -1182,7 +1196,7 @@ def chart(x: str = "net_income", y: str = "div_years", search: str = "", regions
         raise HTTPException(400, str(exc)) from exc
     keys = sorted({"symbol", "name", "region", "region_code", "sector", "industry", "exchange",
                    "income_period", "cf_period", "fcf_growth_period", "financial_fetched", "quote_time", x, y,
-                   "williams_monthly_version", "williams_monthly_reason", "williams_monthly_asof", "williams_monthly_zone", "williams_monthly_provisional", "williams_monthly_source_note", "technical_asof", "technical_calendar", "williams_source_note", "williams_provisional", "williams_asof", "williams_zone", "williams_version", "eps_version", "eps_fetched", "eps_currency", *[key.removesuffix("_distance") + "_period" for key in (x, y) if key in GROWTH_KEYS or key in CAPITAL_KEYS or key in {"eps_diluted", "williams_r", "williams_monthly_r"} or key.startswith("sma_")]})
+                   "williams_monthly_version", "williams_monthly_reason", "williams_monthly_asof", "williams_monthly_zone", "williams_monthly_provisional", "williams_monthly_source_note", "technical_asof", "technical_calendar", "williams_source_note", "williams_provisional", "williams_asof", "williams_zone", "williams_version", "eps_version", "eps_fetched", "eps_currency", "dividend_quality_fetched", "fcf_payout_basis", *[key.removesuffix("_distance") + "_period" for key in (x, y) if key in GROWTH_KEYS or key in CAPITAL_KEYS or key in DIVIDEND_QUALITY_KEYS or key in {"eps_diluted", "williams_r", "williams_monthly_r"} or key.startswith("sma_")]})
     # Project only plot fields and paired values. Do not load every dividend event or description.
     projection = "json_object(" + ",".join(f"'{key}',json_extract(data,'$.{key}')" for key in keys) + ")"
     paired = " AND ".join(f"json_type(data,'$.{key}') IN ('integer','real')" for key in {x, y})
@@ -1194,6 +1208,8 @@ def chart(x: str = "net_income", y: str = "div_years", search: str = "", regions
             source = "COALESCE(json_extract(data,'$.williams_monthly_version'),0)<1"
         elif key.startswith("sma_"):
             source = "COALESCE(json_extract(data,'$.technical_version'),0)<1"
+        elif key in DIVIDEND_QUALITY_KEYS:
+            source = "COALESCE(json_extract(data,'$.statement_version'),0)<1 AND COALESCE(json_extract(data,'$.sector'),'')!='Financial Services'"
         elif key in GROWTH_KEYS:
             source = "COALESCE(json_extract(data,'$.annual_growth_version'),0)<1"
         elif key == "eps_diluted":
@@ -1220,16 +1236,16 @@ def chart(x: str = "net_income", y: str = "div_years", search: str = "", regions
 
 
 @app.get("/api/technical-screen")
-def technical_screen():
+def technical_screen(include_history: bool = True):
     # Custom SMA screening uses the same browser calculation in local and Pages modes.
     store.classify_listings()
-    keys = sorted(set(["symbol","name","region_code","instrument","active","main_listing","listing_reason","annual_growth_version","income_fetched","statement_version","technical_version", "technical_calendar", "williams_source_note", "williams_provisional", "williams_monthly_version", "williams_monthly_reason", "williams_monthly_provisional", "williams_monthly_source_note", *FIELDS]))
+    keys = sorted(set(["symbol","name","region_code","instrument","active","main_listing","listing_reason","annual_growth_version","income_fetched","statement_version","dividend_quality_version","dividend_quality_fetched","dividend_quality_reasons","technical_version", "technical_calendar", "williams_source_note", "williams_provisional", "williams_monthly_version", "williams_monthly_reason", "williams_monthly_provisional", "williams_monthly_source_note", *FIELDS]))
     parts = ["json_object("+','.join(f"'{k}',json_extract(data,'$.{k}')" for k in keys[i:i+32])+")" for i in range(0,len(keys),32)]
     projection = parts[0]
     for part in parts[1:]: projection = "json_patch("+projection+","+part+")"
     with store.connect() as conn:
         records = [json.loads(r[0]) for r in conn.execute("SELECT "+projection+" FROM stocks WHERE json_extract(data,'$.active')=1")]
-        technicals = [dict(r) for r in conn.execute("SELECT symbol,json_extract(data,'$.technical_history') AS history,json_extract(data,'$.technical_currency') AS currency FROM stocks WHERE json_type(data,'$.technical_history')='object'")]
+        technicals = [dict(r) for r in conn.execute("SELECT symbol,json_extract(data,'$.technical_history') AS history,json_extract(data,'$.technical_currency') AS currency FROM stocks WHERE json_type(data,'$.technical_history')='object'")] if include_history else []
     payload = dict(fields=keys,rows=[[row.get(key) for key in keys] for row in records],
         technicals={r['symbol']:json.loads(r['history']) for r in technicals},fx=store.meta('fx',{}),
         currencies={r['symbol']:r['currency'] for r in technicals})
@@ -1323,13 +1339,14 @@ def export(search: str = "", regions: str = "", filters: str = "[]", sort: str =
     if not all(k in FIELDS for k in selected):
         raise HTTPException(400, "Unknown export column")
     selected = list(dict.fromkeys(["symbol", "name"] + selected + ["income_period", "cf_period", "fcf_growth_period", "quote_time", "financial_fetched"]
-                                 + [key.removesuffix("_distance") + "_period" for key in selected if key in GROWTH_KEYS or key in CAPITAL_KEYS or key in {"eps_diluted", "williams_r", "williams_monthly_r"} or key.startswith("sma_")]
+                                 + [key.removesuffix("_distance") + "_period" for key in selected if key in GROWTH_KEYS or key in CAPITAL_KEYS or key in DIVIDEND_QUALITY_KEYS or key in {"eps_diluted", "williams_r", "williams_monthly_r"} or key.startswith("sma_")]
                                  + (["eps_currency", "eps_fetched"] if "eps_diluted" in selected else [])
                                  + (["williams_asof", "williams_zone", "williams_provisional", "williams_source_note", "technical_calendar"] if "williams_r" in selected else [])
                                  + (["williams_monthly_asof", "williams_monthly_zone", "williams_monthly_provisional", "williams_monthly_source_note", "technical_calendar"] if "williams_monthly_r" in selected else [])
                                  + (["technical_asof"] if any(key.startswith("sma_") for key in selected) else [])
                                  + (["annual_growth_fetched"] if any(key in GROWTH_KEYS for key in selected) else [])
-                                 + (["statement_fetched"] if any(key in CAPITAL_KEYS for key in selected) else [])))
+                                 + (["statement_fetched"] if any(key in CAPITAL_KEYS for key in selected) else [])
+                                 + (["dividend_quality_fetched", "fcf_payout_basis"] if any(key in DIVIDEND_QUALITY_KEYS for key in selected) else [])))
     rows, _ = select_rows(search, regions, filters, sort, direction, include_other, only_symbols, 100000, 0, main_only)
     out = io.StringIO()
     writer = csv.writer(out)

@@ -24,6 +24,7 @@ EXTRA_FIELDS = {
     "statement_history", "statement_errors", "statement_version", "statement_fetched", "roic_proxy_inputs", "roic_proxy_reason", "roce_inputs", "roce_reason",
     "capital_returns_history", "capital_returns_version", "roic_proxy_5y_avg_reason", "roce_5y_avg_reason",
     "eps_diluted_local", "eps_reason", "eps_version",
+    "dividend_quality_version", "dividend_quality_fetched", "dividend_quality_reasons", "dividend_quality_history", "fcf_payout_inputs",
     "technical_calendar", "williams_source_note", "williams_version", "williams_reason", "williams_provisional", "williams_high_local", "williams_low_local", "williams_close_local", "williams_oversold_price_local", "williams_overbought_price_local",
     *(key + "_local" for key in model.MONETARY_FINANCIAL),
 }
@@ -36,6 +37,7 @@ INDEX_FIELDS = list(dict.fromkeys([
 ]))
 META_KEYS = ["coverage", "fx", "quote_completed", "last_quote_run", "quote_error", "quote_refresh", "last_financial", "refresh_health", "annual_growth_backfill", "statement_backfill", "cloud_refresh", "profile_seed", "technical_backfill"]
 INDEX_FIELDS = list(dict.fromkeys(INDEX_FIELDS + sorted(MONTHLY_FIELDS - {key for key in MONTHLY_FIELDS if key.endswith('_local')})))
+INDEX_FIELDS += ["dividend_quality_version", "dividend_quality_fetched", "dividend_quality_reasons"]
 ICON_FILE = re.compile(r"[a-f0-9]{64}\.(png|jpg|gif|webp|ico)")
 
 
@@ -84,11 +86,16 @@ def snapshot_status(rows, metadata, icon_count, built):
         available = sum(model.number(r.get(key)) is not None for r in main)
         pending = sum(model.number(r.get(key)) is None and not r.get('statement_version') for r in main)
         capital_coverage['metrics'][key] = dict(available=available, not_fetched=pending, unavailable=len(main)-available-pending)
+    dividend_coverage = dict(main_listings=len(main), metrics={})
+    for key in model.DIVIDEND_QUALITY_KEYS:
+        available = sum(model.number(r.get(key)) is not None for r in main)
+        pending = sum(model.number(r.get(key)) is None and not r.get('statement_version') and r.get('sector') != 'Financial Services' for r in main)
+        dividend_coverage['metrics'][key] = dict(available=available, not_fetched=pending, unavailable=len(main)-available-pending)
     quote_refresh = dict(metadata.get('quote_refresh') or {})
     if quote_refresh:
         fresh = sum(bool(r.get('quote_fetched')) and r['quote_fetched'] >= quote_refresh['started'] for r in rows)
         quote_refresh.update(published_updated=fresh, published_cached=len(rows)-fresh)
-    return dict(quote_refresh=quote_refresh or None, capital_returns=capital_coverage, counts=counts, coverage=metadata.get("coverage", {}), fx=metadata.get("fx", {}),
+    return dict(quote_refresh=quote_refresh or None, capital_returns=capital_coverage, dividend_quality=dividend_coverage, counts=counts, coverage=metadata.get("coverage", {}), fx=metadata.get("fx", {}),
         refreshing=False, completed=metadata.get("quote_completed"), error=("Some quotes remain cached after an incomplete Yahoo scan." if quote_refresh.get("mode")=="partial" else metadata.get("quote_error")),
         last_financial=metadata.get("last_financial"), refresh_health=metadata.get("refresh_health"),
         annual_growth_backfill=metadata.get("annual_growth_backfill"), statement_backfill=metadata.get("statement_backfill"),

@@ -60,6 +60,7 @@ jobs:
           node --experimental-default-type=module tests/test_snapshot_json.mjs
           node --experimental-default-type=module tests/test_williams.mjs
           node --experimental-default-type=module tests/test_etfs.mjs
+          node --experimental-default-type=module tests/test_dividend_quality.mjs
           node --check static/quadrant.js
           node --check static/app.js
       - name: Restore market data cache

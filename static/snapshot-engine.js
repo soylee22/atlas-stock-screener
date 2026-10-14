@@ -1,4 +1,5 @@
 import { williamsSourceKeys } from './williams.js';
+import { qualitySourceKeys } from './dividend-quality.js';
 export function decodeSnapshot(data) {
   if (data.version !== 1 || !Array.isArray(data.fields) || !Array.isArray(data.rows)) throw new Error('Unsupported data snapshot');
   return data.rows.map(values => Object.fromEntries(data.fields.map((field, i) => [field, values[i]])));
@@ -54,6 +55,8 @@ export function chartCoverage(rows, x, y, fields) {
     if(key === 'williams_r') return !row.williams_version;
     if(key === 'williams_monthly_r') return !row.williams_monthly_version;
     if(key === 'eps_diluted') return !row.eps_version;
+    if (fields[key]?.group === 'Dividend quality') return row.sector !== 'Financial Services' && !row.statement_version;
+    if (['fair_value', 'margin_of_safety'].includes(key)) return false;
     if(key.startsWith('sma_')) return !row.technical_version;
     if (/^(revenue|net_income)_growth_(1|3|5|10)y$/.test(key)) return !row.annual_growth_version;
     if (/^(roic_proxy|roce)(_(5y_avg|5y_count))?$/.test(key)) return !row.statement_version;
@@ -74,7 +77,7 @@ export function snapshotCSV(rows, schema, requested = '') {
   const allowed = new Set(['symbol', 'name', 'instrument', ...schema.columns.map(f => f.key)]);
   const columns = requested ? requested.split(',') : schema.columns.filter(f => f.default).map(f => f.key);
   if (columns.some(k => !allowed.has(k))) throw new Error('Invalid export column');
-  const keys = [...new Set(['symbol', 'name', ...columns, ...(schema.universe==='etf'?['catalogue_date','catalogue_source','aum_period','expense_ratio_period','aum_currency','aum_local','quote_currency','price_local','price_period','price_source','price_fetched','nav_return_3y_period','nav_return_currency','mapping_status','history_error','technical_fetched','history_quality_note','history_regime_start','williams_input_note','williams_daily_range_discrepancies']:['income_period','cf_period','fcf_growth_period','quote_time','financial_fetched']), ...columns.flatMap(williamsSourceKeys), ...(columns.includes('eps_diluted')?['eps_diluted_period','eps_currency','eps_fetched']:[]), ...columns.filter(k=>/^(roic_proxy|roce)(_5y_avg)?$/.test(k)).map(k=>k+'_period'), ...(columns.some(k=>/^(roic_proxy|roce)(_5y_avg)?$/.test(k))?['statement_fetched']:[]), ...columns.filter(k=>k.startsWith('sma_')).map(k=>k.replace(/_distance$/,'')+'_period'), ...(columns.some(k=>k.startsWith('sma_'))?['technical_asof']:[]), ...columns.filter(k => /^(revenue|net_income)_growth_(1|3|5|10)y$/.test(k)).map(k => k + '_period'), ...(columns.some(k => /^(revenue|net_income)_growth_(1|3|5|10)y$/.test(k)) ? ['annual_growth_fetched'] : [])])];
+  const keys = [...new Set(['symbol', 'name', ...columns, ...(schema.universe==='etf'?['catalogue_date','catalogue_source','aum_period','expense_ratio_period','aum_currency','aum_local','quote_currency','price_local','price_period','price_source','price_fetched','nav_return_3y_period','nav_return_currency','mapping_status','history_error','technical_fetched','history_quality_note','history_regime_start','williams_input_note','williams_daily_range_discrepancies']:['income_period','cf_period','fcf_growth_period','quote_time','financial_fetched']), ...columns.flatMap(williamsSourceKeys), ...columns.flatMap(qualitySourceKeys), ...(columns.includes('eps_diluted')?['eps_diluted_period','eps_currency','eps_fetched']:[]), ...columns.filter(k=>/^(roic_proxy|roce)(_5y_avg)?$/.test(k)).map(k=>k+'_period'), ...(columns.some(k=>/^(roic_proxy|roce)(_5y_avg)?$/.test(k))?['statement_fetched']:[]), ...columns.filter(k=>k.startsWith('sma_')).map(k=>k.replace(/_distance$/,'')+'_period'), ...(columns.some(k=>k.startsWith('sma_'))?['technical_asof']:[]), ...columns.filter(k => /^(revenue|net_income)_growth_(1|3|5|10)y$/.test(k)).map(k => k + '_period'), ...(columns.some(k => /^(revenue|net_income)_growth_(1|3|5|10)y$/.test(k)) ? ['annual_growth_fetched'] : [])])];
   const cell = value => {
     if (value == null) return '';
     let text = String(value);
