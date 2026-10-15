@@ -24,7 +24,7 @@ on:
   schedule:
     - cron: '23 1 * * *'
       timezone: Europe/London
-    - cron: '17 9,12,15 * * 1-5'
+    - cron: '0 9,11,13,15,17,19,21 * * 1-5'
       timezone: Europe/London
 
 concurrency:
@@ -39,7 +39,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 300
     env:
-      INTRADAY: ${{ github.event.schedule == '17 9,12,15 * * 1-5' || inputs.intraday || false }}
+      INTRADAY: ${{ github.event.schedule == '0 9,11,13,15,17,19,21 * * 1-5' || inputs.intraday || false }}
       ENRICH_LIMIT: ${{ github.event_name == 'workflow_dispatch' && format('{0}', inputs.enrich_limit) || '30000' }}
       REFRESH_SECONDS: ${{ github.event_name == 'workflow_dispatch' && format('{0}', inputs.refresh_seconds) || '14400' }}
     permissions:

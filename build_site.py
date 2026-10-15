@@ -102,7 +102,7 @@ def snapshot_status(rows, metadata, icon_count, built):
         cloud_refresh=metadata.get("cloud_refresh"), profile_seed=metadata.get("profile_seed"), technical_backfill=metadata.get("technical_backfill"),
         missing_fx=sum(r.get("market_cap_local") is not None and r.get("market_cap") is None for r in rows),
         logos=dict(cached=icon_count, queued=0, downloading=0), snapshot=dict(built=built, version=1,
-            cadence="Williams refresh starts at 09:17, 12:17 and 15:17 UK time on weekdays for open markets. Nightly collection starts at 01:23 UK time. Publication follows collection and may be delayed. Quotes daily, company profiles on a seven-day cache.",
+            cadence="Williams refresh starts at 09:00, 11:00, 13:00, 15:00, 17:00, 19:00 and 21:00 UK time on weekdays for open markets. Nightly collection starts at 01:23 UK time. Publication follows collection and may be delayed. Quotes daily, company profiles on a seven-day cache.",
             actions_url="https://github.com/soylee22/atlas-stock-screener/actions/workflows/pages.yml"))
 
 
@@ -185,7 +185,7 @@ def build_site(database, output, seed=None, compress_details=False, compress_dat
     html = html.replace('./static/', f'./static/{version}/')
     html = html.replace("while the local service runs", "on GitHub")
     html = html.replace("Use Refresh data for a new universe scan.", "Use Refresh data to load the latest published snapshot.")
-    html = html.replace("Financials load in a rolling queue, prioritising visible rows, and are cached for seven days.", "Williams refresh starts at 09:17, 12:17 and 15:17 UK time on weekdays for open markets. Nightly collection starts at 01:23 UK time. Publication follows collection and may be delayed. Company profiles use a seven-day cache.")
+    html = html.replace("Financials load in a rolling queue, prioritising visible rows, and are cached for seven days.", "Williams refresh starts at 09:00, 11:00, 13:00, 15:00, 17:00, 19:00 and 21:00 UK time on weekdays for open markets. Nightly collection starts at 01:23 UK time. Publication follows collection and may be delayed. Company profiles use a seven-day cache.")
     html = html.replace("Files are stored locally", "Files are stored with the published site")
     (output / "index.html").write_text(html)
     etf_html=(model.ROOT / 'static' / 'etfs.html').read_text().replace('href="/', 'href="./').replace('src="/', 'src="./')
