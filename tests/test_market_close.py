@@ -126,3 +126,49 @@ def test_stock_fresh_cache_fetches_newly_completed_session(tmp_path,monkeypatch)
     refresh_data.backfill_technicals(store,seconds=10,limit=1)
     assert calls==['HSBA.L']
     assert store.get('HSBA.L')['technical_asof']=='2026-10-09'
+
+
+def test_developing_williams_changes_with_latest_price_but_sma_closes_do_not():
+    frame = pd.DataFrame({'High':110.,'Low':90.,'Close':100.},
+                         index=pd.bdate_range('2024-01-02','2026-10-09'))
+    frame.loc['2026-10-09'] = [120.,85.,86.]
+    stamp = pd.Timestamp('2026-10-09T12:00:00Z')
+    meta = {'regularMarketTime':int(stamp.timestamp())}
+    first = technicals.technical_values(frame,'GBP',asof=stamp,metadata=meta,region='gb')
+    assert first['williams_r'] == -100*34/35
+    assert first['williams_monthly_r'] == first['williams_r']
+    assert first['williams_asof'] == '2026-10-09'
+    assert first['technical_asof'] == '2026-10-08'
+    assert first['sma_200d_local'] == 100
+    assert first['technical_history']['weekly']['dates'][-1] == '2026-10-02'
+    assert 'source quote 2026-10-09T12:00:00+00:00' in first['williams_r_period']
+    frame.loc['2026-10-09','Close'] = 119.
+    second = technicals.technical_values(frame,'GBP',asof=stamp,region='gb')
+    assert second['williams_r'] == -100/35
+    assert second['sma_200d_local'] == first['sma_200d_local']
+
+
+def test_developing_bar_is_not_used_before_open_on_holiday_or_unknown_venue():
+    from market_sessions import SessionCutoff
+    frame = friday_history()
+    frame.loc['2026-10-09'] = [1000.,1.,900.,1000.]
+    before = compute(frame,stamp='2026-10-09T06:59:59Z')
+    assert before['williams_asof'] == '2026-10-08'
+    assert before['williams_r'] == -50
+    assert compute(frame,region=None,stamp='2026-10-09T12:00:00Z')['williams_asof']=='2026-10-08'
+    holiday = pd.DataFrame({'Close':[10.,1000.]},index=pd.to_datetime(['2026-04-02','2026-04-03']))
+    selected = SessionCutoff(asof='2026-04-03T12:00:00Z',region='gb').observed(holiday)
+    assert list(selected.index.strftime('%Y-%m-%d')) == ['2026-04-02']
+
+
+def test_etf_developing_williams_keeps_completed_display_price():
+    row = dict(etfs.import_catalogue()[0],catalogue_price_local=100.)
+    meta = dict(symbol=row['yahoo_symbol'],currency='GBp',exchangeName='LSE',instrumentType='ETF',longName=row['name'])
+    frame = friday_history()
+    frame.loc['2026-10-09','Close'] = 108.
+    result = etfs.apply_history(row,frame,meta,asof=pd.Timestamp('2026-10-09T12:00:00Z'))
+    assert result['price_local'] == 100.
+    assert result['technical_asof'] == '2026-10-08'
+    assert result['williams_r'] == -10.
+    assert result['williams_asof'] == '2026-10-09'
+    assert 'developing daily session' in result['williams_r_period']

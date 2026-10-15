@@ -218,8 +218,10 @@ def apply_history(row, history, metadata, today=None, *, asof=None):
     jumps = complete.index[(ratios < .05) | (ratios > 20)]
     regime_start = jumps[-1] if len(jumps) else None
     coherent = history[history.index >= regime_start] if regime_start is not None else history
-    omitted_tail = [str(d.date()) for d in coherent.index if d > complete.index[-1]]
-    coherent = coherent.loc[:complete.index[-1]]
+    observed = cutoff.observed(coherent)
+    observed = observed.loc[:observed.Close.last_valid_index()]
+    omitted_tail = [str(d.date()) for d in coherent.index if d > observed.index[-1]]
+    coherent = observed
     currency = metadata['currency']
     out = dict(row, mapping_status='Verified', mapping_reason=None, yahoo_name=metadata.get('longName') or metadata.get('shortName'),
         exchange='LSE', region='UK / London', quote_currency=currency, yahoo_instrument_type=metadata.get('instrumentType'))
@@ -306,8 +308,8 @@ def refresh(cache_path=CACHE, seconds=1200, limit=1000, fetcher=None):
     cutoff = datetime.now(timezone.utc) - timedelta(hours=20)
     retry = datetime.now(timezone.utc) - timedelta(hours=6)
     session_date, session_ready = SessionCutoff(region='gb').latest_session()
-    due = lambda row: row.get('etf_history_version') != 6 or not row.get('technical_fetched') or datetime.fromisoformat(row['technical_fetched']) < cutoff or (row.get('technical_asof') or '') < session_date
-    ready = lambda row: (row.get('technical_fetched') and row.get('etf_history_version')!=6) or not row.get('history_attempted') or datetime.fromisoformat(row['history_attempted']) < retry or (row.get('technical_fetched') and datetime.fromisoformat(row['history_attempted']) < session_ready)
+    due = lambda row: row.get('etf_history_version') != 7 or not row.get('technical_fetched') or datetime.fromisoformat(row['technical_fetched']) < cutoff or (row.get('technical_asof') or '') < session_date
+    ready = lambda row: (row.get('technical_fetched') and row.get('etf_history_version')!=7) or not row.get('history_attempted') or datetime.fromisoformat(row['history_attempted']) < retry or (row.get('technical_fetched') and datetime.fromisoformat(row['history_attempted']) < session_ready)
     candidates = sorted([r for r in cache['rows'] if due(r) and ready(r)], key=lambda r: (bool(r.get('technical_fetched')), r.get('technical_fetched') or '', -(r.get('aum_local') or 0), r['symbol']))
     deadline = time.monotonic() + seconds
     for row in candidates[:limit]:
@@ -324,7 +326,7 @@ def refresh(cache_path=CACHE, seconds=1200, limit=1000, fetcher=None):
                 metadata = ticker.history_metadata
             refreshed = apply_history(row, history, metadata)
             refreshed['history_error'] = None
-            refreshed['etf_history_version'] = 6
+            refreshed['etf_history_version'] = 7
             row.clear()
             row.update(refreshed)
             checkpoint['succeeded'] += 1

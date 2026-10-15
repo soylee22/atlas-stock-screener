@@ -6,6 +6,7 @@ from market_sessions import SessionCutoff
 
 def technical_values(history,currency,today=None, *, validate_daily_close=True, asof=None, metadata=None, region=None):
     cutoff = SessionCutoff(today, asof=asof, metadata=metadata, region=region)
+    observed = cutoff.observed(history)
     history = cutoff.completed(history)
     closes=history.get('Close',pd.Series(dtype=float)).dropna().sort_index()
     closes=closes[closes>0]
@@ -17,7 +18,7 @@ def technical_values(history,currency,today=None, *, validate_daily_close=True, 
     weekly=weekly.tail(261)
     weekly=weekly[[cutoff.week_complete(day) for day in weekly.index]].tail(260)
     cache={kind:dict(closes=[float(v) for v in series],dates=[str(d.date()) for d in series.index]) for kind,series in [('daily',daily),('weekly',weekly)]}
-    result=dict(technical_history=cache,technical_currency=currency,technical_version=3,
+    result=dict(technical_history=cache,technical_currency=currency,technical_version=4,
         technical_fetched=datetime.now(timezone.utc).isoformat(timespec='seconds'),technical_asof=str(daily.index[-1].date()) if len(daily) else None,
         technical_price_local=float(daily.iloc[-1]) if len(daily) else None,
         technical_basis='Yahoo Close: split-adjusted, not dividend-adjusted. Includes daily sessions after exchange close plus 30 minutes. Weekly averages use completed market weeks.')
@@ -27,14 +28,14 @@ def technical_values(history,currency,today=None, *, validate_daily_close=True, 
         result['sma_'+label+'_local']=average
         result['sma_'+label+'_distance']=(result['technical_price_local']/average-1)*100 if average and currency else None
         result['sma_'+label+'_period']=f'{series.index[-200].date()} to {series.index[-1].date()} · {currency}' if average else f'Needs 200 completed {kind} closes. {len(series)} available.'
-    result.update(weekly_williams(history, today, validate_daily_close=validate_daily_close, cutoff=cutoff))
-    result.update(monthly_williams(history, today, validate_daily_close=validate_daily_close, cutoff=cutoff))
+    result.update(weekly_williams(observed, today, validate_daily_close=validate_daily_close, cutoff=cutoff, metadata=metadata))
+    result.update(monthly_williams(observed, today, validate_daily_close=validate_daily_close, cutoff=cutoff, metadata=metadata))
     result['technical_calendar'] = cutoff.calendar_name
     return result
 
 
 def weekly_williams(history, today=None, *, validate_daily_close=True, cutoff=None, asof=None, metadata=None, region=None):
-    """14 weekly OHLC bars through the latest completed exchange session."""
+    """14 weekly OHLC bars including a reported developing daily session."""
     return period_williams(history, today, validate_daily_close=validate_daily_close, cutoff=cutoff,
         asof=asof, metadata=metadata, region=region, interval='weekly')
 
@@ -58,9 +59,9 @@ def period_williams(history, today=None, *, validate_daily_close=True, cutoff=No
     candles.index = pd.to_datetime(candles.index)
     if candles.index.tz is not None:
         candles.index = candles.index.tz_localize(None)
-    candles = cutoff.completed(candles)
+    candles = cutoff.observed(candles)
     if candles.empty:
-        out['williams_reason'] = 'No completed daily sessions available.'
+        out['williams_reason'] = 'No reported exchange sessions available.'
         return out
     out['williams_asof'] = str(candles.index[-1].date())
     # Do not silently skip corrupt daily bars or missing whole periods.
@@ -77,6 +78,15 @@ def period_williams(history, today=None, *, validate_daily_close=True, cutoff=No
     start = window.index[0] - pd.Timedelta(days=4) if interval=='weekly' else window.index[0].replace(day=1)
     out['williams_source_note'] = cutoff.source_note(candles, max(start, candles.index[0]))
     out['williams_r_period'] = f"14 {interval} candles ending {periods.index[-1].date()} · through {out['williams_asof']} · " + (f'developing {period_name}' if out['williams_provisional'] else f'completed {period_name}')
+    if candles.index[-1].date() == cutoff.today and cutoff.session_developing():
+        out['williams_r_period'] += ' · developing daily session (Yahoo snapshot, may be delayed)'
+        stamp = (metadata or {}).get('regularMarketTime')
+        try:
+            quote_time = pd.Timestamp(stamp, unit='s', tz='UTC') if stamp else None
+            if quote_time is not None and quote_time <= cutoff.asof and quote_time.tz_convert(cutoff.calendar.tz).date() == cutoff.today:
+                out['williams_r_period'] += ' · source quote ' + quote_time.isoformat()
+        except (ValueError, TypeError, OverflowError):
+            pass
     if out['williams_source_note'] and cutoff.calendar is not None:
         out['williams_r_period'] += ' · source gaps'
     if len(window) < 14 or window.isna().any().any():

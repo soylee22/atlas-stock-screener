@@ -71,13 +71,15 @@ def test_monthly_source_gaps_are_separate_from_weekly_gaps():
     assert row['williams_monthly_asof']=='2026-10-09'
 
 
-def test_forming_daily_bar_excluded_before_close_from_both_timeframes():
+def test_forming_daily_bar_used_before_close_for_both_timeframes():
     frame=history()
     frame.loc['2026-10-09']=[1000,1,900]
     row=technical_values(frame,'GBP',asof='2026-10-09T12:00:00Z',region='gb')
-    assert row['williams_monthly_asof']=='2026-10-08'
-    assert row['williams_monthly_r']==-50
-    assert row['williams_r']==-50
+    assert row['williams_monthly_asof']=='2026-10-09'
+    assert row['williams_monthly_r']==pytest.approx(-100*100/999)
+    assert row['williams_r']==pytest.approx(-100*100/999)
+    assert row['technical_asof']=='2026-10-08'
+    assert 'developing daily session' in row['williams_r_period']
 
 
 def test_monthly_chart_coverage_and_export_keep_independent_dates(tmp_path,monkeypatch):

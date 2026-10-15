@@ -43,6 +43,22 @@ class SessionCutoff:
         return frame[(frame.index.date < self.today) |
                      ((frame.index.date == self.today) & include_today)]
 
+    def observed(self, history):
+        """Reported daily bars, including today's developing exchange session."""
+        frame = history.copy().sort_index()
+        frame.index = pd.to_datetime(frame.index)
+        if frame.index.tz is not None:
+            frame.index = frame.index.tz_localize(None)
+        include_today = (self.calendar is not None and self.calendar.is_session(str(self.today))
+                         and self.calendar.session_open(str(self.today)) <= self.asof)
+        return frame[(frame.index.date < self.today) |
+                     ((frame.index.date == self.today) & include_today)]
+
+    def session_developing(self):
+        return (self.calendar is not None and self.calendar.is_session(str(self.today))
+                and self.calendar.session_open(str(self.today)) <= self.asof
+                < self.calendar.session_close(str(self.today)) + CLOSE_ALLOWANCE)
+
     def week_complete(self, friday):
         friday = pd.Timestamp(friday).normalize()
         if self.calendar is None:
