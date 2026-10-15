@@ -59,6 +59,13 @@ class SessionCutoff:
                 and self.calendar.session_open(str(self.today)) <= self.asof
                 < self.calendar.session_close(str(self.today)) + CLOSE_ALLOWANCE)
 
+    def intraday_ready(self, attempted=None):
+        """Bound daytime polling to open sessions and at most one attempt per hour."""
+        if not self.session_developing():
+            return False
+        stamp = pd.to_datetime(attempted, unit='s', utc=True, errors='coerce') if isinstance(attempted, (int, float)) else pd.to_datetime(attempted, utc=True, errors='coerce')
+        return pd.isna(stamp) or self.asof - stamp >= pd.Timedelta(hours=1)
+
     def week_complete(self, friday):
         friday = pd.Timestamp(friday).normalize()
         if self.calendar is None:

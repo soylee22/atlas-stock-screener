@@ -5,6 +5,10 @@ on:
     branches: [main]
   workflow_dispatch:
     inputs:
+      intraday:
+        description: Refresh open-market Williams only, without financial scans
+        type: boolean
+        default: false
       force_quotes:
         description: Refresh all twelve markets now
         type: boolean
@@ -20,6 +24,8 @@ on:
   schedule:
     - cron: '23 1 * * *'
       timezone: Europe/London
+    - cron: '17 9,12,15 * * 1-5'
+      timezone: Europe/London
 
 concurrency:
   group: atlas-pages
@@ -33,6 +39,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 300
     env:
+      INTRADAY: ${{ github.event.schedule == '17 9,12,15 * * 1-5' || inputs.intraday || false }}
       ENRICH_LIMIT: ${{ github.event_name == 'workflow_dispatch' && format('{0}', inputs.enrich_limit) || '30000' }}
       REFRESH_SECONDS: ${{ github.event_name == 'workflow_dispatch' && format('{0}', inputs.refresh_seconds) || '14400' }}
     permissions:
@@ -89,9 +96,10 @@ jobs:
           key: atlas-data-v1-37779061916-1
           fail-on-cache-miss: true
       - name: Merge previously collected public company histories
+        if: env.INTRADAY != 'true'
         run: python profile_seed.py
       - name: Refresh security classifications
-        if: github.event_name != 'push'
+        if: github.event_name != 'push' && env.INTRADAY != 'true'
         run: python listing_types.py
       - name: Refresh primary-listing designations
         run: python primary_listings.py
@@ -100,12 +108,18 @@ jobs:
         run: python refresh_data.py --europe-only --seconds 300 --limit 600
       - name: Refresh large-cap weekly/monthly Williams and moving averages
         if: github.event_name != 'push'
-        run: python refresh_data.py --technicals-only --seconds 1200 --limit 1200
+        run: |
+          args=(--technicals-only --seconds 1200 --limit 1200)
+          if [ "$INTRADAY" = true ]; then args+=(--intraday); fi
+          python refresh_data.py "${args[@]}"
       - name: Refresh ETF price histories and retain the fund catalogue
         if: github.event_name != 'push'
-        run: python etfs.py --restore --seconds 1200 --limit 1000
+        run: |
+          args=(--restore --seconds 1200 --limit 1000)
+          if [ "$INTRADAY" = true ]; then args+=(--intraday); fi
+          python etfs.py "${args[@]}"
       - name: Overnight Yahoo refresh, first half
-        if: github.event_name != 'push'
+        if: github.event_name != 'push' && env.INTRADAY != 'true'
         env:
           FORCE_QUOTES: ${{ github.event_name == 'schedule' || inputs.force_quotes || 'false' }}
         run: |
@@ -113,16 +127,16 @@ jobs:
           if [ "$FORCE_QUOTES" = true ]; then args+=(--force-quotes); fi
           python cloud_refresh.py "${args[@]}"
       - name: Checkpoint collected data
-        if: ${{ always() && github.event_name != 'push' }}
+        if: ${{ always() && github.event_name != 'push' && env.INTRADAY != 'true' }}
         uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25 # v5
         with:
           path: data
           key: atlas-data-v1-${{ github.run_id }}-${{ github.run_attempt }}-checkpoint
       - name: Overnight Yahoo refresh, second half
-        if: github.event_name != 'push'
+        if: github.event_name != 'push' && env.INTRADAY != 'true'
         run: python cloud_refresh.py --part 2 --seconds "$REFRESH_SECONDS" --limit "$ENRICH_LIMIT"
       - name: Backfill remaining annual and statement history
-        if: github.event_name != 'push'
+        if: github.event_name != 'push' && env.INTRADAY != 'true'
         run: |
           python cloud_refresh.py --part history --seconds "$REFRESH_SECONDS"
       - name: Build public site

@@ -300,16 +300,20 @@ def merged_rows(cache):
     return rows
 
 
-def refresh(cache_path=CACHE, seconds=1200, limit=1000, fetcher=None):
+def refresh(cache_path=CACHE, seconds=1200, limit=1000, fetcher=None, *, intraday=False):
     cache = read_cache(cache_path)
     cache['rows'] = merged_rows(cache)
-    checkpoint = dict(started=now(), attempted=0, succeeded=0, failed=0, rate_limited=False)
+    checkpoint = dict(started=now(), attempted=0, succeeded=0, failed=0, rate_limited=False, mode='intraday' if intraday else 'daily')
     cache['refresh'] = checkpoint
     cutoff = datetime.now(timezone.utc) - timedelta(hours=20)
     retry = datetime.now(timezone.utc) - timedelta(hours=6)
     session_date, session_ready = SessionCutoff(region='gb').latest_session()
     due = lambda row: row.get('etf_history_version') != 7 or not row.get('technical_fetched') or datetime.fromisoformat(row['technical_fetched']) < cutoff or (row.get('technical_asof') or '') < session_date
     ready = lambda row: (row.get('technical_fetched') and row.get('etf_history_version')!=7) or not row.get('history_attempted') or datetime.fromisoformat(row['history_attempted']) < retry or (row.get('technical_fetched') and datetime.fromisoformat(row['history_attempted']) < session_ready)
+    if intraday:
+        session = SessionCutoff(region='gb')
+        due = lambda row: row.get('mapping_status') == 'Verified' and session.intraday_ready(row.get('history_attempted'))
+        ready = lambda row: True
     candidates = sorted([r for r in cache['rows'] if due(r) and ready(r)], key=lambda r: (bool(r.get('technical_fetched')), r.get('technical_fetched') or '', -(r.get('aum_local') or 0), r['symbol']))
     deadline = time.monotonic() + seconds
     for row in candidates[:limit]:
@@ -400,7 +404,7 @@ def publish(output, fx, built, cache_path=CACHE, compress=True):
             fees=sum(r.get('expense_ratio') is not None for r in rows), aum=sum(r.get('aum') is not None for r in rows),
             nav_return_3y=sum(r.get('nav_return_3y') is not None for r in rows), catalogue_date=CATALOGUE_DATE, refresh=cache.get('refresh')),
         snapshot=dict(built=built, index_compression='gzip' if compress else None, technical_compression='gzip' if compress else None,
-            detail_compression='gzip' if compress else None, cadence='ETF price histories refresh nightly from 01:23 UK time. Fund metadata is a dated CSV import.'))
+            detail_compression='gzip' if compress else None, cadence='Williams refresh starts at 09:17, 12:17 and 15:17 UK time on weekdays for open markets. Nightly collection starts at 01:23 UK time. Publication follows collection and may be delayed. Fund metadata is a dated CSV import.'))
     write('status.json', status)
     write('seed.json', dict(cache, rows=merged_rows(cache)), True)
     return status['etfs']
@@ -412,6 +416,7 @@ def main():
     parser.add_argument('--limit', type=int, default=1000)
     parser.add_argument('--restore', action='store_true')
     parser.add_argument('--publish-local', action='store_true')
+    parser.add_argument('--intraday', action='store_true')
     args = parser.parse_args()
     if not 0 <= args.seconds <= 1200 or not 0 <= args.limit <= 1000:
         parser.error('Use 0 to 1200 seconds and 0 to 1000 funds')
@@ -420,7 +425,7 @@ def main():
             restore()
         except requests.RequestException:
             print('ETF recovery unavailable. CSV retained, history will refill.', flush=True)
-    cache = refresh(seconds=args.seconds, limit=args.limit)
+    cache = refresh(seconds=args.seconds, limit=args.limit, intraday=args.intraday)
     print(json.dumps(cache['refresh']), flush=True)
     if args.publish_local:
         import app

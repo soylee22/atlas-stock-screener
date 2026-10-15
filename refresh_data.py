@@ -434,7 +434,7 @@ def backfill_statements(store, seconds=180, limit=60):
     return result
 
 
-def backfill_technicals(store,seconds=180,limit=120):
+def backfill_technicals(store,seconds=180,limit=120,*,intraday=False):
     from technicals import technical_values
     deadline=time.monotonic()+seconds
     store.classify_listings(force=True)
@@ -447,8 +447,10 @@ def backfill_technicals(store,seconds=180,limit=120):
     def due(row):
         venue = (row.get('exchange'), row['region_code'])
         if venue not in cutoffs:
-            cutoffs[venue] = SessionCutoff(metadata={'exchange':venue[0]}, region=venue[1]).latest_session()
-        session_date, session_ready = cutoffs[venue]
+            cutoffs[venue] = SessionCutoff(metadata={'exchange':venue[0]}, region=venue[1])
+        if intraday:
+            return cutoffs[venue].intraday_ready(row.get('technical_attempted'))
+        session_date, session_ready = cutoffs[venue].latest_session()
         upgrade = (row.get('technical_version') or 0) < 4 or (row.get('williams_version') or 0) < 2 or not row.get('williams_monthly_version')
         stale = (row.get('technical_fetched') or '') < model.datetime.fromtimestamp(time.time()-86400,model.timezone.utc).isoformat()
         new_session = session_date and (row.get('technical_asof') or '') < session_date
@@ -488,7 +490,7 @@ def backfill_technicals(store,seconds=180,limit=120):
             logging.warning('Price history %s: %s',row['symbol'],exc)
             if '429' in str(exc) or 'rate' in str(exc).lower(): break
         if counts['attempted']%10==0: print(json.dumps(dict(technical_progress=counts)),flush=True)
-    result=dict(technicals=counts,finished=model.now_iso())
+    result=dict(technicals=counts,finished=model.now_iso(),mode='intraday' if intraday else 'daily')
     store.set_meta('technical_backfill',result)
     print(json.dumps(result),flush=True)
     return result
@@ -535,6 +537,7 @@ def main():
     parser.add_argument("--europe-only", action="store_true")
     parser.add_argument("--statements-only", action="store_true")
     parser.add_argument("--technicals-only", action="store_true")
+    parser.add_argument("--intraday", action="store_true", help="Refresh developing open-market technicals with an hourly retry limit")
     parser.add_argument("--workers", type=int, default=4)
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO)
@@ -548,7 +551,7 @@ def main():
         bootstrap_europe(store,max(1,args.seconds),max(0,args.limit))
     elif args.technicals_only:
         restore_seed(store,args.seed)
-        backfill_technicals(store,max(1,args.seconds),max(0,args.limit))
+        backfill_technicals(store,max(1,args.seconds),max(0,args.limit),intraday=args.intraday)
     elif args.statements_only:
         restore_seed(store, args.seed)
         backfill_statements(store,max(1,args.seconds),max(0,args.limit))
