@@ -21,6 +21,16 @@ def test_intraday_session_and_hourly_attempt_limit(stamp,attempted,expected):
     assert bool(SessionCutoff(asof=stamp,region='gb').intraday_ready(attempted)) is expected
 
 
+def test_evening_run_collects_a_newly_completed_close_without_repolling_closed_market():
+    london = SessionCutoff(asof='2026-10-16T16:10:00Z',region='gb')
+    assert london.intraday_ready('2026-10-16T14:00:00Z', completed_asof='2026-10-15')
+    assert not london.intraday_ready('2026-10-16T14:00:00Z', completed_asof='2026-10-16')
+    assert not london.intraday_ready('2026-10-16T15:45:00Z', completed_asof='2026-10-15')
+    usa = SessionCutoff(asof='2026-10-16T21:00:00Z',region='us')
+    assert usa.intraday_ready('2026-10-16T18:00:00Z', completed_asof='2026-10-15')
+    assert not usa.intraday_ready('2026-10-16T18:00:00Z', completed_asof='2026-10-16')
+
+
 class MiddayCutoff(SessionCutoff):
     def __init__(self,*args,**kwargs):
         kwargs.setdefault('asof','2026-10-16T11:17:00Z')

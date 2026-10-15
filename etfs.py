@@ -312,7 +312,7 @@ def refresh(cache_path=CACHE, seconds=1200, limit=1000, fetcher=None, *, intrada
     ready = lambda row: (row.get('technical_fetched') and row.get('etf_history_version')!=7) or not row.get('history_attempted') or datetime.fromisoformat(row['history_attempted']) < retry or (row.get('technical_fetched') and datetime.fromisoformat(row['history_attempted']) < session_ready)
     if intraday:
         session = SessionCutoff(region='gb')
-        due = lambda row: row.get('mapping_status') == 'Verified' and session.intraday_ready(row.get('history_attempted'))
+        due = lambda row: row.get('mapping_status') == 'Verified' and session.intraday_ready(row.get('history_attempted'), completed_asof=row.get('technical_asof'))
         ready = lambda row: True
     candidates = sorted([r for r in cache['rows'] if due(r) and ready(r)], key=lambda r: (bool(r.get('technical_fetched')), r.get('technical_fetched') or '', -(r.get('aum_local') or 0), r['symbol']))
     deadline = time.monotonic() + seconds
@@ -404,7 +404,7 @@ def publish(output, fx, built, cache_path=CACHE, compress=True):
             fees=sum(r.get('expense_ratio') is not None for r in rows), aum=sum(r.get('aum') is not None for r in rows),
             nav_return_3y=sum(r.get('nav_return_3y') is not None for r in rows), catalogue_date=CATALOGUE_DATE, refresh=cache.get('refresh')),
         snapshot=dict(built=built, index_compression='gzip' if compress else None, technical_compression='gzip' if compress else None,
-            detail_compression='gzip' if compress else None, cadence='Williams refresh starts at 09:00, 11:00, 13:00, 15:00, 17:00, 19:00 and 21:00 UK time on weekdays for open markets. Nightly collection starts at 01:23 UK time. Publication follows collection and may be delayed. Fund metadata is a dated CSV import.'))
+            detail_compression='gzip' if compress else None, cadence='Williams refresh starts at 09:00, 11:00, 13:00, 15:00, 17:00, 19:00 and 21:00 UK time on weekdays for open markets and newly completed sessions. Nightly collection starts at 01:23 UK time. Publication follows collection and may be delayed. Fund metadata is a dated CSV import.'))
     write('status.json', status)
     write('seed.json', dict(cache, rows=merged_rows(cache)), True)
     return status['etfs']
