@@ -49,7 +49,7 @@ def test_stock_intraday_refreshes_fresh_daily_cache_but_not_recent_attempt_or_cl
     for symbol,region,exchange,attempt in [('DUE','gb','LSE','08:17'),('RECENT','gb','LSE','10:45'),('CLOSED','us','NYSE','08:17')]:
         store.upsert_many([dict(symbol=symbol,name=symbol,region_code=region,exchange=exchange,
             active=True,instrument='stock',main_listing=True,market_cap_local=30e9,quote_currency='USD',
-            technical_version=4,williams_version=2,williams_monthly_version=1,
+            technical_version=5,williams_version=2,williams_monthly_version=1,
             technical_asof='2026-10-15',technical_fetched='2026-10-16T08:17:00+00:00',
             technical_attempted=pd.Timestamp('2026-10-16T'+attempt+':00Z').timestamp())])
     calls=[]
@@ -68,7 +68,7 @@ def test_etf_intraday_bypasses_daily_cache_and_only_refreshes_verified_old_attem
     catalogue=[dict(row,catalogue_price_local=100.) for row in etfs.import_catalogue()[:3]]
     rows=[]
     for base,attempt,status in zip(catalogue,['08:17','10:45','08:17'],['Verified','Verified','Not checked']):
-        rows.append(dict(base,catalogue_price_local=100.,mapping_status=status,etf_history_version=7,
+        rows.append(dict(base,catalogue_price_local=100.,mapping_status=status,etf_history_version=8,
             technical_fetched='2026-10-16T08:17:00+00:00',history_attempted='2026-10-16T'+attempt+':00+00:00',technical_asof='2026-10-15'))
     monkeypatch.setattr(etfs,'import_catalogue',lambda:catalogue)
     path=tmp_path/'etfs.json';etfs.write_cache({'version':1,'rows':rows},path)

@@ -448,10 +448,10 @@ def backfill_technicals(store,seconds=180,limit=120,*,intraday=False):
         venue = (row.get('exchange'), row['region_code'])
         if venue not in cutoffs:
             cutoffs[venue] = SessionCutoff(metadata={'exchange':venue[0]}, region=venue[1])
+        upgrade = (row.get('technical_version') or 0) < 5 or (row.get('williams_version') or 0) < 2 or not row.get('williams_monthly_version')
         if intraday:
-            return cutoffs[venue].intraday_ready(row.get('technical_attempted'), completed_asof=row.get('technical_asof'))
+            return cutoffs[venue].intraday_ready(None if upgrade else row.get('technical_attempted'), completed_asof=row.get('technical_asof'))
         session_date, session_ready = cutoffs[venue].latest_session()
-        upgrade = (row.get('technical_version') or 0) < 4 or (row.get('williams_version') or 0) < 2 or not row.get('williams_monthly_version')
         stale = (row.get('technical_fetched') or '') < model.datetime.fromtimestamp(time.time()-86400,model.timezone.utc).isoformat()
         new_session = session_date and (row.get('technical_asof') or '') < session_date
         ready = upgrade or row.get('technical_attempted',0) < time.time()-6*3600 or (session_ready is not None and row.get('technical_attempted',0) < session_ready.timestamp())

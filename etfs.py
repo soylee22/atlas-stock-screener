@@ -16,7 +16,7 @@ from functools import lru_cache
 import pandas as pd
 import requests
 import yfinance as yf
-from technicals import technical_values
+from technicals import technical_values, reported_quote_close, note_reported_quote
 from market_sessions import SessionCutoff
 
 ROOT = Path(__file__).resolve().parent
@@ -202,8 +202,9 @@ def apply_history(row, history, metadata, today=None, *, asof=None):
     history.index = pd.to_datetime(history.index)
     if history.index.tz is not None:
         history.index = history.index.tz_localize(None)
-    retained_closes = retain_reported_closes(row, history)
     cutoff = SessionCutoff(today, asof=asof, metadata=metadata, region='gb')
+    history, quote_note = reported_quote_close(history, metadata.get('currency'), metadata, cutoff)
+    retained_closes = retain_reported_closes(row, history)
     today = cutoff.today
     complete = cutoff.completed(history).dropna(subset=['Close']).sort_index()
     if complete.empty:
@@ -226,6 +227,7 @@ def apply_history(row, history, metadata, today=None, *, asof=None):
     out = dict(row, mapping_status='Verified', mapping_reason=None, yahoo_name=metadata.get('longName') or metadata.get('shortName'),
         exchange='LSE', region='UK / London', quote_currency=currency, yahoo_instrument_type=metadata.get('instrumentType'))
     out.update(technical_values(coherent, currency, validate_daily_close=False, asof=cutoff.asof, metadata=metadata, region='gb'))
+    note_reported_quote(out, quote_note)
     for prefix, months in [('williams', False), ('williams_monthly', True)]:
         if retained_closes and out.get(prefix+'_r_period'):
             last = pd.Timestamp(out[prefix+'_asof'])
@@ -308,11 +310,11 @@ def refresh(cache_path=CACHE, seconds=1200, limit=1000, fetcher=None, *, intrada
     cutoff = datetime.now(timezone.utc) - timedelta(hours=20)
     retry = datetime.now(timezone.utc) - timedelta(hours=6)
     session_date, session_ready = SessionCutoff(region='gb').latest_session()
-    due = lambda row: row.get('etf_history_version') != 7 or not row.get('technical_fetched') or datetime.fromisoformat(row['technical_fetched']) < cutoff or (row.get('technical_asof') or '') < session_date
-    ready = lambda row: (row.get('technical_fetched') and row.get('etf_history_version')!=7) or not row.get('history_attempted') or datetime.fromisoformat(row['history_attempted']) < retry or (row.get('technical_fetched') and datetime.fromisoformat(row['history_attempted']) < session_ready)
+    due = lambda row: row.get('etf_history_version') != 8 or not row.get('technical_fetched') or datetime.fromisoformat(row['technical_fetched']) < cutoff or (row.get('technical_asof') or '') < session_date
+    ready = lambda row: (row.get('technical_fetched') and row.get('etf_history_version')!=8) or not row.get('history_attempted') or datetime.fromisoformat(row['history_attempted']) < retry or (row.get('technical_fetched') and datetime.fromisoformat(row['history_attempted']) < session_ready)
     if intraday:
         session = SessionCutoff(region='gb')
-        due = lambda row: row.get('mapping_status') == 'Verified' and session.intraday_ready(row.get('history_attempted'), completed_asof=row.get('technical_asof'))
+        due = lambda row: row.get('mapping_status') == 'Verified' and session.intraday_ready(None if row.get('etf_history_version') != 8 else row.get('history_attempted'), completed_asof=row.get('technical_asof'))
         ready = lambda row: True
     candidates = sorted([r for r in cache['rows'] if due(r) and ready(r)], key=lambda r: (bool(r.get('technical_fetched')), r.get('technical_fetched') or '', -(r.get('aum_local') or 0), r['symbol']))
     deadline = time.monotonic() + seconds
@@ -330,7 +332,7 @@ def refresh(cache_path=CACHE, seconds=1200, limit=1000, fetcher=None, *, intrada
                 metadata = ticker.history_metadata
             refreshed = apply_history(row, history, metadata)
             refreshed['history_error'] = None
-            refreshed['etf_history_version'] = 7
+            refreshed['etf_history_version'] = 8
             row.clear()
             row.update(refreshed)
             checkpoint['succeeded'] += 1

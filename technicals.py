@@ -1,11 +1,51 @@
 """Moving averages and weekly/monthly Williams %R from Yahoo candles."""
 from datetime import date,datetime,timezone
+import math
 import pandas as pd
 from market_sessions import SessionCutoff
 
 
+def reported_quote_close(history, currency, metadata, cutoff):
+    """Use a dated regular-market quote only for a missing latest daily Close."""
+    meta = metadata or {}
+    if cutoff.calendar is None or not currency or meta.get('currency') != currency or not all(k in history for k in ('High','Low','Close')):
+        return history, None
+    try:
+        price = float(meta['regularMarketPrice'])
+        stamp = pd.Timestamp(meta['regularMarketTime'], unit='s', tz='UTC')
+        observed = cutoff.observed(history)
+        day = stamp.tz_convert(cutoff.calendar.tz).date()
+        if not math.isfinite(price) or price <= 0 or stamp > cutoff.asof or observed.empty or observed.index[-1].date() != day:
+            return history, None
+        if not cutoff.calendar.is_session(str(day)) or not cutoff.calendar.session_open(str(day)) <= stamp <= cutoff.calendar.session_close(str(day)) + pd.Timedelta(minutes=30):
+            return history, None
+        row = observed.iloc[-1]
+        if pd.notna(row.Close):
+            return history, None
+        low, high = float(row.Low), float(row.High)
+        if not all(math.isfinite(v) for v in (low,high)) or not 0 < low <= price <= high:
+            return history, None
+        frame = history.copy()
+        frame.index = pd.to_datetime(frame.index)
+        if frame.index.tz is not None:
+            frame.index = frame.index.tz_localize(None)
+        frame.loc[observed.index[-1], 'Close'] = price
+        note = f'Latest daily Close was missing from Yahoo history. Used its reported regular-market quote {price:g} {currency} at {stamp.isoformat()} for {day}. This is a reported price, not an estimate.'
+        return frame, note
+    except (KeyError, ValueError, TypeError, OverflowError):
+        return history, None
+
+
+def note_reported_quote(values, note):
+    if note:
+        for key in ('williams_source_note','williams_monthly_source_note','technical_basis'):
+            values[key] = ' '.join(filter(None, [values.get(key), note]))
+    return values
+
+
 def technical_values(history,currency,today=None, *, validate_daily_close=True, asof=None, metadata=None, region=None):
     cutoff = SessionCutoff(today, asof=asof, metadata=metadata, region=region)
+    history, quote_note = reported_quote_close(history, currency, metadata, cutoff)
     observed = cutoff.observed(history)
     history = cutoff.completed(history)
     closes=history.get('Close',pd.Series(dtype=float)).dropna().sort_index()
@@ -18,7 +58,7 @@ def technical_values(history,currency,today=None, *, validate_daily_close=True, 
     weekly=weekly.tail(261)
     weekly=weekly[[cutoff.week_complete(day) for day in weekly.index]].tail(260)
     cache={kind:dict(closes=[float(v) for v in series],dates=[str(d.date()) for d in series.index]) for kind,series in [('daily',daily),('weekly',weekly)]}
-    result=dict(technical_history=cache,technical_currency=currency,technical_version=4,
+    result=dict(technical_history=cache,technical_currency=currency,technical_version=5,
         technical_fetched=datetime.now(timezone.utc).isoformat(timespec='seconds'),technical_asof=str(daily.index[-1].date()) if len(daily) else None,
         technical_price_local=float(daily.iloc[-1]) if len(daily) else None,
         technical_basis='Yahoo Close: split-adjusted, not dividend-adjusted. Includes daily sessions after exchange close plus 30 minutes. Weekly averages use completed market weeks.')
@@ -31,7 +71,7 @@ def technical_values(history,currency,today=None, *, validate_daily_close=True, 
     result.update(weekly_williams(observed, today, validate_daily_close=validate_daily_close, cutoff=cutoff, metadata=metadata))
     result.update(monthly_williams(observed, today, validate_daily_close=validate_daily_close, cutoff=cutoff, metadata=metadata))
     result['technical_calendar'] = cutoff.calendar_name
-    return result
+    return note_reported_quote(result, quote_note)
 
 
 def weekly_williams(history, today=None, *, validate_daily_close=True, cutoff=None, asof=None, metadata=None, region=None):
