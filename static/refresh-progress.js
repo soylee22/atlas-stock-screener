@@ -118,10 +118,10 @@ export function installRefreshProgress({ button, onPublished, getSnapshotBuilt }
     starting = true;
     render({label:'Checking for an existing refresh…',value:null});
     try {
-      run = await client.latest();
-      if (activeRun(run)) { render(progressState(run, await client.jobs(run.id))); return; }
       if (!token) token = await connect();
       if (!token) { render({label:'Refresh cancelled. GitHub access is needed to start collection.',failed:true}); return; }
+      run = await client.latest();
+      if (activeRun(run)) { render(progressState(run, await client.jobs(run.id))); return; }
       before = getSnapshotBuilt(); confirmedRun = undefined;
       const response = await client.dispatch();
       submitted = true;
