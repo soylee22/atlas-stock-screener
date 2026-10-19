@@ -151,6 +151,9 @@ def test_discontinuity_starts_new_segment_without_guessing_units():
 
 
 def test_latest_unit_conflict_replaces_bad_cached_quote_with_catalogue(tmp_path,monkeypatch):
+    # Keep this fixture inside the catalogue's seven-day validation window.
+    apply_history = etfs.apply_history
+    monkeypatch.setattr(etfs, 'apply_history', lambda row, history, metadata: apply_history(row, history, metadata, today=date(2026, 10, 9)))
     imported=sample();old=dict(imported,price_local=1.,mapping_status='Verified',technical_fetched='2020-01-01T00:00:00+00:00',etf_history_version=2)
     monkeypatch.setattr(etfs,'import_catalogue',lambda:[imported])
     path=tmp_path/'etfs.json';etfs.write_cache(dict(version=1,rows=[old]),path)
