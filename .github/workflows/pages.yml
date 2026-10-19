@@ -96,6 +96,8 @@ jobs:
           path: data
           key: atlas-data-v1-37779061916-1
           fail-on-cache-miss: true
+      - name: Restore ETF history checkpoint
+        run: python -c "import etfs; etfs.restore()"
       - name: Merge previously collected public company histories
         if: env.INTRADAY != 'true'
         run: python profile_seed.py
@@ -128,7 +130,7 @@ jobs:
           if [ "$FORCE_QUOTES" = true ]; then args+=(--force-quotes); fi
           python cloud_refresh.py "${args[@]}"
       - name: Checkpoint collected data
-        if: ${{ always() && github.event_name != 'push' && env.INTRADAY != 'true' }}
+        if: ${{ always() && steps.bootstrap-policy.outcome == 'success' && github.event_name != 'push' && env.INTRADAY != 'true' }}
         uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25 # v5
         with:
           path: data
@@ -144,7 +146,7 @@ jobs:
         run: |
           python build_site.py --output public --compress-details --compress-data --seed public/data/cache-seed.tar.gz
       - name: Preserve refreshed data
-        if: ${{ always() }}
+        if: ${{ always() && steps.bootstrap-policy.outcome == 'success' }}
         uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25 # v5
         with:
           path: data

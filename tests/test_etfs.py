@@ -112,7 +112,7 @@ def test_failed_refresh_retains_successful_history_and_metadata(tmp_path,monkeyp
 
 
 def test_empty_cache_recovers_public_history(tmp_path,monkeypatch):
-    path=tmp_path/'etfs.json';cache=dict(version=1,rows=[sample()],refresh={})
+    path=tmp_path/'etfs.json';cache=dict(version=1,rows=[dict(sample(),mapping_status='Verified',technical_fetched='2026-10-09T18:00:00+00:00')],refresh={})
     class Response:
         status_code=200
         content=gzip.compress(json.dumps(cache).encode())
@@ -163,3 +163,29 @@ def test_latest_unit_conflict_replaces_bad_cached_quote_with_catalogue(tmp_path,
     assert result['mapping_status']=='Unavailable / unconfirmed'
     assert not result.get('technical_fetched')
     assert 'twenty-fold' in result['mapping_reason']
+
+
+def test_catalogue_only_cache_recovers_bundled_history_when_public_seed_is_empty(tmp_path,monkeypatch):
+    path=tmp_path/'etfs.json'
+    etfs.write_cache(dict(version=1,rows=[sample()],refresh={}),path)
+    good=dict(version=1,rows=[dict(sample(),mapping_status='Verified',technical_fetched='2026-10-10T00:00:00+00:00',williams_r=-82.)],refresh={})
+    seed=tmp_path/'checkpoint.gz';seed.write_bytes(gzip.compress(json.dumps(good).encode()))
+    class Response:
+        status_code=200
+        content=gzip.compress(json.dumps(dict(version=1,rows=[sample()])).encode())
+        def raise_for_status(self):pass
+    monkeypatch.setattr(etfs.requests,'get',lambda *a,**k:Response())
+    assert etfs.restore(path,seed_path=seed)
+    assert etfs.read_cache(path)==good
+    assert not etfs.restore(path,seed_path=seed)
+
+
+def test_bundled_etf_checkpoint_survives_public_download_failure(tmp_path,monkeypatch):
+    seed=tmp_path/'checkpoint.gz'
+    good=dict(version=1,rows=[dict(sample(),mapping_status='Verified',technical_fetched='2026-10-10T00:00:00+00:00')])
+    seed.write_bytes(gzip.compress(json.dumps(good).encode()))
+    def failed(*args,**kwargs):raise etfs.requests.ConnectionError('offline')
+    monkeypatch.setattr(etfs.requests,'get',failed)
+    path=tmp_path/'etfs.json'
+    assert etfs.restore(path,seed_path=seed)
+    assert etfs.read_cache(path)==good

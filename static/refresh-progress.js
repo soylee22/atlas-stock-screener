@@ -45,6 +45,7 @@ export function createCloudClient({ fetcher = fetch, getToken = () => '' } = {})
       const data = await request('/actions/workflows/pages.yml/runs?branch=main&per_page=10');
       return data.workflow_runs.find(activeRun) || data.workflow_runs[0] || null;
     },
+    async run(id) { return request(`/actions/runs/${Number(id)}`); },
     async jobs(id) { return (await request(`/actions/runs/${Number(id)}/jobs?per_page=100`)).jobs; },
     async dispatch() { return request('/actions/workflows/pages.yml/dispatches', {
       method: 'POST', body: JSON.stringify({ ref: 'main', inputs: { intraday: true } }),
@@ -54,7 +55,7 @@ export function createCloudClient({ fetcher = fetch, getToken = () => '' } = {})
 
 export function installRefreshProgress({ button, onPublished, getSnapshotBuilt }) {
   let token = '', timer, checking = false, starting = false, run, submitted = false;
-  let before = getSnapshotBuilt(), confirmedRun;
+  let before = getSnapshotBuilt(), confirmedRun, trackedId;
   const client = createCloudClient({ getToken: () => token });
   const panel = document.createElement('section');
   panel.className = 'cloud-refresh'; panel.setAttribute('aria-label', 'Cloud refresh progress');
@@ -74,7 +75,7 @@ export function installRefreshProgress({ button, onPublished, getSnapshotBuilt }
     if (checking) return;
     checking = true;
     try {
-      const latest = await client.latest();
+      const latest = trackedId ? await client.run(trackedId) : await client.latest();
       if (submitted && latest?.id === run?.id) {
         render({ label: 'Refresh requested. Waiting for GitHub to register the run.', value: null });
         return;
@@ -87,7 +88,7 @@ export function installRefreshProgress({ button, onPublished, getSnapshotBuilt }
         await onPublished();
         const built = getSnapshotBuilt();
         if (built && (built !== before || Date.parse(built) >= Date.parse(run.run_started_at || run.created_at))) {
-          confirmedRun = run.id; before = built;
+          confirmedRun = run.id; before = built; trackedId = null;
           render({ label: `Up to date. Snapshot ${new Date(built).toLocaleString('en-GB')}`, value: 1 });
         } else render({ label: 'Run succeeded. Waiting for the new website snapshot.', value: null });
       } else if (confirmedRun === run?.id) render({ label: `Up to date. Snapshot ${new Date(before).toLocaleString('en-GB')}`, value: 1 });
@@ -127,7 +128,8 @@ export function installRefreshProgress({ button, onPublished, getSnapshotBuilt }
       submitted = true;
       render({label:'Refresh requested. Waiting for GitHub to register the run.',value:null});
       if (response?.workflow_run_id) {
-        run = {id:response.workflow_run_id,status:'queued',html_url:response.html_url};
+        trackedId = response.workflow_run_id;
+        run = {id:trackedId,status:'queued',html_url:response.html_url};
         submitted = false;
       }
     } catch(error) {

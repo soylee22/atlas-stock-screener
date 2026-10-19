@@ -360,18 +360,33 @@ def refresh(cache_path=CACHE, seconds=1200, limit=1000, fetcher=None, *, intrada
     return cache
 
 
-def restore(cache_path=CACHE, base='https://soylee22.github.io/atlas-stock-screener/'):
-    if read_cache(cache_path)['rows']:
+def restore(cache_path=CACHE, base='https://soylee22.github.io/atlas-stock-screener/', *, seed_path=None):
+    cache = read_cache(cache_path)
+    verified = lambda data: any(r.get('mapping_status') == 'Verified' and r.get('technical_fetched') for r in data.get('rows', []))
+    if verified(cache):
         return False
-    response = requests.get(base + 'data/etfs/seed.json.gz', timeout=30)
-    if response.status_code == 404:
+    seed_path = Path(seed_path) if seed_path is not None else ROOT / 'seed' / 'etf-history-checkpoint.json.gz'
+    recovered = None
+    if seed_path.is_file():
+        recovered = json.loads(gzip.decompress(seed_path.read_bytes()))
+        if recovered.get('version') != 1 or not verified(recovered):
+            raise ValueError('Invalid bundled ETF history checkpoint')
+    try:
+        response = requests.get(base + 'data/etfs/seed.json.gz', timeout=30)
+        if response.status_code != 404:
+            response.raise_for_status()
+            content = gzip.decompress(response.content) if response.content[:2] == b'\x1f\x8b' else response.content
+            published = json.loads(content)
+            if published.get('version') != 1 or not isinstance(published.get('rows'), list):
+                raise ValueError('Invalid ETF recovery snapshot')
+            if verified(published):
+                recovered = published
+    except requests.RequestException:
+        if recovered is None:
+            raise
+    if recovered is None:
         return False
-    response.raise_for_status()
-    content = gzip.decompress(response.content) if response.content[:2] == b'\x1f\x8b' else response.content
-    cache = json.loads(content)
-    if cache.get('version') != 1 or not isinstance(cache.get('rows'), list) or not cache['rows']:
-        raise ValueError('Invalid ETF recovery snapshot')
-    write_cache(cache, cache_path)
+    write_cache(recovered, cache_path)
     return True
 
 
