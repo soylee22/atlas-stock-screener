@@ -184,7 +184,7 @@ def build_site(database, output, seed=None, compress_details=False, compress_dat
     html = html.replace('href="/', 'href="./').replace('src="/', 'src="./')
     html = html.replace('./static/', f'./static/{version}/')
     html = html.replace("while the local service runs", "on GitHub")
-    html = html.replace("Use Refresh data for a new universe scan.", "Use Refresh data to load the latest published snapshot.")
+    html = html.replace("Use Refresh data for a new universe scan.", "Use Refresh data to request a cloud market-data refresh and follow its progress.")
     html = html.replace("Financials load in a rolling queue, prioritising visible rows, and are cached for seven days.", "Williams refresh starts at 09:00, 11:00, 13:00, 15:00, 17:00, 19:00 and 21:00 UK time on weekdays for open markets and newly completed sessions. Nightly collection starts at 01:23 UK time. Publication follows collection and may be delayed. Company profiles use a seven-day cache.")
     html = html.replace("Files are stored locally", "Files are stored with the published site")
     (output / "index.html").write_text(html)

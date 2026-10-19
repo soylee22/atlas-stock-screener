@@ -128,7 +128,14 @@ The workflow `.github/workflows/pages.yml` deploys the generated `public/` direc
 Enable GitHub Pages with GitHub Actions as the source.
 A push to main deploys the cached data. The first European import runs a bounded financial bootstrap before publishing.
 Scheduled and manual runs refresh Yahoo within a twelve-minute budget.
-Use Run workflow to request an immediate quote scan or change the company batch limit.
+Refresh data starts an intraday cloud Williams refresh for stocks and ETFs.
+The first request in a tab asks for a fine-grained GitHub token restricted to this repository with Actions read and write permission.
+The token stays in tab memory and goes directly to GitHub. Reloading or closing the page clears it.
+An active run is followed instead of starting another one. Nightly company profile collection retains its existing schedule.
+The live panel shows the current job step and completed build steps, rather than an estimated time percentage.
+Queued runs, failed runs and publication delays remain explicit. A successful run reloads the snapshot and checks its date.
+Anonymous status checks run every three minutes. Connected tabs check every twenty seconds.
+Use Run workflow on GitHub for a full collection or to change the company batch limit.
 
 The initial `seed/bootstrap.tar.gz` contains only public Yahoo data and company website icons.
 Actions caches preserve the SQLite market database and downloaded icons between refreshes.
