@@ -2,8 +2,17 @@ name = "atlas-refresh-auth"
 main = "worker.js"
 compatibility_date = "2026-10-20"
 workers_dev = true
+account_id = "f341aa0a3033293c5ddeaa1dba1d9fee"
 
 [vars]
 OWNER_ID = "73914454"
 # GITHUB_CLIENT_ID is added after registering the Atlas-only GitHub App.
 # Store GITHUB_CLIENT_SECRET and SESSION_KEY through Wrangler secrets.
+
+[[durable_objects.bindings]]
+name = "SIGN_INS"
+class_name = "SignInAttempt"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["SignInAttempt"]

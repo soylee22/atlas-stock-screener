@@ -66,7 +66,7 @@ export function createCloudClient({ fetcher = fetch, getToken = () => '', servic
 
 export function installRefreshProgress({ button, onPublished, getSnapshotBuilt }) {
   let token = '', timer, checking = false, starting = false, run, submitted = false;
-  let before = getSnapshotBuilt(), confirmedRun, trackedId;
+  let before = getSnapshotBuilt(), confirmedRun, trackedId, signInController;
   const client = createCloudClient({ getToken: () => token });
   const panel = document.createElement('section');
   panel.className = 'cloud-refresh'; panel.setAttribute('aria-label', 'Cloud refresh progress');
@@ -74,6 +74,8 @@ export function installRefreshProgress({ button, onPublished, getSnapshotBuilt }
   button.closest('.heading-row').after(panel);
   const label = panel.querySelector('.cloud-refresh-label'), bar = panel.querySelector('progress');
   const detail = panel.querySelector('small'), link = panel.querySelector('a');
+  const cancelSignIn=document.createElement('button');cancelSignIn.className='button secondary';cancelSignIn.textContent='Cancel sign-in';cancelSignIn.hidden=true;panel.append(cancelSignIn);
+  cancelSignIn.onclick=()=>signInController?.abort();
   function render(state) {
     label.textContent = state.label; detail.textContent = state.detail || '';
     if (state.value == null) bar.removeAttribute('value'); else { bar.max = 1; bar.value = state.value; }
@@ -118,7 +120,11 @@ export function installRefreshProgress({ button, onPublished, getSnapshotBuilt }
     starting = true;
     render({label:token?'Checking for an existing refresh…':'Sign in with GitHub to start the refresh…',value:null});
     try {
-      if (!token) token = await signInWithGitHub(REFRESH_SERVICE_URL);
+      if (!token) {
+        signInController=new AbortController();cancelSignIn.hidden=false;
+        try {token=await signInWithGitHub(REFRESH_SERVICE_URL,{signal:signInController.signal});}
+        finally {cancelSignIn.hidden=true;signInController=undefined;}
+      }
       run = await client.latest();
       if (activeRun(run)) { render(progressState(run, await client.jobs(run.id))); return; }
       before = getSnapshotBuilt(); confirmedRun = undefined;

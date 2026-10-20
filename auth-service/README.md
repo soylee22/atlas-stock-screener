@@ -5,8 +5,8 @@ Only GitHub user 73914454 can create a refresh session.
 The App must have Actions read and write permission and be installed only on atlas-stock-screener.
 
 GitHub credentials stay inside the Worker.
-Atlas receives an encrypted one-hour session through a popup message.
-The browser validates the service origin, popup window and attempt nonce.
+Atlas receives an encrypted one-hour session through a same-origin callback bridge.
+Redemption requires a secret held by the original tab and a separate single-use callback code.
 The session stays in tab memory and clears on reload or close.
 Public job progress works without signing in.
 
@@ -19,7 +19,7 @@ Public job progress works without signing in.
 5. Store GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET and SESSION_KEY in the Worker configuration.
 6. Generate SESSION_KEY as 32 random bytes encoded with base64url.
 7. Set REFRESH_SERVICE_URL in static/refresh-auth.js to the deployed service origin.
-8. Verify owner sign-in and a real workflow dispatch before publishing the frontend.
+8. Check service readiness, publish the configured frontend, then verify owner sign-in and a real dispatch.
 
 Keep credential material in an ignored private directory.
 Never print credentials or commit development secrets.
@@ -39,5 +39,6 @@ Dispatch always uses main with intraday enabled and reuses an active run.
 ## Current setup state
 
 The implementation and local security checks are complete.
-Deployment, GitHub App registration and the real sign-in check are pending account setup.
+The Worker is deployed at https://atlas-refresh-auth.econd-rain.workers.dev.
+GitHub App registration and the real sign-in check remain pending.
 The published site retains its previous access method until the new service is verified.

@@ -1,7 +1,19 @@
-import test from 'node:test';
+import test,{beforeEach} from 'node:test';
 import assert from 'node:assert/strict';
-import {createService,seal,open} from './worker.js';
+import {createService,seal,open,SignInAttempt} from './worker.js';
 const env={GITHUB_CLIENT_ID:'client',GITHUB_CLIENT_SECRET:'secret',SESSION_KEY:Buffer.alloc(32,7).toString('base64url'),OWNER_ID:'73914454'};
+function memoryAttempts() {
+ const objects=new Map();
+ return {idFromName:x=>x,get(id){
+  if(!objects.has(id)) {
+   const values=new Map();const storage={async get(k){return values.get(k);},async put(k,v){values.set(k,v);},async delete(k){return values.delete(k);},async deleteAll(){values.clear();},async setAlarm(){},async transaction(fn){return fn(storage);}};
+   objects.set(id,new SignInAttempt({storage}));
+  }
+  return {fetch:(url,options)=>objects.get(id).fetch(new Request(url,options))};
+ }};
+}
+beforeEach(()=>{env.SIGN_INS=memoryAttempts();});
+const challenge='b'.repeat(43);
 const origin='https://soylee22.github.io';
 const expires=()=>Math.floor(Date.now()/1000)+600;
 const session=()=>seal({kind:'session',github_token:'github-test-only',user_id:73914454,exp:expires()},env);
@@ -45,7 +57,7 @@ test('CORS is restricted and the proxy has no arbitrary GitHub route',async()=>{
  assert.equal((await handler(await apiRequest('/api/repos/other/repo'),env)).status,404);
 });
 test('login uses state, PKCE and a secure HttpOnly flow cookie',async()=>{
- const response=await createService()(request('/login?attempt='+'a'.repeat(32)),env);
+ const response=await createService()(request('/login?attempt='+'a'.repeat(32)+'&challenge='+challenge),env);
  assert.equal(response.status,302);
  const target=new URL(response.headers.get('Location'));
  assert.equal(target.origin,'https://github.com');assert.equal(target.searchParams.get('code_challenge_method'),'S256');assert.ok(target.searchParams.get('state'));
@@ -53,7 +65,7 @@ test('login uses state, PKCE and a secure HttpOnly flow cookie',async()=>{
  assert.ok(!cookie.includes('secret'));
 });
 async function callback(handler,userId=73914454,wrongState=false){
- const login=await handler(request('/login?attempt='+'a'.repeat(32)),env);
+ const login=await handler(request('/login?attempt='+'a'.repeat(32)+'&challenge='+challenge),env);
  const target=new URL(login.headers.get('Location'));
  const state=wrongState?'wrong':target.searchParams.get('state');
  return handler(request('/callback?code=example&state='+state,{headers:{Cookie:login.headers.get('Set-Cookie').split(';')[0]}}),env);
@@ -62,12 +74,34 @@ test('bad OAuth state is rejected before exchanging credentials',async()=>{
  let count=0;const handler=createService(async()=>{count++;throw Error('not expected');});
  const result=await callback(handler,73914454,true);assert.equal(count,0);assert.match(await result.text(),/atlas-auth-error/);
 });
-test('authorised callback returns only an opaque session to the exact Atlas origin',async()=>{
+test('authorised callback returns a one-time code, never a GitHub credential',async()=>{
  const handler=createService(async(url)=>Response.json(url.includes('access_token')?{access_token:'private-github-token',expires_in:3600}:url.endsWith('/user')?{id:73914454}:{name:'Atlas'}));
- const response=await callback(handler);const html=await response.text();
- assert.match(html,/atlas-auth-success/);assert.ok(!html.includes('private-github-token'));assert.match(html,/https:\/\/soylee22.github.io/);assert.match(response.headers.get('Set-Cookie'),/Max-Age=0/);assert.match(response.headers.get('Content-Security-Policy'),/default-src 'none'/);
+ const response=await callback(handler);assert.equal(response.status,302);
+ const target=new URL(response.headers.get('Location'));
+ assert.equal(target.origin,origin);assert.equal(target.pathname,'/atlas-stock-screener/auth-callback.html');
+ const code=new URLSearchParams(target.hash.slice(1)).get('code');assert.match(code,/^[A-Za-z0-9_-]{43}$/);
+ assert.ok(!target.href.includes('private-github-token'));assert.match(response.headers.get('Set-Cookie'),/Max-Age=0/);
 });
-test('a signed-in GitHub user who is not Lee is refused',async()=>{
+test('a signed-in GitHub user who is not Lee is refused through the protected handoff',async()=>{
  const handler=createService(async(url)=>Response.json(url.includes('access_token')?{access_token:'test'}:{id:1}));
- const html=await(await callback(handler,1)).text();assert.match(html,/atlas-auth-error/);assert.ok(!html.includes('atlas-auth-success'));
+ const response=await callback(handler,1);assert.equal(response.status,302);
+ const code=new URLSearchParams(new URL(response.headers.get('Location')).hash.slice(1)).get('code');
+ const result=await env.SIGN_INS.get('a'.repeat(32)).fetch('https://internal/result',{method:'POST',body:JSON.stringify({challenge,code})});
+ const value=await result.json();assert.match(value.error,/cannot refresh/);assert.equal(value.session,undefined);
+});
+test('handoff requires both secret proof and one-time code and cannot be replayed',async()=>{
+ const object=env.SIGN_INS.get('a'.repeat(32));
+ const call=(path,value)=>object.fetch('https://internal'+path,{method:'POST',body:JSON.stringify(value)});
+ await call('/create',{challenge});
+ await call('/complete',{challenge,code:'c'.repeat(43),result:{session:'encrypted-session'}});
+ assert.equal((await call('/result',{challenge:'wrong',code:'c'.repeat(43)})).status,403);
+ assert.equal((await call('/result',{challenge,code:'wrong'})).status,403);
+ assert.equal((await(await call('/result',{challenge,code:'c'.repeat(43)})).json()).session,'encrypted-session');
+ assert.equal((await call('/result',{challenge,code:'c'.repeat(43)})).status,410);
+});
+test('a proof holder cannot obtain a session before the callback bridge delivers its separate code',async()=>{
+ const handler=createService();
+ const proof='d'.repeat(64);
+ const response=await handler(request('/api/sign-in-result?attempt='+'a'.repeat(32),{headers:{Origin:origin,'X-Atlas-Proof':proof}}),env);
+ assert.equal(response.status,400);
 });

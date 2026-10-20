@@ -191,6 +191,8 @@ def build_site(database, output, seed=None, compress_details=False, compress_dat
     etf_html=(model.ROOT / 'static' / 'etfs.html').read_text().replace('href="/', 'href="./').replace('src="/', 'src="./')
     etf_html=etf_html.replace('./static/',f'./static/{version}/').replace('content="/etf-data/"','content="data/etfs/"')
     (output / 'etfs.html').write_text(etf_html)
+    auth_html=(model.ROOT / 'static' / 'auth-callback.html').read_text().replace('./static/',f'./static/{version}/')
+    (output / 'auth-callback.html').write_text(auth_html)
     (output / ".nojekyll").write_text("")
     (output / "logos").mkdir()
     by_domain = {asset["domain"]: asset for asset in assets}

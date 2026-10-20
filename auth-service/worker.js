@@ -34,6 +34,50 @@ function callbackPage(message,nonce) {
   const html=`<!doctype html><meta charset="utf-8"><meta name="referrer" content="no-referrer"><title>Atlas sign-in</title><p>${message.type==='atlas-auth-success'?'Signed in. Returning to Atlas…':'Atlas could not complete sign-in. Return to Atlas and retry.'}</p><script nonce="${scriptNonce}">if(window.opener){window.opener.postMessage(${body},${JSON.stringify(FRONTEND)});window.close();}</script>`;
   return new Response(html,{headers:{...headers(),'Content-Type':'text/html; charset=utf-8','Content-Security-Policy':`default-src 'none'; script-src 'nonce-${scriptNonce}'; frame-ancestors 'none'; base-uri 'none'`,'Referrer-Policy':'no-referrer','Set-Cookie':flowCookie('',0)}});
 }
+export class SignInAttempt {
+  constructor(state) { this.storage=state.storage; }
+  async fetch(request) {
+    const path=new URL(request.url).pathname;
+    const data=await request.json();
+    if(path==='/create')await this.storage.setAlarm(Date.now()+600000);
+    return this.storage.transaction(async storage=>{
+      const saved=await storage.get('flow');
+      if(path==='/create') {
+        if(saved)return json({error:'Sign-in already started'},409);
+        await storage.put('flow',{challenge:data.challenge,exp:now()+600});
+        return json({pending:true},202);
+      }
+      if(!saved||saved.exp<=now())return json({error:'Sign-in expired'},410);
+      if(data.challenge!==saved.challenge)return json({error:'Invalid sign-in proof'},403);
+      if(path==='/complete') {
+        if(saved.result)return json({error:'Sign-in already completed'},409);
+        await storage.put('flow',{...saved,code:data.code,result:data.result});
+        return json({ready:true});
+      }
+      if(path==='/result') {
+        if(!saved.result)return json({pending:true},202);
+        if(data.code!==saved.code)return json({error:'Invalid sign-in handoff'},403);
+        await storage.delete('flow');
+        return json(saved.result);
+      }
+      return json({error:'Not found'},404);
+    });
+  }
+  async alarm() { await this.storage.deleteAll(); }
+}
+function attemptStore(env,attempt) { return env.SIGN_INS.get(env.SIGN_INS.idFromName(attempt)); }
+async function storeCall(env,attempt,path,data) {
+  return attemptStore(env,attempt).fetch('https://internal'+path,{method:'POST',body:JSON.stringify(data)});
+}
+async function finishSignIn(env,flow,result) {
+  const code=random();
+  const stored=await storeCall(env,flow.attempt,'/complete',{challenge:flow.challenge,code,result});
+  if(!stored.ok)throw new Error('Sign-in handoff expired');
+  const target=new URL('https://soylee22.github.io/atlas-stock-screener/auth-callback.html');
+  target.hash=new URLSearchParams({attempt:flow.attempt,code}).toString();
+  return new Response(null,{status:302,headers:{...headers(),Location:target.href,'Set-Cookie':flowCookie('',0),'Referrer-Policy':'no-referrer'}});
+}
+
 export function createService(fetcher=fetch) {
   async function github(path,token,options={}) {
     const response=await fetcher(path.startsWith('https://')?path:API+path,{
@@ -47,10 +91,18 @@ export function createService(fetcher=fetch) {
   }
   return async function handle(request,env) {
     const url=new URL(request.url),origin=request.headers.get('Origin');
-    if(url.pathname==='/health')return json({service:'Atlas refresh sign-in',configured:!!(env.GITHUB_CLIENT_ID&&env.GITHUB_CLIENT_SECRET&&env.SESSION_KEY&&env.OWNER_ID)});
+    if(url.pathname==='/health')return json({service:'Atlas refresh sign-in',configured:!!(env.GITHUB_CLIENT_ID&&env.GITHUB_CLIENT_SECRET&&env.SESSION_KEY&&env.OWNER_ID&&env.SIGN_INS)});
     if(url.pathname.startsWith('/api/')) {
       if(origin!==FRONTEND)return json({error:'Origin is not allowed'},403);
-      if(request.method==='OPTIONS')return new Response(null,{status:204,headers:{...headers(origin),'Access-Control-Allow-Methods':'GET, POST, OPTIONS','Access-Control-Allow-Headers':'Authorization, Content-Type','Access-Control-Max-Age':'600'}});
+      if(request.method==='OPTIONS')return new Response(null,{status:204,headers:{...headers(origin),'Access-Control-Allow-Methods':'GET, POST, OPTIONS','Access-Control-Allow-Headers':'Authorization, Content-Type, X-Atlas-Proof, X-Atlas-Code','Access-Control-Max-Age':'600'}});
+      if(url.pathname==='/api/sign-in-result'&&request.method==='GET') {
+        const attempt=url.searchParams.get('attempt'),proof=request.headers.get('X-Atlas-Proof'),code=request.headers.get('X-Atlas-Code');
+        if(!/^[a-f0-9]{32}$/.test(attempt||'')||!/^[a-f0-9]{64}$/.test(proof||'')||!/^[A-Za-z0-9_-]{43}$/.test(code||''))return json({error:'Invalid sign-in handoff'},400,origin);
+        if(!env.SIGN_INS)return json({error:'Sign-in is awaiting setup'},503,origin);
+        const challenge=b64(new Uint8Array(await crypto.subtle.digest('SHA-256',encoder.encode(proof))));
+        const result=await storeCall(env,attempt,'/result',{challenge,code});
+        return json(await result.json(),result.status,origin);
+      }
       let session;
       try { session=await open(request.headers.get('Authorization')?.replace(/^Bearer /,''),env,'session'); }
       catch { return json({error:'Please sign in with GitHub'},401,origin); }
@@ -70,12 +122,14 @@ export function createService(fetcher=fetch) {
         return json({error:'Unknown operation'},404,origin);
       } catch(error) { return json({error:error.message},error.status||502,origin); }
     }
-    if(!env.GITHUB_CLIENT_ID||!env.GITHUB_CLIENT_SECRET||!env.SESSION_KEY||!env.OWNER_ID)return json({error:'Atlas sign-in is awaiting account setup'},503);
+    if(!env.GITHUB_CLIENT_ID||!env.GITHUB_CLIENT_SECRET||!env.SESSION_KEY||!env.OWNER_ID||!env.SIGN_INS)return json({error:'Atlas sign-in is awaiting account setup'},503);
     if(url.pathname==='/login'&&request.method==='GET') {
-      const attempt=url.searchParams.get('attempt');
-      if(!/^[a-f0-9]{32}$/.test(attempt||''))return json({error:'Invalid sign-in request'},400);
+      const attempt=url.searchParams.get('attempt'), handoffChallenge=url.searchParams.get('challenge');
+      if(!/^[a-f0-9]{32}$/.test(attempt||'')||!/^[A-Za-z0-9_-]{43}$/.test(handoffChallenge||''))return json({error:'Invalid sign-in request'},400);
+      const registered=await storeCall(env,attempt,'/create',{challenge:handoffChallenge});
+      if(!registered.ok)return json({error:'Please start a new sign-in'},409);
       const state=random(),verifier=random();
-      const flow=await seal({kind:'flow',attempt,state,verifier,exp:now()+600},env);
+      const flow=await seal({kind:'flow',attempt,challenge:handoffChallenge,state,verifier,exp:now()+600},env);
       const challenge=b64(new Uint8Array(await crypto.subtle.digest('SHA-256',encoder.encode(verifier))));
       const target=new URL('https://github.com/login/oauth/authorize');
       target.search=new URLSearchParams({client_id:env.GITHUB_CLIENT_ID,redirect_uri:url.origin+'/callback',state,code_challenge:challenge,code_challenge_method:'S256'}).toString();
@@ -92,13 +146,18 @@ export function createService(fetcher=fetch) {
         const grant=await exchange.json();
         if(typeof grant.access_token!=='string'||grant.error)throw new Error('GitHub sign-in failed');
         const user=await github('https://api.github.com/user',grant.access_token);
-        if(String(user.id)!==String(env.OWNER_ID))return callbackPage({type:'atlas-auth-error',error:'This GitHub account cannot refresh Atlas'},flow.attempt);
+        if(String(user.id)!==String(env.OWNER_ID))return finishSignIn(env,flow,{error:'This GitHub account cannot refresh Atlas'});
         // Confirm the installed app can access this repository before creating a session.
         await github('/actions/workflows/pages.yml',grant.access_token);
         const exp=now()+Math.min(3600,Math.max(0,Number(grant.expires_in)||3600));
         const session=await seal({kind:'session',github_token:grant.access_token,user_id:user.id,exp},env);
-        return callbackPage({type:'atlas-auth-success',session,expires:exp},flow.attempt);
-      } catch { return callbackPage({type:'atlas-auth-error',error:'GitHub sign-in was not completed. Please retry.'},flow?.attempt||''); }
+        return finishSignIn(env,flow,{session,expires:exp});
+      } catch {
+        if(flow?.state===url.searchParams.get('state')) {
+          try { return await finishSignIn(env,flow,{error:'GitHub sign-in was not completed. Please retry.'}); } catch {}
+        }
+        return callbackPage({type:'atlas-auth-error',error:'GitHub sign-in was not completed. Please retry.'},flow?.attempt||'');
+      }
     }
     return json({error:'Not found'},404);
   };
