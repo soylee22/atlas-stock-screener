@@ -3,3 +3,8 @@ public/
 __pycache__/
 .pytest_cache/
 *.log
+
+.wrangler/
+.dev.vars
+.env
+.env.*

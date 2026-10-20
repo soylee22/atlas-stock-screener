@@ -129,13 +129,16 @@ Enable GitHub Pages with GitHub Actions as the source.
 A push to main deploys the cached data. The first European import runs a bounded financial bootstrap before publishing.
 Scheduled and manual runs refresh Yahoo within a twelve-minute budget.
 Refresh data starts an intraday cloud Williams refresh for stocks and ETFs.
-The first request in a tab asks for a fine-grained GitHub token restricted to this repository with Actions read and write permission.
-The token stays in tab memory and goes directly to GitHub. Reloading or closing the page clears it.
+The first request opens normal GitHub sign-in through the Atlas sign-in service.
+Only Lee's GitHub account can start a refresh. The GitHub App is installed on Atlas only.
+GitHub credentials stay in the service. The tab keeps an encrypted one-hour session in memory.
+Reloading or closing the page clears that session. Users never create or paste developer tokens.
 An active run is followed instead of starting another one. Nightly company profile collection retains its existing schedule.
 The live panel shows the current job step and completed build steps, rather than an estimated time percentage.
 Queued runs, failed runs and publication delays remain explicit. A successful run reloads the snapshot and checks its date.
 Anonymous status checks run every three minutes. Connected tabs check every twenty seconds.
 Use Run workflow on GitHub for a full collection or to change the company batch limit.
+The sign-in service must be deployed and verified before publishing this frontend. Setup is in auth-service/README.md.
 
 The initial `seed/bootstrap.tar.gz` contains only public Yahoo data and company website icons.
 Actions caches preserve the SQLite market database and downloaded icons between refreshes.

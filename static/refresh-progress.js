@@ -1,3 +1,4 @@
+import {REFRESH_SERVICE_URL, serviceEndpoint, signInWithGitHub} from './refresh-auth.js';
 const ROOT = 'https://api.github.com/repos/soylee22/atlas-stock-screener';
 export const WORKFLOW_URL = 'https://github.com/soylee22/atlas-stock-screener/actions/workflows/pages.yml';
 const ACTIVE = new Set(['queued', 'in_progress', 'waiting', 'pending', 'requested']);
@@ -23,12 +24,22 @@ export function progressState(run, jobs = []) {
   };
 }
 
-export function createCloudClient({ fetcher = fetch, getToken = () => '' } = {}) {
+export function createCloudClient({ fetcher = fetch, getToken = () => '', serviceURL = REFRESH_SERVICE_URL } = {}) {
   async function request(path, options = {}) {
     const token = getToken();
-    const response = await fetcher(`${ROOT}${path}`, {
+    let target = `${ROOT}${path}`;
+    if(token) {
+      let route;
+      if(path.startsWith('/actions/workflows/pages.yml/runs?'))route='/api/latest';
+      else if(path==='/actions/workflows/pages.yml/dispatches')route='/api/refresh';
+      else route=path.replace('/actions/runs/','/api/runs/').replace('?per_page=100','');
+      target=serviceEndpoint(serviceURL,route);
+    }
+    if(options.method==='POST'&&!token)throw new Error('Sign in with GitHub to start a cloud refresh.');
+    const response = await fetcher(target, {
       ...options, cache: 'no-store', headers: {
-        Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2026-03-10',
+        Accept: token ? 'application/json' : 'application/vnd.github+json',
+        ...(!token ? {'X-GitHub-Api-Version': '2026-03-10'} : {}),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...(options.body ? { 'Content-Type': 'application/json' } : {}),
       }, signal: AbortSignal.timeout(20000),
@@ -101,26 +112,13 @@ export function installRefreshProgress({ button, onPublished, getSnapshotBuilt }
     }
   }
   function schedule() { clearTimeout(timer); timer = setTimeout(check, token ? 20000 : 180000); }
-  function connect() {
-    return new Promise(resolve => {
-      const dialog = document.createElement('dialog');
-      dialog.innerHTML = `<form method="dialog"><div class="dialog-heading"><h2>Connect GitHub refresh</h2><button value="cancel" class="close" aria-label="Close">×</button></div><p>Allow this tab to start Atlas refreshes. Use a fine-grained GitHub token restricted to <strong>atlas-stock-screener</strong>, with <strong>Actions: read and write</strong>.</p><p>The token goes directly to GitHub. It stays in this tab's memory and is cleared when you close or reload the page.</p><label>GitHub access token<input class="cloud-token" type="password" autocomplete="off" spellcheck="false" aria-label="GitHub access token"></label><p><a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">Create a restricted token on GitHub ↗</a></p><div class="dialog-footer"><button value="cancel" class="button secondary">Cancel</button><button value="connect" class="button primary">Connect and refresh</button></div></form>`;
-      document.body.append(dialog);
-      dialog.addEventListener('close', () => {
-        const input = dialog.querySelector('input');
-        const value = dialog.returnValue === 'connect' ? input.value.trim() : '';
-        input.value = ''; dialog.remove(); resolve(value);
-      }, {once:true});
-      dialog.showModal(); dialog.querySelector('input').focus();
-    });
-  }
+
   button.onclick = async () => {
     if (starting || submitted) return;
     starting = true;
-    render({label:'Checking for an existing refresh…',value:null});
+    render({label:token?'Checking for an existing refresh…':'Sign in with GitHub to start the refresh…',value:null});
     try {
-      if (!token) token = await connect();
-      if (!token) { render({label:'Refresh cancelled. GitHub access is needed to start collection.',failed:true}); return; }
+      if (!token) token = await signInWithGitHub(REFRESH_SERVICE_URL);
       run = await client.latest();
       if (activeRun(run)) { render(progressState(run, await client.jobs(run.id))); return; }
       before = getSnapshotBuilt(); confirmedRun = undefined;
