@@ -1,11 +1,11 @@
 """Dispatch Portfolio Command Briefing (Atlas Compounder + LYW #1 Momentum).
 
 Runs on a GitHub Actions schedule (e.g., daily after US market close).
-Engineered with bulletproof HTML table architecture and inline styles
-for seamless rendering across Gmail, Apple Mail, and Outlook.
-Explicitly separates:
-1. Current Active Holding & Instruction
-2. Next-Year Contender Leaderboard (Top 3)
+Bulletproof HTML table architecture and inline styles.
+Reflects live active holdings:
+- Sleeve 1 (Atlas): AVGO (Broadcom) at $38.27B NI, -90.6 W%R
+- Sleeve 2 (LYW): Active 2026 holding is SanDisk (SNDK), entered at $275.24, currently $1,378.22 (+400.7% gain), 35% stop at $178.91 (untriggered).
+- Lookahead (2027): MRNA (+629.1%), SNDK (+474.7%), DELL (+362.8%).
 """
 import os
 import smtplib
@@ -62,7 +62,7 @@ def get_atlas_picks():
 
 
 def render_html_briefing(top_pick, runners_up, days_to_eom, days_to_lyw, as_of_str):
-    """Render bulletproof table-based briefing with separate holding & lookahead."""
+    """Render bulletproof table-based briefing with correct SNDK 2026 holding."""
     return f"""<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
@@ -186,16 +186,40 @@ def render_html_briefing(top_pick, runners_up, days_to_eom, days_to_lyw, as_of_s
                 </tr>
               </table>
 
-              <!-- Section 1: CURRENT ACTIVE HOLDING -->
+              <!-- Section 1: CURRENT ACTIVE 2026 HOLDING (SANDISK) -->
               <table width="100%" border="0" cellspacing="0" cellpadding="0" style="border-bottom: 1px solid #e5e5ea; padding-bottom: 18px; margin-bottom: 20px;">
                 <tr>
                   <td align="left" valign="bottom">
-                    <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #86868b; margin-bottom: 4px;">Current 2026 Active Holding</div>
-                    <span style="font-size: 32px; font-weight: 800; letter-spacing: -0.02em; color: #1d1d1f; line-height: 1;">CASH / T-BILLS</span>
+                    <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #86868b; margin-bottom: 4px;">Current Active 2026 Position</div>
+                    <span style="font-size: 40px; font-weight: 800; letter-spacing: -0.03em; color: #1d1d1f; line-height: 1;">SNDK</span>
                   </td>
                   <td align="right" valign="bottom">
-                    <div style="font-size: 13px; font-weight: 700; color: #34c759; margin-bottom: 2px;">Capital 100% Protected</div>
-                    <div style="font-size: 12px; color: #86868b;">Stopped Out of PLTR at -35%</div>
+                    <div style="font-size: 15px; font-weight: 700; color: #34c759; margin-bottom: 2px;">+400.7% Unrealised Gain</div>
+                    <div style="font-size: 13px; color: #86868b;">SanDisk · 2026 Holding</div>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- 2x2 Metric Grid for SNDK -->
+              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 20px;">
+                <tr>
+                  <td width="50%" align="left" valign="top" style="padding-bottom: 16px; padding-right: 12px;">
+                    <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #86868b; margin-bottom: 4px;">2 Jan 2026 Entry Price</div>
+                    <div style="font-size: 22px; font-weight: 700; color: #1d1d1f; letter-spacing: -0.02em;">$275.24</div>
+                  </td>
+                  <td width="50%" align="left" valign="top" style="padding-bottom: 16px; padding-left: 12px;">
+                    <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #86868b; margin-bottom: 4px;">Latest Market Price</div>
+                    <div style="font-size: 22px; font-weight: 700; color: #34c759; letter-spacing: -0.02em;">$1,378.22</div>
+                  </td>
+                </tr>
+                <tr>
+                  <td width="50%" align="left" valign="top" style="padding-right: 12px;">
+                    <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #86868b; margin-bottom: 4px;">Fixed 35% Stop Level</div>
+                    <div style="font-size: 20px; font-weight: 600; color: #1d1d1f; letter-spacing: -0.02em;">$178.91 (Safe)</div>
+                  </td>
+                  <td width="50%" align="left" valign="top" style="padding-left: 12px;">
+                    <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #86868b; margin-bottom: 4px;">2026 Lowest Drawdown</div>
+                    <div style="font-size: 20px; font-weight: 600; color: #1d1d1f; letter-spacing: -0.02em;">$244.00 (Never Hit)</div>
                   </td>
                 </tr>
               </table>
@@ -203,8 +227,8 @@ def render_html_briefing(top_pick, runners_up, days_to_eom, days_to_lyw, as_of_s
               <!-- Current Instruction Callout -->
               <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 24px;">
                 <tr>
-                  <td style="background-color: #f5f5f7; border-left: 3px solid #0071e3; border-radius: 0 10px 10px 0; padding: 12px 14px; font-size: 12px; color: #555e6d; line-height: 1.45;">
-                    <strong style="color: #1d1d1f;">Current Instruction:</strong> <strong>HOLD CASH IN T-BILLS.</strong> Zero active trade management required for the remainder of 2026. Do not re-enter or chase rallies. Capital is safe and earning risk-free yield until the 2 January 2027 rebalance.
+                  <td style="background-color: #f5f5f7; border-left: 3px solid #34c759; border-radius: 0 10px 10px 0; padding: 12px 14px; font-size: 12px; color: #555e6d; line-height: 1.45;">
+                    <strong style="color: #1d1d1f;">Current Instruction:</strong> <strong>RIDE SNDK TO 31 DECEMBER 2026.</strong> Stop is untouched ($178.91). Position is compounding at +400.7% YTD. Zero action required until the 31 December closing print.
                   </td>
                 </tr>
               </table>
@@ -223,7 +247,7 @@ def render_html_briefing(top_pick, runners_up, days_to_eom, days_to_lyw, as_of_s
                 </tr>
                 <tr>
                   <td width="22%" style="padding: 7px 0; font-size: 13px; font-weight: 700; color: #1d1d1f;">#2 SNDK</td>
-                  <td width="48%" style="padding: 7px 0; font-size: 13px; color: #86868b;">SanDisk / WDC</td>
+                  <td width="48%" style="padding: 7px 0; font-size: 13px; color: #86868b;">SanDisk (Held)</td>
                   <td width="30%" align="right" style="padding: 7px 0; font-size: 13px; font-weight: 600; color: #1d1d1f;">+474.7% YTD</td>
                 </tr>
                 <tr>
@@ -237,7 +261,7 @@ def render_html_briefing(top_pick, runners_up, days_to_eom, days_to_lyw, as_of_s
               <table width="100%" border="0" cellspacing="0" cellpadding="0">
                 <tr>
                   <td style="font-size: 11px; color: #86868b; line-height: 1.4; padding-top: 6px;">
-                    <strong>Lookahead Gate:</strong> MRNA currently holds a +154.4% lead over #2. On 31 December close, confirm if MRNA finishes as the undisputed #1 winner and verify December price support before executing the 2 January 2027 entry with an immediate 35% fixed stop.
+                    <strong>Lookahead Gate:</strong> MRNA currently leads SNDK by +154.4%. On 31 December close, if MRNA wins the full year with solid December support, rotate SNDK into MRNA on 2 January 2027. If SNDK rallies to take #1, roll SNDK over into 2027!
                   </td>
                 </tr>
               </table>
@@ -294,10 +318,10 @@ def main():
 
     if smtp_host and smtp_user and smtp_pass and notify_email:
         msg = EmailMessage()
-        msg['Subject'] = f"Portfolio Briefing: {days_to_eom} Days to Month-End · {top_pick['symbol']} & LYW Status ({as_of_str})"
+        msg['Subject'] = f"Portfolio Briefing: {days_to_eom} Days to Month-End · {top_pick['symbol']} & SNDK Status ({as_of_str})"
         msg['From'] = f"SecondBrain Portfolio <{smtp_user}>"
         msg['To'] = notify_email
-        msg.set_content(f"Atlas #1: {top_pick['symbol']} (${top_pick['net_income']/1e9:.2f}B NI, W%R {top_pick['wr']}). Current 2026 Holding: Cash / T-Bills (Hold Cash). Next Year Contenders: MRNA (+629.1%), SNDK (+474.7%), DELL (+362.8%).")
+        msg.set_content(f"Atlas #1: {top_pick['symbol']} (${top_pick['net_income']/1e9:.2f}B NI, W%R {top_pick['wr']}). Active 2026 LYW: SNDK ($1,378.22, +400.7% gain, Stop $178.91 untouched). 2027 Contenders: MRNA (+629.1%), SNDK (+474.7%), DELL (+362.8%).")
         msg.add_alternative(html_body, subtype='html')
 
         try:
