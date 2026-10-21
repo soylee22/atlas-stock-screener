@@ -1,11 +1,11 @@
 """Dispatch Portfolio Command Briefing (Atlas Compounder + LYW #1 Momentum).
 
 Runs on a GitHub Actions schedule (e.g., daily after US market close).
-Engineered with 100% bulletproof HTML table architecture and inline styles
-for seamless, glitch-free rendering across Gmail (mobile/web), Apple Mail, and Outlook:
-- Table-cell isolation prevents label/value text collisions
-- Clean Cupertino Executive palette (#F5F5F7 / #FFFFFF / #1D1D1F / #86868B)
-- SF Pro typographic hierarchy with crisp numeric display
+Engineered with bulletproof HTML table architecture and inline styles
+for seamless rendering across Gmail, Apple Mail, and Outlook.
+Explicitly separates:
+1. Current Active Holding & Instruction
+2. Next-Year Contender Leaderboard (Top 3)
 """
 import os
 import smtplib
@@ -62,7 +62,7 @@ def get_atlas_picks():
 
 
 def render_html_briefing(top_pick, runners_up, days_to_eom, days_to_lyw, as_of_str):
-    """Render 100% bulletproof table-based Apple Cupertino Executive briefing."""
+    """Render bulletproof table-based briefing with separate holding & lookahead."""
     return f"""<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
@@ -95,7 +95,7 @@ def render_html_briefing(top_pick, runners_up, days_to_eom, days_to_lyw, as_of_s
               <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 20px;">
                 <tr>
                   <td align="left" style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #86868b;">
-                    Sleeve 1 · Atlas Compounder (70%)
+                    Sleeve 1 · Atlas Monthly Compounder (70%)
                   </td>
                   <td align="right">
                     <span style="display: inline-block; padding: 4px 12px; border-radius: 980px; background-color: #e8f2ff; color: #0071e3; font-size: 12px; font-weight: 600;">
@@ -109,16 +109,17 @@ def render_html_briefing(top_pick, runners_up, days_to_eom, days_to_lyw, as_of_s
               <table width="100%" border="0" cellspacing="0" cellpadding="0" style="border-bottom: 1px solid #e5e5ea; padding-bottom: 18px; margin-bottom: 22px;">
                 <tr>
                   <td align="left" valign="bottom">
+                    <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #86868b; margin-bottom: 4px;">Current Monthly Target</div>
                     <span style="font-size: 40px; font-weight: 800; letter-spacing: -0.03em; color: #1d1d1f; line-height: 1;">{top_pick['symbol']}</span>
                   </td>
                   <td align="right" valign="bottom">
                     <div style="font-size: 15px; font-weight: 700; color: #1d1d1f; margin-bottom: 2px;">{top_pick['name']}</div>
-                    <div style="font-size: 13px; color: #86868b;">{top_pick['sector']}</div>
+                    <div style="font-size: 13px; color: #86868b;">{top_pick['sector']} · Dream Zone #1</div>
                   </td>
                 </tr>
               </table>
 
-              <!-- 2x2 Metric Grid (Tables prevent Gmail collision) -->
+              <!-- 2x2 Metric Grid -->
               <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 22px;">
                 <tr>
                   <td width="50%" align="left" valign="top" style="padding-bottom: 18px; padding-right: 12px;">
@@ -138,6 +139,15 @@ def render_html_briefing(top_pick, runners_up, days_to_eom, days_to_lyw, as_of_s
                   <td width="50%" align="left" valign="top" style="padding-left: 12px;">
                     <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #86868b; margin-bottom: 4px;">Dividend Streak</div>
                     <div style="font-size: 22px; font-weight: 600; color: #1d1d1f; letter-spacing: -0.02em;">{top_pick['div_years']} Consecutive Years</div>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Instruction Box -->
+              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 18px;">
+                <tr>
+                  <td style="background-color: #f5f5f7; border-radius: 12px; padding: 12px 14px; font-size: 12px; color: #555e6d; line-height: 1.45;">
+                    <strong style="color: #1d1d1f;">Monthly Instruction:</strong> Allocate new monthly capital into <strong>{top_pick['symbol']}</strong> on the month-end close. Top up relentlessly even if already held.
                   </td>
                 </tr>
               </table>
@@ -176,48 +186,58 @@ def render_html_briefing(top_pick, runners_up, days_to_eom, days_to_lyw, as_of_s
                 </tr>
               </table>
 
-              <!-- Hero Stock Banner -->
-              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="border-bottom: 1px solid #e5e5ea; padding-bottom: 18px; margin-bottom: 22px;">
+              <!-- Section 1: CURRENT ACTIVE HOLDING -->
+              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="border-bottom: 1px solid #e5e5ea; padding-bottom: 18px; margin-bottom: 20px;">
                 <tr>
                   <td align="left" valign="bottom">
-                    <span style="font-size: 40px; font-weight: 800; letter-spacing: -0.03em; color: #1d1d1f; line-height: 1;">MRNA</span>
+                    <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #86868b; margin-bottom: 4px;">Current 2026 Active Holding</div>
+                    <span style="font-size: 32px; font-weight: 800; letter-spacing: -0.02em; color: #1d1d1f; line-height: 1;">CASH / T-BILLS</span>
                   </td>
                   <td align="right" valign="bottom">
-                    <div style="font-size: 15px; font-weight: 700; color: #1d1d1f; margin-bottom: 2px;">Moderna Inc.</div>
-                    <div style="font-size: 13px; color: #86868b;">S&P 500 YTD Leader</div>
+                    <div style="font-size: 13px; font-weight: 700; color: #34c759; margin-bottom: 2px;">Capital 100% Protected</div>
+                    <div style="font-size: 12px; color: #86868b;">Stopped Out of PLTR at -35%</div>
                   </td>
                 </tr>
               </table>
 
-              <!-- 2x2 Metric Grid -->
-              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 22px;">
+              <!-- Current Instruction Callout -->
+              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 24px;">
                 <tr>
-                  <td width="50%" align="left" valign="top" style="padding-bottom: 18px; padding-right: 12px;">
-                    <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #86868b; margin-bottom: 4px;">2026 YTD Return</div>
-                    <div style="font-size: 24px; font-weight: 700; color: #34c759; letter-spacing: -0.02em;">+663.0%</div>
-                  </td>
-                  <td width="50%" align="left" valign="top" style="padding-bottom: 18px; padding-left: 12px;">
-                    <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #86868b; margin-bottom: 4px;">Lead Margin Over #2</div>
-                    <div style="font-size: 24px; font-weight: 700; color: #1d1d1f; letter-spacing: -0.02em;">+96.6% Margin</div>
-                  </td>
-                </tr>
-                <tr>
-                  <td width="50%" align="left" valign="top" style="padding-right: 12px;">
-                    <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #86868b; margin-bottom: 4px;">Current Holding</div>
-                    <div style="font-size: 22px; font-weight: 600; color: #1d1d1f; letter-spacing: -0.02em;">100% Cash (T-Bills)</div>
-                  </td>
-                  <td width="50%" align="left" valign="top" style="padding-left: 12px;">
-                    <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #86868b; margin-bottom: 4px;">Risk Management</div>
-                    <div style="font-size: 22px; font-weight: 600; color: #1d1d1f; letter-spacing: -0.02em;">Stopped at -35%</div>
+                  <td style="background-color: #f5f5f7; border-left: 3px solid #0071e3; border-radius: 0 10px 10px 0; padding: 12px 14px; font-size: 12px; color: #555e6d; line-height: 1.45;">
+                    <strong style="color: #1d1d1f;">Current Instruction:</strong> <strong>HOLD CASH IN T-BILLS.</strong> Zero active trade management required for the remainder of 2026. Do not re-enter or chase rallies. Capital is safe and earning risk-free yield until the 2 January 2027 rebalance.
                   </td>
                 </tr>
               </table>
 
-              <!-- Callout Box -->
+              <!-- Section 2: 2027 LOOKAHEAD LEADERBOARD -->
+              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="border-top: 1px solid #e5e5ea; padding-top: 18px; margin-bottom: 16px;">
+                <tr>
+                  <td colspan="3" style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #86868b; padding-bottom: 12px;">
+                    Next Year (2027) Leaderboard Contenders (Top 3)
+                  </td>
+                </tr>
+                <tr>
+                  <td width="22%" style="padding: 7px 0; font-size: 14px; font-weight: 700; color: #0071e3;">#1 MRNA</td>
+                  <td width="48%" style="padding: 7px 0; font-size: 13px; color: #1d1d1f;">Moderna Inc.</td>
+                  <td width="30%" align="right" style="padding: 7px 0; font-size: 14px; font-weight: 700; color: #34c759;">+629.1% YTD</td>
+                </tr>
+                <tr>
+                  <td width="22%" style="padding: 7px 0; font-size: 13px; font-weight: 700; color: #1d1d1f;">#2 SNDK</td>
+                  <td width="48%" style="padding: 7px 0; font-size: 13px; color: #86868b;">SanDisk / WDC</td>
+                  <td width="30%" align="right" style="padding: 7px 0; font-size: 13px; font-weight: 600; color: #1d1d1f;">+474.7% YTD</td>
+                </tr>
+                <tr>
+                  <td width="22%" style="padding: 7px 0; font-size: 13px; font-weight: 700; color: #1d1d1f;">#3 DELL</td>
+                  <td width="48%" style="padding: 7px 0; font-size: 13px; color: #86868b;">Dell Technologies</td>
+                  <td width="30%" align="right" style="padding: 7px 0; font-size: 13px; font-weight: 600; color: #1d1d1f;">+362.8% YTD</td>
+                </tr>
+              </table>
+
+              <!-- Lookahead Action Gate -->
               <table width="100%" border="0" cellspacing="0" cellpadding="0">
                 <tr>
-                  <td style="background-color: #f5f5f7; border-radius: 12px; padding: 14px 16px; font-size: 13px; color: #86868b; line-height: 1.5;">
-                    <strong style="color: #1d1d1f;">Execution rule:</strong> 2026 position remains safely locked in cash. If Moderna preserves its full-year lead through 31 December, allocation triggers on 2 January 2027 with a hard 35% trailing stop-loss.
+                  <td style="font-size: 11px; color: #86868b; line-height: 1.4; padding-top: 6px;">
+                    <strong>Lookahead Gate:</strong> MRNA currently holds a +154.4% lead over #2. On 31 December close, confirm if MRNA finishes as the undisputed #1 winner and verify December price support before executing the 2 January 2027 entry with an immediate 35% fixed stop.
                   </td>
                 </tr>
               </table>
@@ -277,7 +297,7 @@ def main():
         msg['Subject'] = f"Portfolio Briefing: {days_to_eom} Days to Month-End · {top_pick['symbol']} & LYW Status ({as_of_str})"
         msg['From'] = f"SecondBrain Portfolio <{smtp_user}>"
         msg['To'] = notify_email
-        msg.set_content(f"Atlas #1: {top_pick['symbol']} (${top_pick['net_income']/1e9:.2f}B NI, W%R {top_pick['wr']}). LYW Leader: MRNA (+663.0%). {days_to_eom} days to month-end.")
+        msg.set_content(f"Atlas #1: {top_pick['symbol']} (${top_pick['net_income']/1e9:.2f}B NI, W%R {top_pick['wr']}). Current 2026 Holding: Cash / T-Bills (Hold Cash). Next Year Contenders: MRNA (+629.1%), SNDK (+474.7%), DELL (+362.8%).")
         msg.add_alternative(html_body, subtype='html')
 
         try:
