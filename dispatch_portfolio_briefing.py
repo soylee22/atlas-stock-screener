@@ -1,11 +1,11 @@
 """Dispatch Portfolio Command Briefing (Atlas Compounder + LYW #1 Momentum).
 
 Runs on a GitHub Actions schedule (e.g., daily after US market close).
-Styled using Apple Newsroom / Cupertino Executive Financial design language:
-- Clean ceramic palette (#F5F5F7 / #FFFFFF / #1D1D1F / #86868B)
-- SF Pro Display & Text typographic hierarchy (-0.022em tracking)
-- Rounded 20px card architecture with hairline boundaries
-- Dark-mode responsive support (Space Black #000000 / #1C1C1E)
+Engineered with 100% bulletproof HTML table architecture and inline styles
+for seamless, glitch-free rendering across Gmail (mobile/web), Apple Mail, and Outlook:
+- Table-cell isolation prevents label/value text collisions
+- Clean Cupertino Executive palette (#F5F5F7 / #FFFFFF / #1D1D1F / #86868B)
+- SF Pro typographic hierarchy with crisp numeric display
 """
 import os
 import smtplib
@@ -62,301 +62,182 @@ def get_atlas_picks():
 
 
 def render_html_briefing(top_pick, runners_up, days_to_eom, days_to_lyw, as_of_str):
-    """Render publication-grade Apple Cupertino Executive HTML briefing."""
-    return f"""<!DOCTYPE html>
-<html lang="en">
+    """Render 100% bulletproof table-based Apple Cupertino Executive briefing."""
+    return f"""<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Capital Allocation Briefing</title>
-  <style>
-    /* Apple Cupertino Design System */
-    body {{
-      margin: 0;
-      padding: 40px 16px;
-      background-color: #f5f5f7;
-      color: #1d1d1f;
-      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
-      line-height: 1.47059;
-      letter-spacing: -0.022em;
-      -webkit-font-smoothing: antialiased;
-    }}
-    .container {{
-      max-width: 580px;
-      margin: 0 auto;
-    }}
-    .masthead {{
-      margin-bottom: 28px;
-      padding: 0 4px;
-    }}
-    .brand-eyebrow {{
-      font-size: 11px;
-      font-weight: 600;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: #86868b;
-      margin-bottom: 8px;
-    }}
-    .headline {{
-      font-size: 28px;
-      font-weight: 700;
-      letter-spacing: -0.015em;
-      color: #1d1d1f;
-      margin: 0 0 6px;
-      line-height: 1.15;
-    }}
-    .date-stamp {{
-      font-size: 14px;
-      color: #86868b;
-      margin: 0;
-    }}
-    .card {{
-      background: #ffffff;
-      border-radius: 20px;
-      padding: 30px;
-      margin-bottom: 20px;
-      border: 1px solid rgba(0, 0, 0, 0.05);
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
-    }}
-    .section-meta {{
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 20px;
-    }}
-    .section-label {{
-      font-size: 11px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      color: #86868b;
-    }}
-    .pill {{
-      display: inline-flex;
-      align-items: center;
-      padding: 4px 12px;
-      border-radius: 980px;
-      font-size: 12px;
-      font-weight: 600;
-      background: #f5f5f7;
-      color: #1d1d1f;
-    }}
-    .pill.accent {{
-      background: rgba(0, 113, 227, 0.1);
-      color: #0071e3;
-    }}
-    .hero-stock {{
-      display: flex;
-      justify-content: space-between;
-      align-items: baseline;
-      margin-bottom: 24px;
-      padding-bottom: 18px;
-      border-bottom: 1px solid #e5e5ea;
-    }}
-    .ticker {{
-      font-size: 38px;
-      font-weight: 700;
-      letter-spacing: -0.03em;
-      color: #1d1d1f;
-      line-height: 1;
-    }}
-    .company-desc {{
-      font-size: 14px;
-      color: #86868b;
-      text-align: right;
-    }}
-    .stat-row {{
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      row-gap: 20px;
-      column-gap: 24px;
-      margin-bottom: 24px;
-    }}
-    .stat-item {{
-      display: flex;
-      flex-direction: column;
-    }}
-    .stat-caption {{
-      font-size: 11px;
-      font-weight: 500;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: #86868b;
-      margin-bottom: 4px;
-    }}
-    .stat-value {{
-      font-size: 20px;
-      font-weight: 600;
-      color: #1d1d1f;
-      letter-spacing: -0.02em;
-    }}
-    .stat-value.highlight {{
-      color: #0071e3;
-    }}
-    .stat-value.green {{
-      color: #34c759;
-    }}
-    .runners-table {{
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 18px;
-      padding-top: 16px;
-      border-top: 1px solid #e5e5ea;
-    }}
-    .runners-table caption {{
-      text-align: left;
-      font-size: 11px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      color: #86868b;
-      margin-bottom: 12px;
-    }}
-    .runners-table td {{
-      padding: 8px 0;
-      font-size: 13px;
-    }}
-    .runners-table td.ticker-col {{
-      font-weight: 600;
-      color: #1d1d1f;
-      width: 25%;
-    }}
-    .runners-table td.name-col {{
-      color: #86868b;
-      width: 45%;
-    }}
-    .runners-table td.data-col {{
-      text-align: right;
-      color: #1d1d1f;
-      font-weight: 500;
-      width: 30%;
-    }}
-    .callout-box {{
-      background: #f5f5f7;
-      border-radius: 12px;
-      padding: 16px;
-      font-size: 13px;
-      color: #86868b;
-      line-height: 1.5;
-    }}
-    .callout-box strong {{
-      color: #1d1d1f;
-      font-weight: 600;
-    }}
-    .footer {{
-      text-align: center;
-      padding: 24px 0;
-      font-size: 12px;
-      color: #86868b;
-    }}
-    @media (prefers-color-scheme: dark) {{
-      body {{ background-color: #000000 !important; color: #f5f5f7 !important; }}
-      .card {{ background: #1c1c1e !important; border-color: rgba(255, 255, 255, 0.08) !important; }}
-      .headline, .ticker, .stat-value, .runners-table td.ticker-col, .runners-table td.data-col, .callout-box strong {{ color: #f5f5f7 !important; }}
-      .brand-eyebrow, .date-stamp, .section-label, .company-desc, .stat-caption, .runners-table caption, .runners-table td.name-col, .callout-box, .footer {{ color: #8e8e93 !important; }}
-      .hero-stock, .runners-table {{ border-color: #2c2c2e !important; }}
-      .pill, .callout-box {{ background: #2c2c2e !important; color: #f5f5f7 !important; }}
-      .pill.accent {{ background: rgba(41, 151, 255, 0.15) !important; color: #2997ff !important; }}
-      .stat-value.highlight {{ color: #2997ff !important; }}
-      .stat-value.green {{ color: #30d158 !important; }}
-    }}
-  </style>
 </head>
-<body>
-  <div class="container">
-    <div class="masthead">
-      <div class="brand-eyebrow">SecondBrain Investment Allocation</div>
-      <h1 class="headline">Capital Briefing</h1>
-      <p class="date-stamp">{as_of_str} · Daily Market Close</p>
-    </div>
+<body style="margin: 0; padding: 24px 12px; background-color: #f5f5f7; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; color: #1d1d1f;">
 
-    <!-- SLEEVE 1: ATLAS -->
-    <div class="card">
-      <div class="section-meta">
-        <span class="section-label">Sleeve 1 · Atlas Monthly Compounder (70%)</span>
-        <span class="pill accent">{days_to_eom} Days to Rebalance</span>
-      </div>
+  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f5f5f7;">
+    <tr>
+      <td align="center" style="padding: 10px 0;">
+        
+        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 580px; text-align: left;">
+          
+          <!-- Masthead Header -->
+          <tr>
+            <td style="padding: 10px 8px 24px 8px;">
+              <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #86868b; margin-bottom: 6px;">SecondBrain Portfolio Command</div>
+              <div style="font-size: 26px; font-weight: 700; letter-spacing: -0.02em; color: #1d1d1f; line-height: 1.15; margin-bottom: 4px;">Capital Allocation Briefing</div>
+              <div style="font-size: 13px; color: #86868b;">{as_of_str} · Daily Market Close</div>
+            </td>
+          </tr>
 
-      <div class="hero-stock">
-        <div>
-          <div class="ticker">{top_pick['symbol']}</div>
-        </div>
-        <div class="company-desc">
-          <strong>{top_pick['name']}</strong><br>
-          {top_pick['sector']}
-        </div>
-      </div>
+          <!-- SLEEVE 1: ATLAS COMPOUNDER -->
+          <tr>
+            <td style="background-color: #ffffff; border-radius: 20px; border: 1px solid rgba(0, 0, 0, 0.06); padding: 28px 26px; box-shadow: 0 4px 16px rgba(0,0,0,0.03);">
+              
+              <!-- Card Header Row -->
+              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 20px;">
+                <tr>
+                  <td align="left" style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #86868b;">
+                    Sleeve 1 · Atlas Compounder (70%)
+                  </td>
+                  <td align="right">
+                    <span style="display: inline-block; padding: 4px 12px; border-radius: 980px; background-color: #e8f2ff; color: #0071e3; font-size: 12px; font-weight: 600;">
+                      {days_to_eom} Days to Rebalance
+                    </span>
+                  </td>
+                </tr>
+              </table>
 
-      <div class="stat-row">
-        <div class="stat-item">
-          <span class="stat-caption">Net Income (TTM)</span>
-          <span class="stat-value highlight">${top_pick['net_income']/1e9:.2f}B</span>
-        </div>
-        <div class="stat-item">
-          <span class="stat-caption">14W Williams %R</span>
-          <span class="stat-value highlight">{top_pick['wr']:.1f} Oversold</span>
-        </div>
-        <div class="stat-item">
-          <span class="stat-caption">Return on Equity</span>
-          <span class="stat-value">{top_pick['roe']:.1f}%</span>
-        </div>
-        <div class="stat-item">
-          <span class="stat-caption">Dividend Streak</span>
-          <span class="stat-value">{top_pick['div_years']} Consecutive Years</span>
-        </div>
-      </div>
+              <!-- Hero Stock Banner -->
+              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="border-bottom: 1px solid #e5e5ea; padding-bottom: 18px; margin-bottom: 22px;">
+                <tr>
+                  <td align="left" valign="bottom">
+                    <span style="font-size: 40px; font-weight: 800; letter-spacing: -0.03em; color: #1d1d1f; line-height: 1;">{top_pick['symbol']}</span>
+                  </td>
+                  <td align="right" valign="bottom">
+                    <div style="font-size: 15px; font-weight: 700; color: #1d1d1f; margin-bottom: 2px;">{top_pick['name']}</div>
+                    <div style="font-size: 13px; color: #86868b;">{top_pick['sector']}</div>
+                  </td>
+                </tr>
+              </table>
 
-      <table class="runners-table">
-        <caption>Alternative Qualified Tranches</caption>
-        {''.join(f'<tr><td class="ticker-col">{r["symbol"]}</td><td class="name-col">{r["name"]}</td><td class="data-col">${r["net_income"]/1e9:.2f}B · {r["wr"]:.1f}</td></tr>' for r in runners_up)}
-      </table>
-    </div>
+              <!-- 2x2 Metric Grid (Tables prevent Gmail collision) -->
+              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 22px;">
+                <tr>
+                  <td width="50%" align="left" valign="top" style="padding-bottom: 18px; padding-right: 12px;">
+                    <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #86868b; margin-bottom: 4px;">Net Income (TTM)</div>
+                    <div style="font-size: 24px; font-weight: 700; color: #0071e3; letter-spacing: -0.02em;">${top_pick['net_income']/1e9:.2f}B</div>
+                  </td>
+                  <td width="50%" align="left" valign="top" style="padding-bottom: 18px; padding-left: 12px;">
+                    <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #86868b; margin-bottom: 4px;">14W Williams %R</div>
+                    <div style="font-size: 24px; font-weight: 700; color: #0071e3; letter-spacing: -0.02em;">{top_pick['wr']:.1f} Oversold</div>
+                  </td>
+                </tr>
+                <tr>
+                  <td width="50%" align="left" valign="top" style="padding-right: 12px;">
+                    <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #86868b; margin-bottom: 4px;">Return on Equity</div>
+                    <div style="font-size: 22px; font-weight: 600; color: #1d1d1f; letter-spacing: -0.02em;">{top_pick['roe']:.1f}%</div>
+                  </td>
+                  <td width="50%" align="left" valign="top" style="padding-left: 12px;">
+                    <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #86868b; margin-bottom: 4px;">Dividend Streak</div>
+                    <div style="font-size: 22px; font-weight: 600; color: #1d1d1f; letter-spacing: -0.02em;">{top_pick['div_years']} Consecutive Years</div>
+                  </td>
+                </tr>
+              </table>
 
-    <!-- SLEEVE 2: LYW MOMENTUM -->
-    <div class="card">
-      <div class="section-meta">
-        <span class="section-label">Sleeve 2 · LYW #1 Momentum (30%)</span>
-        <span class="pill">{days_to_lyw} Days to 2 Jan 2027</span>
-      </div>
+              <!-- Alternative Tranches Table -->
+              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="border-top: 1px solid #e5e5ea; padding-top: 16px;">
+                <tr>
+                  <td colspan="3" style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #86868b; padding-bottom: 10px;">
+                    Alternative Qualified Tranches
+                  </td>
+                </tr>
+                {''.join(f'<tr><td width="22%" style="padding: 6px 0; font-size: 13px; font-weight: 700; color: #1d1d1f;">{r["symbol"]}</td><td width="48%" style="padding: 6px 0; font-size: 13px; color: #86868b;">{r["name"]}</td><td width="30%" align="right" style="padding: 6px 0; font-size: 13px; font-weight: 600; color: #1d1d1f;">${r["net_income"]/1e9:.2f}B · {r["wr"]:.1f}</td></tr>' for r in runners_up)}
+              </table>
 
-      <div class="hero-stock">
-        <div>
-          <div class="ticker">MRNA</div>
-        </div>
-        <div class="company-desc">
-          <strong>Moderna Inc.</strong><br>
-          S&P 500 YTD Leader
-        </div>
-      </div>
+            </td>
+          </tr>
 
-      <div class="stat-row">
-        <div class="stat-item">
-          <span class="stat-caption">2026 YTD Return</span>
-          <span class="stat-value green">+663.0%</span>
-        </div>
-        <div class="stat-item">
-          <span class="stat-caption">Lead Over #2 (SNDK)</span>
-          <span class="stat-value">+96.6% Margin</span>
-        </div>
-        <div class="stat-item">
-          <span class="stat-caption">Current Holding</span>
-          <span class="stat-value">100% Cash (T-Bills)</span>
-        </div>
-        <div class="stat-item">
-          <span class="stat-caption">Risk Management</span>
-          <span class="stat-value">Stopped at -35%</span>
-        </div>
-      </div>
+          <!-- Spacer -->
+          <tr><td height="20"></td></tr>
 
-      <div class="callout-box">
-        <strong>Execution rule:</strong> 2026 position remains safely locked in cash. If Moderna preserves its full-year lead through 31 December, allocation triggers on 2 January 2027 with a hard 35% trailing stop-loss.
-      </div>
-    </div>
+          <!-- SLEEVE 2: LYW MOMENTUM -->
+          <tr>
+            <td style="background-color: #ffffff; border-radius: 20px; border: 1px solid rgba(0, 0, 0, 0.06); padding: 28px 26px; box-shadow: 0 4px 16px rgba(0,0,0,0.03);">
+              
+              <!-- Card Header Row -->
+              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 20px;">
+                <tr>
+                  <td align="left" style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #86868b;">
+                    Sleeve 2 · LYW #1 Momentum (30%)
+                  </td>
+                  <td align="right">
+                    <span style="display: inline-block; padding: 4px 12px; border-radius: 980px; background-color: #f2f2f7; color: #1d1d1f; font-size: 12px; font-weight: 600;">
+                      {days_to_lyw} Days to 2 Jan 2027
+                    </span>
+                  </td>
+                </tr>
+              </table>
 
-    <div class="footer">
-      Atlas & LYW Command Engine · SecondBrain
-    </div>
-  </div>
+              <!-- Hero Stock Banner -->
+              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="border-bottom: 1px solid #e5e5ea; padding-bottom: 18px; margin-bottom: 22px;">
+                <tr>
+                  <td align="left" valign="bottom">
+                    <span style="font-size: 40px; font-weight: 800; letter-spacing: -0.03em; color: #1d1d1f; line-height: 1;">MRNA</span>
+                  </td>
+                  <td align="right" valign="bottom">
+                    <div style="font-size: 15px; font-weight: 700; color: #1d1d1f; margin-bottom: 2px;">Moderna Inc.</div>
+                    <div style="font-size: 13px; color: #86868b;">S&P 500 YTD Leader</div>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- 2x2 Metric Grid -->
+              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 22px;">
+                <tr>
+                  <td width="50%" align="left" valign="top" style="padding-bottom: 18px; padding-right: 12px;">
+                    <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #86868b; margin-bottom: 4px;">2026 YTD Return</div>
+                    <div style="font-size: 24px; font-weight: 700; color: #34c759; letter-spacing: -0.02em;">+663.0%</div>
+                  </td>
+                  <td width="50%" align="left" valign="top" style="padding-bottom: 18px; padding-left: 12px;">
+                    <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #86868b; margin-bottom: 4px;">Lead Margin Over #2</div>
+                    <div style="font-size: 24px; font-weight: 700; color: #1d1d1f; letter-spacing: -0.02em;">+96.6% Margin</div>
+                  </td>
+                </tr>
+                <tr>
+                  <td width="50%" align="left" valign="top" style="padding-right: 12px;">
+                    <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #86868b; margin-bottom: 4px;">Current Holding</div>
+                    <div style="font-size: 22px; font-weight: 600; color: #1d1d1f; letter-spacing: -0.02em;">100% Cash (T-Bills)</div>
+                  </td>
+                  <td width="50%" align="left" valign="top" style="padding-left: 12px;">
+                    <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #86868b; margin-bottom: 4px;">Risk Management</div>
+                    <div style="font-size: 22px; font-weight: 600; color: #1d1d1f; letter-spacing: -0.02em;">Stopped at -35%</div>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Callout Box -->
+              <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                <tr>
+                  <td style="background-color: #f5f5f7; border-radius: 12px; padding: 14px 16px; font-size: 13px; color: #86868b; line-height: 1.5;">
+                    <strong style="color: #1d1d1f;">Execution rule:</strong> 2026 position remains safely locked in cash. If Moderna preserves its full-year lead through 31 December, allocation triggers on 2 January 2027 with a hard 35% trailing stop-loss.
+                  </td>
+                </tr>
+              </table>
+
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td align="center" style="padding: 24px 0 10px 0; font-size: 12px; color: #86868b;">
+              Atlas & LYW Command Engine · SecondBrain
+            </td>
+          </tr>
+
+        </table>
+
+      </td>
+    </tr>
+  </table>
+
 </body>
 </html>"""
 
