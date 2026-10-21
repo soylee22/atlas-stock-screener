@@ -1,9 +1,11 @@
 """Dispatch Portfolio Command Briefing (Atlas Compounder + LYW #1 Momentum).
 
-Runs on a GitHub Actions schedule (e.g., 25th of every month or weekly).
-Reads local screener.sqlite for the undisputed Atlas Dream Zone #1 Net Income titan,
-calculates YTD S&P 500 LYW momentum standings, renders an aesthetic HTML email,
-and dispatches via SMTP (or saves a preview artifact).
+Runs on a GitHub Actions schedule (e.g., daily after US market close).
+Styled using Apple Newsroom / Cupertino Executive Financial design language:
+- Clean ceramic palette (#F5F5F7 / #FFFFFF / #1D1D1F / #86868B)
+- SF Pro Display & Text typographic hierarchy (-0.022em tracking)
+- Rounded 20px card architecture with hairline boundaries
+- Dark-mode responsive support (Space Black #000000 / #1C1C1E)
 """
 import os
 import smtplib
@@ -20,7 +22,6 @@ DB_PATH = os.path.join(ROOT_DIR, 'data', 'screener.sqlite')
 def get_atlas_picks():
     """Extract top Dream Zone candidates from screener.sqlite."""
     if not os.path.exists(DB_PATH):
-        # Fallback if running on runner before db restored
         return [
             {'symbol': 'AVGO', 'name': 'Broadcom Inc.', 'net_income': 38.27e9, 'wr': -90.6, 'roe': 44.2, 'div_years': 14, 'sector': 'Semiconductors'},
             {'symbol': 'BAC', 'name': 'Bank of America Corp', 'net_income': 31.75e9, 'wr': -89.3, 'roe': 11.2, 'div_years': 10, 'sector': 'Financial Services'},
@@ -41,8 +42,6 @@ def get_atlas_picks():
         name = d.get('name') or sym
         sector = d.get('sector') or 'General'
 
-        # Filter: Net Income >= $2B, Div Growth >= 2y, ROE >= 10%, Williams %R <= -80
-        # If williams_r not in stock root, we fall back to AVGO / BAC / CSCO defaults
         if wr is not None and wr <= -80.0 and ni >= 2e9 and div_years >= 2 and roe >= 10.0:
             candidates.append({
                 'symbol': sym, 'name': name, 'net_income': ni,
@@ -52,7 +51,6 @@ def get_atlas_picks():
     conn.close()
 
     if not candidates:
-        # Default verified current picks
         candidates = [
             {'symbol': 'AVGO', 'name': 'Broadcom Inc.', 'net_income': 38.27e9, 'wr': -90.6, 'roe': 44.2, 'div_years': 14, 'sector': 'Semiconductors'},
             {'symbol': 'BAC', 'name': 'Bank of America Corp', 'net_income': 31.75e9, 'wr': -89.3, 'roe': 11.2, 'div_years': 10, 'sector': 'Financial Services'},
@@ -63,8 +61,8 @@ def get_atlas_picks():
     return candidates
 
 
-def render_html_briefing(top_pick, runners_up, days_to_eom, days_to_lyw, as_of_date):
-    """Render publication-grade HTML briefing."""
+def render_html_briefing(top_pick, runners_up, days_to_eom, days_to_lyw, as_of_str):
+    """Render publication-grade Apple Cupertino Executive HTML briefing."""
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -72,205 +70,291 @@ def render_html_briefing(top_pick, runners_up, days_to_eom, days_to_lyw, as_of_d
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Capital Allocation Briefing</title>
   <style>
+    /* Apple Cupertino Design System */
     body {{
-      margin: 0; padding: 24px 12px;
-      background-color: #0c0e12; color: #e2e8f0;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      margin: 0;
+      padding: 40px 16px;
+      background-color: #f5f5f7;
+      color: #1d1d1f;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
+      line-height: 1.47059;
+      letter-spacing: -0.022em;
       -webkit-font-smoothing: antialiased;
     }}
     .container {{
-      max-width: 620px; margin: 0 auto;
-      background: #141820; border: 1px solid #232a36;
-      border-radius: 16px; overflow: hidden;
-      box-shadow: 0 12px 35px rgba(0, 0, 0, 0.45);
+      max-width: 580px;
+      margin: 0 auto;
     }}
-    .header {{
-      padding: 30px 28px 22px;
-      background: linear-gradient(180deg, #181d27 0%, #141820 100%);
-      border-bottom: 1px solid #232a36;
+    .masthead {{
+      margin-bottom: 28px;
+      padding: 0 4px;
     }}
-    .eyebrow {{
-      font-size: 11px; text-transform: uppercase;
-      letter-spacing: 2px; color: #6366f1;
-      font-weight: 700; display: block; margin-bottom: 6px;
+    .brand-eyebrow {{
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #86868b;
+      margin-bottom: 8px;
     }}
-    .title {{
-      font-size: 22px; font-weight: 700; color: #ffffff;
-      margin: 0 0 6px; letter-spacing: -0.5px;
+    .headline {{
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.015em;
+      color: #1d1d1f;
+      margin: 0 0 6px;
+      line-height: 1.15;
     }}
-    .subtitle {{
-      font-size: 13px; color: #8b95a5; margin: 0;
+    .date-stamp {{
+      font-size: 14px;
+      color: #86868b;
+      margin: 0;
     }}
-    .content {{ padding: 24px 28px; }}
     .card {{
-      background: #19202c; border: 1px solid #283344;
-      border-radius: 12px; padding: 22px;
-      margin-bottom: 22px;
+      background: #ffffff;
+      border-radius: 20px;
+      padding: 30px;
+      margin-bottom: 20px;
+      border: 1px solid rgba(0, 0, 0, 0.05);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
     }}
-    .card-header {{
-      display: flex; justify-content: space-between;
-      align-items: baseline; margin-bottom: 16px;
-      border-bottom: 1px solid #253041; padding-bottom: 10px;
+    .section-meta {{
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
     }}
-    .card-title {{
-      font-size: 15px; font-weight: 700; color: #f1f5f9;
-      display: flex; align-items: center; gap: 8px;
+    .section-label {{
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #86868b;
     }}
-    .badge {{
-      display: inline-block; padding: 2px 8px;
-      border-radius: 6px; font-size: 11px; font-weight: 600;
+    .pill {{
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 12px;
+      border-radius: 980px;
+      font-size: 12px;
+      font-weight: 600;
+      background: #f5f5f7;
+      color: #1d1d1f;
     }}
-    .badge-dream {{
-      background: rgba(188, 241, 128, 0.15); color: #bcf180;
-      border: 1px solid rgba(188, 241, 128, 0.35);
+    .pill.accent {{
+      background: rgba(0, 113, 227, 0.1);
+      color: #0071e3;
     }}
-    .badge-momentum {{
-      background: rgba(99, 102, 241, 0.15); color: #818cf8;
-      border: 1px solid rgba(99, 102, 241, 0.35);
-    }}
-    .countdown {{
-      font-size: 12px; font-weight: 600; color: #94a3b8;
-    }}
-    .hero {{
-      display: flex; align-items: baseline; gap: 10px; margin-bottom: 16px;
+    .hero-stock {{
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 24px;
+      padding-bottom: 18px;
+      border-bottom: 1px solid #e5e5ea;
     }}
     .ticker {{
-      font-size: 30px; font-weight: 800; color: #ffffff;
+      font-size: 38px;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      color: #1d1d1f;
+      line-height: 1;
     }}
-    .company {{
-      font-size: 14px; color: #94a3b8; font-weight: 500;
+    .company-desc {{
+      font-size: 14px;
+      color: #86868b;
+      text-align: right;
     }}
-    .grid {{
-      display: grid; grid-template-columns: repeat(2, 1fr);
-      gap: 10px; margin-bottom: 16px;
+    .stat-row {{
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      row-gap: 20px;
+      column-gap: 24px;
+      margin-bottom: 24px;
     }}
-    .box {{
-      background: #11151d; border: 1px solid #222a38;
-      border-radius: 8px; padding: 10px 12px;
+    .stat-item {{
+      display: flex;
+      flex-direction: column;
     }}
-    .box-lbl {{
-      font-size: 11px; color: #64748b; text-transform: uppercase;
-      font-weight: 600; display: block; margin-bottom: 3px;
+    .stat-caption {{
+      font-size: 11px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #86868b;
+      margin-bottom: 4px;
     }}
-    .box-val {{
-      font-size: 15px; font-weight: 700; color: #f8fafc;
+    .stat-value {{
+      font-size: 20px;
+      font-weight: 600;
+      color: #1d1d1f;
+      letter-spacing: -0.02em;
     }}
-    .box-val.green {{ color: #4ade80; }}
-    .runners {{
-      margin-top: 14px; padding-top: 12px;
-      border-top: 1px dashed #283344;
+    .stat-value.highlight {{
+      color: #0071e3;
     }}
-    .runner-lbl {{
-      font-size: 11px; font-weight: 600; color: #64748b;
-      text-transform: uppercase; margin-bottom: 8px;
+    .stat-value.green {{
+      color: #34c759;
     }}
-    .runner-row {{
-      display: flex; justify-content: space-between;
-      font-size: 12px; color: #cbd5e1; margin-bottom: 6px;
+    .runners-table {{
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 18px;
+      padding-top: 16px;
+      border-top: 1px solid #e5e5ea;
     }}
-    .runner-row strong {{ color: #ffffff; }}
-    .callout {{
-      background: #11151c; border-left: 3px solid #6366f1;
-      padding: 12px 14px; border-radius: 0 8px 8px 0;
-      font-size: 12px; color: #94a3b8; line-height: 1.5;
+    .runners-table caption {{
+      text-align: left;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #86868b;
+      margin-bottom: 12px;
+    }}
+    .runners-table td {{
+      padding: 8px 0;
+      font-size: 13px;
+    }}
+    .runners-table td.ticker-col {{
+      font-weight: 600;
+      color: #1d1d1f;
+      width: 25%;
+    }}
+    .runners-table td.name-col {{
+      color: #86868b;
+      width: 45%;
+    }}
+    .runners-table td.data-col {{
+      text-align: right;
+      color: #1d1d1f;
+      font-weight: 500;
+      width: 30%;
+    }}
+    .callout-box {{
+      background: #f5f5f7;
+      border-radius: 12px;
+      padding: 16px;
+      font-size: 13px;
+      color: #86868b;
+      line-height: 1.5;
+    }}
+    .callout-box strong {{
+      color: #1d1d1f;
+      font-weight: 600;
     }}
     .footer {{
-      padding: 18px 28px; border-top: 1px solid #232a36;
-      text-align: center; font-size: 11px; color: #556275;
+      text-align: center;
+      padding: 24px 0;
+      font-size: 12px;
+      color: #86868b;
+    }}
+    @media (prefers-color-scheme: dark) {{
+      body {{ background-color: #000000 !important; color: #f5f5f7 !important; }}
+      .card {{ background: #1c1c1e !important; border-color: rgba(255, 255, 255, 0.08) !important; }}
+      .headline, .ticker, .stat-value, .runners-table td.ticker-col, .runners-table td.data-col, .callout-box strong {{ color: #f5f5f7 !important; }}
+      .brand-eyebrow, .date-stamp, .section-label, .company-desc, .stat-caption, .runners-table caption, .runners-table td.name-col, .callout-box, .footer {{ color: #8e8e93 !important; }}
+      .hero-stock, .runners-table {{ border-color: #2c2c2e !important; }}
+      .pill, .callout-box {{ background: #2c2c2e !important; color: #f5f5f7 !important; }}
+      .pill.accent {{ background: rgba(41, 151, 255, 0.15) !important; color: #2997ff !important; }}
+      .stat-value.highlight {{ color: #2997ff !important; }}
+      .stat-value.green {{ color: #30d158 !important; }}
     }}
   </style>
 </head>
 <body>
   <div class="container">
-    <div class="header">
-      <span class="eyebrow">Portfolio Command Dispatch</span>
-      <h1 class="title">Capital Allocation Briefing</h1>
-      <p class="subtitle">Systematic execution status as of {as_of_date}</p>
+    <div class="masthead">
+      <div class="brand-eyebrow">SecondBrain Investment Allocation</div>
+      <h1 class="headline">Capital Briefing</h1>
+      <p class="date-stamp">{as_of_str} · Daily Market Close</p>
     </div>
 
-    <div class="content">
-      <!-- SLEEVE 1: ATLAS -->
-      <div class="card">
-        <div class="card-header">
-          <div class="card-title">
-            <span>Sleeve 1: Atlas Compounder (70%)</span>
-            <span class="badge badge-dream">Dream Zone #1</span>
-          </div>
-          <div class="countdown">{days_to_eom} days to month-end</div>
-        </div>
+    <!-- SLEEVE 1: ATLAS -->
+    <div class="card">
+      <div class="section-meta">
+        <span class="section-label">Sleeve 1 · Atlas Monthly Compounder (70%)</span>
+        <span class="pill accent">{days_to_eom} Days to Rebalance</span>
+      </div>
 
-        <div class="hero">
-          <span class="ticker">{top_pick['symbol']}</span>
-          <span class="company">{top_pick['name']} · {top_pick['sector']}</span>
+      <div class="hero-stock">
+        <div>
+          <div class="ticker">{top_pick['symbol']}</div>
         </div>
-
-        <div class="grid">
-          <div class="box">
-            <span class="box-lbl">Net Income (TTM)</span>
-            <span class="box-val green">${top_pick['net_income']/1e9:.2f}B (#1 Earner)</span>
-          </div>
-          <div class="box">
-            <span class="box-lbl">14W Williams %R</span>
-            <span class="box-val green">{top_pick['wr']:.1f} (Oversold)</span>
-          </div>
-          <div class="box">
-            <span class="box-lbl">Return on Equity</span>
-            <span class="box-val">{top_pick['roe']:.1f}%</span>
-          </div>
-          <div class="box">
-            <span class="box-lbl">Dividend Growth</span>
-            <span class="box-val">{top_pick['div_years']} Consecutive Years</span>
-          </div>
-        </div>
-
-        <div class="runners">
-          <div class="runner-lbl">Alternative Tranche Runners-Up</div>
-          {''.join(f'<div class="runner-row"><span><strong>{r["symbol"]}</strong> {r["name"]}</span><span>${r["net_income"]/1e9:.2f}B NI · W%R {r["wr"]:.1f} · ROE {r["roe"]:.1f}%</span></div>' for r in runners_up)}
+        <div class="company-desc">
+          <strong>{top_pick['name']}</strong><br>
+          {top_pick['sector']}
         </div>
       </div>
 
-      <!-- SLEEVE 2: LYW MOMENTUM -->
-      <div class="card">
-        <div class="card-header">
-          <div class="card-title">
-            <span>Sleeve 2: LYW #1 Momentum (30%)</span>
-            <span class="badge badge-momentum">Leader</span>
-          </div>
-          <div class="countdown">{days_to_lyw} days to 2 Jan 2027</div>
+      <div class="stat-row">
+        <div class="stat-item">
+          <span class="stat-caption">Net Income (TTM)</span>
+          <span class="stat-value highlight">${top_pick['net_income']/1e9:.2f}B</span>
         </div>
+        <div class="stat-item">
+          <span class="stat-caption">14W Williams %R</span>
+          <span class="stat-value highlight">{top_pick['wr']:.1f} Oversold</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-caption">Return on Equity</span>
+          <span class="stat-value">{top_pick['roe']:.1f}%</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-caption">Dividend Streak</span>
+          <span class="stat-value">{top_pick['div_years']} Consecutive Years</span>
+        </div>
+      </div>
 
-        <div class="hero">
-          <span class="ticker">MRNA</span>
-          <span class="company">Moderna Inc. · S&P 500 YTD Leader</span>
-        </div>
+      <table class="runners-table">
+        <caption>Alternative Qualified Tranches</caption>
+        {''.join(f'<tr><td class="ticker-col">{r["symbol"]}</td><td class="name-col">{r["name"]}</td><td class="data-col">${r["net_income"]/1e9:.2f}B · {r["wr"]:.1f}</td></tr>' for r in runners_up)}
+      </table>
+    </div>
 
-        <div class="grid">
-          <div class="box">
-            <span class="box-lbl">2026 YTD Return</span>
-            <span class="box-val green">+663.0%</span>
-          </div>
-          <div class="box">
-            <span class="box-lbl">Lead Margin</span>
-            <span class="box-val">+96.6% over #2 (SNDK)</span>
-          </div>
-          <div class="box">
-            <span class="box-lbl">Active 2026 Position</span>
-            <span class="box-val">100% Cash (Stopped at -35%)</span>
-          </div>
-          <div class="box">
-            <span class="box-lbl">Next Action Gate</span>
-            <span class="box-val">Track Dec 2026 Close</span>
-          </div>
-        </div>
+    <!-- SLEEVE 2: LYW MOMENTUM -->
+    <div class="card">
+      <div class="section-meta">
+        <span class="section-label">Sleeve 2 · LYW #1 Momentum (30%)</span>
+        <span class="pill">{days_to_lyw} Days to 2 Jan 2027</span>
+      </div>
 
-        <div class="callout">
-          <strong>Execution rule:</strong> 2026 sleeve capital remains safely parked in T-bills. If MRNA maintains its lead through 31 December, entry triggers at market open on 2 January 2027 with an immediate hard stop-loss set at 65% of entry price.
+      <div class="hero-stock">
+        <div>
+          <div class="ticker">MRNA</div>
         </div>
+        <div class="company-desc">
+          <strong>Moderna Inc.</strong><br>
+          S&P 500 YTD Leader
+        </div>
+      </div>
+
+      <div class="stat-row">
+        <div class="stat-item">
+          <span class="stat-caption">2026 YTD Return</span>
+          <span class="stat-value green">+663.0%</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-caption">Lead Over #2 (SNDK)</span>
+          <span class="stat-value">+96.6% Margin</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-caption">Current Holding</span>
+          <span class="stat-value">100% Cash (T-Bills)</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-caption">Risk Management</span>
+          <span class="stat-value">Stopped at -35%</span>
+        </div>
+      </div>
+
+      <div class="callout-box">
+        <strong>Execution rule:</strong> 2026 position remains safely locked in cash. If Moderna preserves its full-year lead through 31 December, allocation triggers on 2 January 2027 with a hard 35% trailing stop-loss.
       </div>
     </div>
 
     <div class="footer">
-      Generated automatically by SecondBrain Portfolio Command · London
+      Atlas & LYW Command Engine · SecondBrain
     </div>
   </div>
 </body>
@@ -295,14 +379,12 @@ def main():
     as_of_str = today.strftime('%d %B %Y')
     html_body = render_html_briefing(top_pick, runners_up, days_to_eom, days_to_lyw, as_of_str)
 
-    # Save artifact
     out_path = os.path.join(ROOT_DIR, 'public', 'portfolio_briefing.html')
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
     with open(out_path, 'w', encoding='utf-8') as f:
         f.write(html_body)
     print(f"Rendered briefing saved to {out_path}")
 
-    # Dispatch email if SMTP secrets are present
     smtp_host = os.environ.get('SMTP_HOST') or 'smtp.gmail.com'
     smtp_port = int(os.environ.get('SMTP_PORT', '465'))
     smtp_user = os.environ.get('SMTP_USER') or os.environ.get('GMAIL_ADDRESS')
