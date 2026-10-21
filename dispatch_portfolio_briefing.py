@@ -303,11 +303,11 @@ def main():
     print(f"Rendered briefing saved to {out_path}")
 
     # Dispatch email if SMTP secrets are present
-    smtp_host = os.environ.get('SMTP_HOST')
+    smtp_host = os.environ.get('SMTP_HOST') or 'smtp.gmail.com'
     smtp_port = int(os.environ.get('SMTP_PORT', '465'))
-    smtp_user = os.environ.get('SMTP_USER')
-    smtp_pass = os.environ.get('SMTP_PASS')
-    notify_email = os.environ.get('NOTIFY_EMAIL')
+    smtp_user = os.environ.get('SMTP_USER') or os.environ.get('GMAIL_ADDRESS')
+    smtp_pass = (os.environ.get('SMTP_PASS') or os.environ.get('GMAIL_APP_PASSWORD') or '').replace(' ', '')
+    notify_email = os.environ.get('NOTIFY_EMAIL') or smtp_user
 
     if smtp_host and smtp_user and smtp_pass and notify_email:
         msg = EmailMessage()
