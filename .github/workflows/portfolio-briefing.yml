@@ -1,0 +1,43 @@
+name: Portfolio Command Briefing
+
+on:
+  schedule:
+    # Runs daily after US market close at 21:45 UTC (Monday to Friday)
+    - cron: '45 21 * * 1-5'
+  workflow_dispatch:
+
+concurrency:
+  group: portfolio-briefing
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  dispatch-briefing:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Generate and dispatch portfolio briefing
+        env:
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          NOTIFY_EMAIL: ${{ secrets.NOTIFY_EMAIL }}
+        run: |
+          python dispatch_portfolio_briefing.py
+
+      - name: Upload HTML briefing artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: portfolio-briefing-html
+          path: public/portfolio_briefing.html
+          retention-days: 14
