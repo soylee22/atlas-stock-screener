@@ -101,6 +101,8 @@ jobs:
       - name: Restore ETF history checkpoint
         run: |
           python -c "import gzip, json, pathlib; seed = pathlib.Path('seed/etf-history-checkpoint.json.gz'); cache = pathlib.Path('data/etfs.json'); pathlib.Path('data').mkdir(exist_ok=True); data = json.loads(gzip.decompress(seed.read_bytes())) if seed.is_file() else None; cache.write_text(json.dumps(data)) if data and (not cache.is_file() or sum(r.get('mapping_status') == 'Verified' for r in json.loads(cache.read_text()).get('rows', [])) < sum(r.get('mapping_status') == 'Verified' for r in data.get('rows', []))) else None"
+      - name: Refresh Trading 212 investable stocks
+        run: python refresh_t212_stocks.py --workers 12
       - name: Merge previously collected public company histories
         if: env.INTRADAY != 'true'
         run: python profile_seed.py

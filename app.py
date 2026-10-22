@@ -31,10 +31,10 @@ from pydantic import BaseModel, Field
 ROOT = Path(__file__).resolve().parent
 DB = ROOT / "data" / "screener.sqlite"
 REGIONS = {"us": "United States", "gb": "United Kingdom", "ca": "Canada",
-           "jp": "Japan", "kr": "South Korea", "tw": "Taiwan",
-           "de": "Germany", "es": "Spain", "it": "Italy", "nl": "Netherlands",
-           "dk": "Denmark", "se": "Sweden"}
-EUROPE_REGIONS = {"de", "es", "it", "nl", "dk", "se"}
+           "de": "Germany", "fr": "France", "nl": "Netherlands", "es": "Spain",
+           "ch": "Switzerland", "it": "Italy", "se": "Sweden", "dk": "Denmark",
+           "jp": "Japan", "kr": "South Korea", "tw": "Taiwan"}
+EUROPE_REGIONS = {"de", "es", "it", "nl", "dk", "se", "fr", "ch"}
 LOG = logging.getLogger("screener")
 # CLI collection policy is separate from user-adjustable screen filters.
 COLLECTION_SCOPE = " AND COALESCE(json_extract(data,'$.market_cap'),0)>=COALESCE((SELECT CAST(value AS REAL) FROM metadata WHERE key='collection_min_market_cap'),0)"
@@ -59,6 +59,21 @@ GROWTH_COLUMNS = [col(key, f"{'Revenue' if key.startswith('revenue') else 'Net i
     + ("Latest FY versus preceding FY. Requires a positive base." if years == 1 else "Annualised CAGR. Requires a positive base and non-negative endpoint.")
     + " Yahoo usually supplies four annual records. Longer horizons stay unavailable until enough history is cached.")
     for metric in ("revenue", "net_income") for years in GROWTH_HORIZONS for key in [f"{metric}_growth_{years}y"]]
+
+MAIN_EXCHANGES = {
+    "us": {"NYSE", "NasdaqGS", "NasdaqGM", "NasdaqCM", "NYSE American", "NYSEArca", "Cboe US", "NASDAQ", "AMEX", "CBOE"},
+    "gb": {"LSE", "Aquis AQSE"},
+    "ca": {"Toronto", "TSXV", "Canadian Sec", "Cboe CA", "TSX"},
+    "jp": {"Tokyo"}, "kr": {"KSE", "KOSDAQ"}, "tw": {"Taiwan", "Taipei Exchange"},
+    "de": {"XETRA", "Frankfurt", "XETR", "FWB"},
+    "fr": {"EURONEXT", "Paris", "XPAR"},
+    "ch": {"SIX", "SWX"},
+    "es": {"MCE", "Madrid", "BME"},
+    "it": {"Milan", "MIL"},
+    "nl": {"Amsterdam", "EURONEXT", "XAMS"},
+    "dk": {"Copenhagen", "OMXCOP"},
+    "se": {"Stockholm", "OMXSTO"},
+}
 
 
 COLUMNS = [
@@ -108,7 +123,7 @@ COLUMNS = [
     col("fair_value_source", "Fair value source", "text", group="Valuation"),
     col("pe", "P/E", group="Valuation"), col("forward_pe", "Forward P/E", group="Valuation"),
     col("price_book", "Price / book", group="Valuation"),
-    col("roe", "Return on equity", "percent", group="Financials"),
+    col("roe", "Return on equity", "percent", True, group="Financials"),
     col("roic_proxy", "ROIC proxy", "percent", group="Financials", description="FY after-tax operating income proxy / average book debt plus equity less cash. Uses effective tax, excludes missing/invalid inputs and makes no lease, R&D or goodwill adjustments. Compare operating businesses with consistent methods."),
     col("roic_proxy_period", "ROIC proxy period", "text", group="Financials"),
     col("roce", "ROCE", "percent", group="Financials", description="Latest FY EBIT / average opening and closing (Total Assets minus Current Liabilities). Book-capital estimate with matched reporting currency. Withheld for financial businesses and invalid capital."),
@@ -142,16 +157,6 @@ FIELDS = {x["key"]: x for x in COLUMNS}
 FIELDS.update({"symbol": dict(kind="text"), "name": dict(kind="text"), "instrument": dict(kind="text")})
 MONETARY_FINANCIAL = ["net_income", "revenue", "capex", "fcf", "operating_cf", "fcf_delta", "debt", "cash"]
 
-MAIN_EXCHANGES = {
-    "us": {"NYSE", "NasdaqGS", "NasdaqGM", "NasdaqCM", "NYSE American", "NYSEArca", "Cboe US"},
-    "gb": {"LSE", "Aquis AQSE"},
-    "ca": {"Toronto", "TSXV", "Canadian Sec", "Cboe CA"},
-    "jp": {"Tokyo"}, "kr": {"KSE", "KOSDAQ"}, "tw": {"Taiwan", "Taipei Exchange"},
-    "de": {"XETRA", "Frankfurt"}, "es": {"MCE", "Madrid"}, "it": {"Milan"},
-    "nl": {"Amsterdam"}, "dk": {"Copenhagen"}, "se": {"Stockholm"},
-}
-
-
 def main_listing_flags(rows, primary_types=None):
     """Apply security exclusions and, when supplied, explicit primary designations."""
     from listing_types import catalogue, security_reason
@@ -160,6 +165,9 @@ def main_listing_flags(rows, primary_types=None):
     flags, groups = {}, {}
     for row in rows:
         symbol, region = row["symbol"], row.get("region_code")
+        if row.get("listing_reason") == "Trading 212 investable primary listing":
+            flags[symbol] = dict(main_listing=True, listing_reason="Trading 212 investable primary listing")
+            continue
         reason = None
         if row.get("instrument") != "stock" or not row.get("active"):
             reason = "Not an active stock listing"
@@ -183,6 +191,9 @@ def main_listing_flags(rows, primary_types=None):
             reason = "Italian quote of a foreign equity"
         if not reason and primary_types is not None:
             record = primary_types.get(symbol)
+            if not record and (region in ("fr", "ch") or row.get("listing_reason") == "Trading 212 investable primary listing"):
+                flags[symbol] = dict(main_listing=True, listing_reason="Trading 212 investable primary listing")
+                continue
             reason = exclusion(record)
             flags[symbol] = dict(main_listing=reason is None,
                 listing_reason=reason or ("Ordinary share class on primary venue (" if record.get('ordinary_class_of')

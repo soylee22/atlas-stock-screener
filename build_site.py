@@ -137,8 +137,8 @@ def build_site(database, output, seed=None, compress_details=False, compress_dat
     assets = [a for a in assets if ICON_FILE.fullmatch(a["filename"]) and (icon_root / a["filename"]).is_file() and not (icon_root / a["filename"]).is_symlink()]
     metadata = clean_metadata({key: store.meta(key) for key in META_KEYS})
     active = [r for r in rows if r.get("active")]
-    if not active or not all(any(r["region_code"] == code for r in active) for code in model.REGIONS):
-        raise ValueError("Publish only a snapshot containing every configured market")
+    if not active or not any(r.get("region_code") == "us" for r in active) or not any(r.get("region_code") == "gb" for r in active):
+        raise ValueError("Publish only a snapshot containing primary listing markets")
     # Keep every source row in the recovery seed, but only publish the large-cap scope.
     active = [r for r in active if (r.get('market_cap') or 0) >= minimum_market_cap]
     output = Path(output).resolve()
@@ -252,7 +252,7 @@ def main():
     parser.add_argument("--seed", type=Path)
     parser.add_argument("--compress-details", action="store_true")
     parser.add_argument("--compress-data", action="store_true")
-    parser.add_argument("--minimum-market-cap", type=float, default=20_000_000_000)
+    parser.add_argument("--minimum-market-cap", type=float, default=0)
     args = parser.parse_args()
     if args.minimum_market_cap < 0:
         parser.error("Minimum market cap must be non-negative")
