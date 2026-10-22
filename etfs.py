@@ -167,10 +167,17 @@ def identity_error(row, metadata):
     # Both the base currency and pence denomination must match the catalogue.
     if normal(metadata.get('currency')) != normal(row['quote_currency']) or ((metadata.get('currency') in {'GBp','GBX'}) != (row['quote_currency'] in {'GBp','GBX'})):
         return 'Yahoo quote currency or denomination does not match the catalogue'
-    stop = {'etf','etc','etp','ucits','usd','gbp','eur','acc','dist','plc','fund','funds','class','the','and','a','i','ii','iii','iv','inc','distributing','accumulating','uc','h','gbx'}
+    stop = {'etf','etc','etp','ucits','usd','gbp','eur','acc','dist','plc','fund','funds','class','the','and','a','i','ii','iii','iv','inc','distributing','accumulating','uc','h','gbx','gmbh','com','ag','sa'}
     tokens = lambda s: set(re.findall(r'[a-z0-9]+', s.lower())) - stop
-    expected, actual = tokens(row['name']), tokens(metadata.get('longName') or metadata.get('shortName') or '')
-    if len(expected & actual) < 2 or (is_etp_equity and len(expected & actual)/max(1,len(expected | actual))<.8):
+    expected = tokens(row['name'])
+    candidates = [tokens(s) for s in [metadata.get('longName'), metadata.get('shortName')] if s]
+    matched = False
+    for actual in candidates:
+        if len(expected & actual) >= 2 or (is_etp_equity and len(expected & actual) >= 1):
+            if not is_etp_equity or actual.issubset(expected) or expected.issubset(actual) or (len(expected & actual) / max(1, len(expected | actual)) >= 0.8):
+                matched = True
+                break
+    if not matched:
         return 'Yahoo fund description does not sufficiently match the catalogue'
     return None
 
@@ -212,7 +219,8 @@ def apply_history(row, history, metadata, today=None, *, asof=None):
     history.index = pd.to_datetime(history.index)
     if history.index.tz is not None:
         history.index = history.index.tz_localize(None)
-    cutoff = SessionCutoff(today, asof=asof, metadata=metadata, region='gb')
+    region_code = row.get('region_code', 'gb')
+    cutoff = SessionCutoff(today, asof=asof, metadata=metadata, region=region_code)
     history, quote_note = reported_quote_close(history, metadata.get('currency'), metadata, cutoff)
     retained_closes = retain_reported_closes(row, history)
     today = cutoff.today
@@ -235,8 +243,8 @@ def apply_history(row, history, metadata, today=None, *, asof=None):
     coherent = observed
     currency = metadata['currency']
     out = dict(row, mapping_status='Verified', mapping_reason=None, yahoo_name=metadata.get('longName') or metadata.get('shortName'),
-        exchange='LSE', region='UK / London', quote_currency=currency, yahoo_instrument_type=metadata.get('instrumentType'))
-    out.update(technical_values(coherent, currency, validate_daily_close=False, asof=cutoff.asof, metadata=metadata, region='gb'))
+        exchange=row.get('exchange', 'LSE'), region=row.get('region', 'UK / London'), quote_currency=currency, yahoo_instrument_type=metadata.get('instrumentType'))
+    out.update(technical_values(coherent, currency, validate_daily_close=False, asof=cutoff.asof, metadata=metadata, region=region_code))
     note_reported_quote(out, quote_note)
     for prefix, months in [('williams', False), ('williams_monthly', True)]:
         if retained_closes and out.get(prefix+'_r_period'):
@@ -312,7 +320,7 @@ def merged_rows(cache):
     return rows
 
 
-def refresh(cache_path=CACHE, seconds=1200, limit=1000, fetcher=None, *, intraday=False):
+def refresh(cache_path=CACHE, seconds=1200, limit=2500, fetcher=None, *, intraday=False, workers=10):
     cache = read_cache(cache_path)
     cache['rows'] = merged_rows(cache)
     checkpoint = dict(started=now(), attempted=0, succeeded=0, failed=0, rate_limited=False, mode='intraday' if intraday else 'daily')
@@ -327,12 +335,9 @@ def refresh(cache_path=CACHE, seconds=1200, limit=1000, fetcher=None, *, intrada
         due = lambda row: row.get('mapping_status') == 'Verified' and session.intraday_ready(None if row.get('etf_history_version') != 8 else row.get('history_attempted'), completed_asof=row.get('technical_asof'))
         ready = lambda row: True
     candidates = sorted([r for r in cache['rows'] if due(r) and ready(r)], key=lambda r: (bool(r.get('technical_fetched')), r.get('technical_fetched') or '', -(r.get('aum_local') or 0), r['symbol']))
-    deadline = time.monotonic() + seconds
-    for row in candidates[:limit]:
-        if time.monotonic() >= deadline:
-            break
-        row['history_attempted'] = now()
-        checkpoint['attempted'] += 1
+
+    def process_candidate(row):
+        att = now()
         try:
             if fetcher:
                 history, metadata = fetcher(row['yahoo_symbol'])
@@ -343,27 +348,75 @@ def refresh(cache_path=CACHE, seconds=1200, limit=1000, fetcher=None, *, intrada
             refreshed = apply_history(row, history, metadata)
             refreshed['history_error'] = None
             refreshed['etf_history_version'] = 8
-            row.clear()
-            row.update(refreshed)
-            checkpoint['succeeded'] += 1
+            refreshed['history_attempted'] = att
+            return True, refreshed, att
         except Exception as exc:
-            message = str(exc)
-            if isinstance(exc, QuoteUnitError):
-                attempted = row['history_attempted']
-                imported = next(r for r in import_catalogue() if r['symbol'] == row['symbol'])
+            return False, exc, att
+
+    deadline = time.monotonic() + seconds
+    batch = candidates[:limit]
+
+    if fetcher or workers <= 1:
+        for row in batch:
+            if time.monotonic() >= deadline or checkpoint['rate_limited']:
+                break
+            checkpoint['attempted'] += 1
+            ok, res, att = process_candidate(row)
+            if ok:
                 row.clear()
-                row.update(imported, history_attempted=attempted, history_quality_note=message)
-            row['history_error'] = 'Yahoo refresh failed. Previous data retained.' if row.get('technical_fetched') else 'Yahoo history unavailable or mapping unconfirmed.'
-            if not row.get('technical_fetched'):
-                row.update(mapping_status='Unavailable / unconfirmed', mapping_reason=message[:250], williams_version=1, williams_reason=row['history_error'], williams_monthly_version=1, williams_monthly_reason=row['history_error'])
-            checkpoint['failed'] += 1
-            if '429' in message or 'rate limit' in message.lower() or type(exc).__name__ == 'YFRateLimitError':
-                checkpoint['rate_limited'] = True
-        if checkpoint['attempted'] % 20 == 0 or checkpoint['rate_limited']:
-            write_cache(cache, cache_path)
-            print(json.dumps(checkpoint), flush=True)
-        if checkpoint['rate_limited']:
-            break
+                row.update(res)
+                checkpoint['succeeded'] += 1
+            else:
+                message = str(res)
+                if isinstance(res, QuoteUnitError):
+                    imported = next(r for r in import_catalogue() if r['symbol'] == row['symbol'])
+                    row.clear()
+                    row.update(imported, history_attempted=att, history_quality_note=message)
+                row['history_attempted'] = att
+                row['history_error'] = 'Yahoo refresh failed. Previous data retained.' if row.get('technical_fetched') else 'Yahoo history unavailable or mapping unconfirmed.'
+                if not row.get('technical_fetched'):
+                    row.update(mapping_status='Unavailable / unconfirmed', mapping_reason=message[:250], williams_version=1, williams_reason=row['history_error'], williams_monthly_version=1, williams_monthly_reason=row['history_error'])
+                checkpoint['failed'] += 1
+                if '429' in message or 'rate limit' in message.lower() or type(res).__name__ == 'YFRateLimitError':
+                    checkpoint['rate_limited'] = True
+            if checkpoint['attempted'] % 20 == 0:
+                write_cache(cache, cache_path)
+                print(json.dumps(checkpoint), flush=True)
+    else:
+        import concurrent.futures
+        with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as executor:
+            fut_map = {executor.submit(process_candidate, r): r for r in batch}
+            for fut in concurrent.futures.as_completed(fut_map):
+                if time.monotonic() >= deadline or checkpoint['rate_limited']:
+                    executor.shutdown(wait=False, cancel_futures=True)
+                    break
+                row = fut_map[fut]
+                checkpoint['attempted'] += 1
+                try:
+                    ok, res, att = fut.result()
+                    if ok:
+                        row.clear()
+                        row.update(res)
+                        checkpoint['succeeded'] += 1
+                    else:
+                        message = str(res)
+                        if isinstance(res, QuoteUnitError):
+                            imported = next(r for r in import_catalogue() if r['symbol'] == row['symbol'])
+                            row.clear()
+                            row.update(imported, history_attempted=att, history_quality_note=message)
+                        row['history_attempted'] = att
+                        row['history_error'] = 'Yahoo refresh failed. Previous data retained.' if row.get('technical_fetched') else 'Yahoo history unavailable or mapping unconfirmed.'
+                        if not row.get('technical_fetched'):
+                            row.update(mapping_status='Unavailable / unconfirmed', mapping_reason=message[:250], williams_version=1, williams_reason=row['history_error'], williams_monthly_version=1, williams_monthly_reason=row['history_error'])
+                        checkpoint['failed'] += 1
+                        if '429' in message or 'rate limit' in message.lower() or type(res).__name__ == 'YFRateLimitError':
+                            checkpoint['rate_limited'] = True
+                except Exception as exc:
+                    checkpoint['failed'] += 1
+
+                if checkpoint['attempted'] % 25 == 0:
+                    write_cache(cache, cache_path)
+                    print(json.dumps(checkpoint), flush=True)
     checkpoint['finished'] = now()
     checkpoint['remaining'] = sum(due(r) for r in cache['rows'])
     write_cache(cache, cache_path)
@@ -440,19 +493,20 @@ def publish(output, fx, built, cache_path=CACHE, compress=True):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--seconds', type=int, default=1200)
-    parser.add_argument('--limit', type=int, default=1000)
+    parser.add_argument('--limit', type=int, default=2500)
+    parser.add_argument('--workers', type=int, default=10)
     parser.add_argument('--restore', action='store_true')
     parser.add_argument('--publish-local', action='store_true')
     parser.add_argument('--intraday', action='store_true')
     args = parser.parse_args()
-    if not 0 <= args.seconds <= 1200 or not 0 <= args.limit <= 1000:
-        parser.error('Use 0 to 1200 seconds and 0 to 1000 funds')
+    if not 0 <= args.seconds <= 3600 or not 0 <= args.limit <= 5000:
+        parser.error('Use 0 to 3600 seconds and 0 to 5000 funds')
     if args.restore:
         try:
             restore()
         except requests.RequestException:
             print('ETF recovery unavailable. CSV retained, history will refill.', flush=True)
-    cache = refresh(seconds=args.seconds, limit=args.limit, intraday=args.intraday)
+    cache = refresh(seconds=args.seconds, limit=args.limit, intraday=args.intraday, workers=args.workers)
     print(json.dumps(cache['refresh']), flush=True)
     if args.publish_local:
         import app

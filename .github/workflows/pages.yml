@@ -99,7 +99,8 @@ jobs:
           key: atlas-data-v1-37779061916-1
           fail-on-cache-miss: true
       - name: Restore ETF history checkpoint
-        run: python -c "import etfs; etfs.restore()"
+        run: |
+          python -c "import gzip, json, pathlib; seed = pathlib.Path('seed/etf-history-checkpoint.json.gz'); cache = pathlib.Path('data/etfs.json'); pathlib.Path('data').mkdir(exist_ok=True); data = json.loads(gzip.decompress(seed.read_bytes())) if seed.is_file() else None; cache.write_text(json.dumps(data)) if data and (not cache.is_file() or sum(r.get('mapping_status') == 'Verified' for r in json.loads(cache.read_text()).get('rows', [])) < sum(r.get('mapping_status') == 'Verified' for r in data.get('rows', []))) else None"
       - name: Merge previously collected public company histories
         if: env.INTRADAY != 'true'
         run: python profile_seed.py
@@ -120,7 +121,7 @@ jobs:
       - name: Refresh ETF price histories and retain the fund catalogue
         if: github.event_name != 'push'
         run: |
-          args=(--restore --seconds 1200 --limit 1000)
+          args=(--restore --seconds 1200 --limit 2500 --workers 10)
           if [ "$INTRADAY" = true ]; then args+=(--intraday); fi
           python etfs.py "${args[@]}"
       - name: Overnight Yahoo refresh, first half

@@ -6,12 +6,12 @@ import pandas as pd
 
 CLOSE_ALLOWANCE = pd.Timedelta(minutes=30)
 REGION_CALENDARS = dict(us='XNYS', gb='XLON', ca='XTSE', jp='XTKS', kr='XKRX', tw='XTAI',
-                        de='XETR', es='XMAD', it='XMIL', nl='XAMS', dk='XCSE', se='XSTO')
+                        de='XETR', fr='XPAR', es='XMAD', it='XMIL', nl='XAMS', dk='XCSE', se='XSTO')
 EXCHANGE_CALENDARS = dict(LSE='XLON', LONDON='XLON', NYQ='XNYS', NYSE='XNYS',
     NMS='XNYS', NGM='XNYS', NCM='XNYS', NASDAQ='XNYS', ASE='XNYS', PCX='XNYS',
     TOR='XTSE', TSX='XTSE', JPX='XTKS', TYO='XTKS', KSC='XKRX', KOE='XKRX',
-    TAI='XTAI', TWO='XTAI', GER='XETR', FRA='XFRA', HAM='XHAM', STU='XSTU',
-    DUS='XDUS', MCE='XMAD', MIL='XMIL', AMS='XAMS', CPH='XCSE', STO='XSTO')
+    TAI='XTAI', TWO='XTAI', GER='XETR', XETR='XETR', FRA='XFRA', HAM='XHAM', STU='XSTU',
+    DUS='XDUS', PAR='XPAR', XPAR='XPAR', MCE='XMAD', MIL='XMIL', AMS='XAMS', CPH='XCSE', STO='XSTO')
 
 
 @lru_cache(maxsize=24)

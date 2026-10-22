@@ -196,10 +196,10 @@ def generate_catalogue(aum_min: float = 100_000_000, output_path: Path = OUT_CSV
             if sym in seen_symbols:
                 continue
             desc = cols[1] or t212_item.get('name', '')
-            old_row = old_catalogue.get(sym) or old_catalogue.get(raw_sym)
+            old_row = old_catalogue.get(sym) if old_catalogue.get(sym, {}).get('Region') == 'de' else None
             asset_class, focus = classify_fund(desc, old_row)
-            price = old_row['Price'] if (old_row and old_row.get('Price')) else cols[2]
-            currency = old_row['Price - Currency'] if (old_row and old_row.get('Price - Currency')) else cols[3]
+            price = cols[2] if cols[2] is not None else (old_row['Price'] if (old_row and old_row.get('Price')) else '')
+            currency = cols[3] or 'EUR'
             records.append({
                 'Symbol': sym,
                 'Description': desc,
@@ -237,10 +237,10 @@ def generate_catalogue(aum_min: float = 100_000_000, output_path: Path = OUT_CSV
             if sym in seen_symbols:
                 continue
             desc = cols[1] or t212_item.get('name', '')
-            old_row = old_catalogue.get(sym) or old_catalogue.get(raw_sym)
+            old_row = old_catalogue.get(sym) if old_catalogue.get(sym, {}).get('Region') == 'fr' else None
             asset_class, focus = classify_fund(desc, old_row)
-            price = old_row['Price'] if (old_row and old_row.get('Price')) else cols[2]
-            currency = old_row['Price - Currency'] if (old_row and old_row.get('Price - Currency')) else cols[3]
+            price = cols[2] if cols[2] is not None else (old_row['Price'] if (old_row and old_row.get('Price')) else '')
+            currency = cols[3] or 'EUR'
             records.append({
                 'Symbol': sym,
                 'Description': desc,
