@@ -13,8 +13,8 @@ import { parseNumber, compact, escapeHtml as esc, annualDividends, quoteStatusSu
 
 const screenQuadrantDefaults={...quadrantDefaults,...(isETF?fundQuadrantDefaults:{})};
 const $ = id => document.getElementById(id);
-const FLAGS = { us: '🇺🇸', gb: '🇬🇧', ca: '🇨🇦', jp: '🇯🇵', kr: '🇰🇷', tw: '🇹🇼', de: '🇩🇪', es: '🇪🇸', it: '🇮🇹', nl: '🇳🇱', dk: '🇩🇰', se: '🇸🇪', fr: '🇫🇷' };
-const SHORT = { us: 'US', gb: 'UK', ca: 'Canada', jp: 'Japan', kr: 'South Korea', tw: 'Taiwan', de: 'Germany', es: 'Spain', it: 'Italy', nl: 'Netherlands', dk: 'Denmark', se: 'Sweden', fr: 'France' };
+const FLAGS = { us: '🇺🇸', gb: '🇬🇧', ca: '🇨🇦', jp: '🇯🇵', kr: '🇰🇷', tw: '🇹🇼', de: '🇩🇪', es: '🇪🇸', it: '🇮🇹', nl: '🇳🇱', dk: '🇩🇰', se: '🇸🇪', fr: '🇫🇷', ch: '🇨🇭' };
+const SHORT = { us: 'US', gb: 'UK', ca: 'Canada', jp: 'Japan', kr: 'South Korea', tw: 'Taiwan', de: 'Germany', es: 'Spain', it: 'Italy', nl: 'Netherlands', dk: 'Denmark', se: 'Sweden', fr: 'France', ch: 'Switzerland' };
 function readStorage(key, fallback) { try { return JSON.parse(localStorage.getItem(storageKey(key))) ?? fallback; } catch { return fallback; } }
 const state = { regions: [], search: '', filters: defaultFilters(), sort: defaultSort, direction: 'desc', columns: [], page: 0, pageSize: 100, includeOther: isETF, mainOnly: true, preset: 'all', watchOnly: false, view: '', section:'table', sma:{window:200,interval:'daily'}, quadrant:{...screenQuadrantDefaults} };
 let quadrant, qualityUI, chartRefreshed = 0;
@@ -71,9 +71,15 @@ function update(changes = {}, edited = true) {
 }
 
 function renderMarkets() {
-  $('markets').innerHTML = `<button class="all-markets ${!state.regions.length ? 'active' : ''}" data-region="all">◎ All markets</button>` + Object.keys(schema.regions).map(code => {
+  const regionKeys = Object.keys(schema.regions).filter(code => {
     const counts = status.counts?.find(c => c.region === code);
-    return `<button class="market-card ${state.regions.includes(code) ? 'active' : ''}" data-region="${code}" aria-pressed="${state.regions.includes(code)}"><span class="market-flag">${FLAGS[code]}</span><span class="market-info"><span class="market-name">${isETF?(code==='gb'?'London listings':SHORT[code]+' listings'):SHORT[code]}</span><span class="market-count">${counts ? (state.mainOnly ? counts.main_stocks : counts.stocks).toLocaleString('en-GB') + ' listings' : 'Loading listings'}</span></span></button>`;
+    if (!status.counts) return true;
+    if (!counts) return isETF;
+    return (state.mainOnly ? counts.main_stocks : counts.stocks) > 0;
+  });
+  $('markets').innerHTML = `<button class="all-markets ${!state.regions.length ? 'active' : ''}" data-region="all">◎ All markets</button>` + regionKeys.map(code => {
+    const counts = status.counts?.find(c => c.region === code);
+    return `<button class="market-card ${state.regions.includes(code) ? 'active' : ''}" data-region="${code}" aria-pressed="${state.regions.includes(code)}"><span class="market-flag">${FLAGS[code] || '🌐'}</span><span class="market-info"><span class="market-name">${isETF?(code==='gb'?'London listings':SHORT[code]+' listings'):(SHORT[code] || code.toUpperCase())}</span><span class="market-count">${counts ? (state.mainOnly ? counts.main_stocks : counts.stocks).toLocaleString('en-GB') + ' listings' : 'Loading listings'}</span></span></button>`;
   }).join('') + `<span class="market-caption">${isETF?'Listing venue · filter Asset class and Focus for exposure':'Click markets to combine them'}</span>`;
 }
 function renderControls() {
@@ -195,9 +201,13 @@ function renderCoverage() {
     $('data-dialog').querySelector('.method-content').innerHTML=fundMethods+`<p>Latest history batch: ${e.refresh?.attempted||0} attempted, ${e.refresh?.succeeded||0} successful, ${e.refresh?.failed||0} unavailable or unconfirmed. ${e.refresh?.rate_limited?'Yahoo rate-limited this batch. Remaining histories retry later.':''}</p><h3>Cached FX rates</h3><table class="fx-table"><tbody>${Object.entries(status.fx||{}).map(([currency,fx])=>`<tr><td>${esc(currency)}</td><td>1 ${esc(currency)} = $${Number(fx.rate).toFixed(6)}</td><td>${esc(fx.date||'Date unknown')}</td></tr>`).join('')}</tbody></table>`;
     return;
   }
-  $('coverage').innerHTML = Object.keys(schema.regions).map(code => {
+  const regionKeys = Object.keys(schema.regions).filter(code => {
+    const count = status.counts?.find(c => c.region === code);
+    return !status.counts || !count || (count.stocks || 0) > 0;
+  });
+  $('coverage').innerHTML = regionKeys.map(code => {
     const count = status.counts?.find(c => c.region === code), progress = status.coverage?.[code];
-    return `<div class="coverage-card"><h3>${FLAGS[code]} ${SHORT[code]}</h3><strong>${(count?.main_stocks || 0).toLocaleString('en-GB')}</strong><p>main listings · ${(count?.stocks || 0).toLocaleString('en-GB')} total stocks<br>${count?.enriched || 0} profiles · ${count?.fcf || 0} with free cash flow<br>${progress?.error ? esc(progress.error) : progress?.finished ? `${progress.stored.toLocaleString('en-GB')} / ${progress.expected.toLocaleString('en-GB')} Yahoo records scanned${progress.difference ? ' · reconciliation gap ' + progress.difference : ''}` : 'Universe scan in progress'}</p></div>`;
+    return `<div class="coverage-card"><h3>${FLAGS[code] || '🌐'} ${SHORT[code] || code.toUpperCase()}</h3><strong>${(count?.main_stocks || 0).toLocaleString('en-GB')}</strong><p>main listings · ${(count?.stocks || 0).toLocaleString('en-GB')} total stocks<br>${count?.enriched || 0} profiles · ${count?.fcf || 0} with free cash flow<br>${progress?.error ? esc(progress.error) : progress?.finished ? `${progress.stored.toLocaleString('en-GB')} / ${progress.expected.toLocaleString('en-GB')} Yahoo records scanned${progress.difference ? ' · reconciliation gap ' + progress.difference : ''}` : 'Universe scan in progress'}</p></div>`;
   }).join('');
   $('logo-status').textContent = `${(status.logos?.cached || 0).toLocaleString('en-GB')} website icons ${isPublished ? 'in this published snapshot' : 'cached on this Mac'}. Icons load as company website data becomes available. Missing icons keep a letter badge.`;
   const quoteRefresh=status.quote_refresh;
