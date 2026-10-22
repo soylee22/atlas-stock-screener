@@ -13,8 +13,8 @@ import { parseNumber, compact, escapeHtml as esc, annualDividends, quoteStatusSu
 
 const screenQuadrantDefaults={...quadrantDefaults,...(isETF?fundQuadrantDefaults:{})};
 const $ = id => document.getElementById(id);
-const FLAGS = { us: '🇺🇸', gb: '🇬🇧', ca: '🇨🇦', jp: '🇯🇵', kr: '🇰🇷', tw: '🇹🇼', de: '🇩🇪', es: '🇪🇸', it: '🇮🇹', nl: '🇳🇱', dk: '🇩🇰', se: '🇸🇪' };
-const SHORT = { us: 'US', gb: 'UK', ca: 'Canada', jp: 'Japan', kr: 'South Korea', tw: 'Taiwan', de: 'Germany', es: 'Spain', it: 'Italy', nl: 'Netherlands', dk: 'Denmark', se: 'Sweden' };
+const FLAGS = { us: '🇺🇸', gb: '🇬🇧', ca: '🇨🇦', jp: '🇯🇵', kr: '🇰🇷', tw: '🇹🇼', de: '🇩🇪', es: '🇪🇸', it: '🇮🇹', nl: '🇳🇱', dk: '🇩🇰', se: '🇸🇪', fr: '🇫🇷' };
+const SHORT = { us: 'US', gb: 'UK', ca: 'Canada', jp: 'Japan', kr: 'South Korea', tw: 'Taiwan', de: 'Germany', es: 'Spain', it: 'Italy', nl: 'Netherlands', dk: 'Denmark', se: 'Sweden', fr: 'France' };
 function readStorage(key, fallback) { try { return JSON.parse(localStorage.getItem(storageKey(key))) ?? fallback; } catch { return fallback; } }
 const state = { regions: [], search: '', filters: defaultFilters(), sort: defaultSort, direction: 'desc', columns: [], page: 0, pageSize: 100, includeOther: isETF, mainOnly: true, preset: 'all', watchOnly: false, view: '', section:'table', sma:{window:200,interval:'daily'}, quadrant:{...screenQuadrantDefaults} };
 let quadrant, qualityUI, chartRefreshed = 0;
@@ -73,7 +73,7 @@ function update(changes = {}, edited = true) {
 function renderMarkets() {
   $('markets').innerHTML = `<button class="all-markets ${!state.regions.length ? 'active' : ''}" data-region="all">◎ All markets</button>` + Object.keys(schema.regions).map(code => {
     const counts = status.counts?.find(c => c.region === code);
-    return `<button class="market-card ${state.regions.includes(code) ? 'active' : ''}" data-region="${code}" aria-pressed="${state.regions.includes(code)}"><span class="market-flag">${FLAGS[code]}</span><span class="market-info"><span class="market-name">${isETF?'London listings':SHORT[code]}</span><span class="market-count">${counts ? (state.mainOnly ? counts.main_stocks : counts.stocks).toLocaleString('en-GB') + ' listings' : 'Loading listings'}</span></span></button>`;
+    return `<button class="market-card ${state.regions.includes(code) ? 'active' : ''}" data-region="${code}" aria-pressed="${state.regions.includes(code)}"><span class="market-flag">${FLAGS[code]}</span><span class="market-info"><span class="market-name">${isETF?(code==='gb'?'London listings':SHORT[code]+' listings'):SHORT[code]}</span><span class="market-count">${counts ? (state.mainOnly ? counts.main_stocks : counts.stocks).toLocaleString('en-GB') + ' listings' : 'Loading listings'}</span></span></button>`;
   }).join('') + `<span class="market-caption">${isETF?'Listing venue · filter Asset class and Focus for exposure':'Click markets to combine them'}</span>`;
 }
 function renderControls() {

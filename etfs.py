@@ -20,11 +20,11 @@ from technicals import technical_values, reported_quote_close, note_reported_quo
 from market_sessions import SessionCutoff
 
 ROOT = Path(__file__).resolve().parent
-CATALOGUE = ROOT / 'seed' / 'etfs-2026-10-09.csv'
-CATALOGUE_DATE = '2026-10-09'
-SOURCE = 'User-supplied TradingView ETF screener CSV'
+CATALOGUE = ROOT / 'seed' / 'etfs-2026-10-23.csv'
+CATALOGUE_DATE = '2026-10-23'
+SOURCE = 'Trading 212 tradeable universe enriched via TradingView'
 CACHE = ROOT / 'data' / 'etfs.json'
-REGIONS = {'gb': 'UK / London candidate listings'}
+REGIONS = {'gb': 'UK / London', 'de': 'Germany (Xetra)', 'fr': 'France (Euronext Paris)'}
 
 
 class QuoteUnitError(ValueError):
@@ -117,7 +117,7 @@ def import_catalogue(path=CATALOGUE):
     with Path(path).open(encoding='utf-8-sig', newline='') as source:
         for record in csv.DictReader(source):
             symbol, name = record['Symbol'].strip(), record['Description'].strip()
-            if not re.fullmatch(r'[A-Z0-9]+', symbol) or symbol in seen or not name:
+            if not re.fullmatch(r'[A-Z0-9_]+', symbol) or symbol in seen or not name:
                 raise ValueError('ETF catalogue needs unique bare symbols and descriptions')
             seen.add(symbol)
             product = next((label for label in ['ETF', 'ETC', 'ETP'] if re.search(r'\b' + label + r'\b', name, re.I)), 'Unconfirmed')
@@ -125,9 +125,13 @@ def import_catalogue(path=CATALOGUE):
             inverse = bool(re.search(r'\b(inverse|short)\b', inverse_name, re.I))
             leveraged = bool(re.search(r'\b(leverage\w*|[235]x|[235]times)\b|\b[235]\s*x\b', name, re.I))
             exposure = 'Leveraged & inverse' if inverse and leveraged else 'Inverse / short' if inverse else 'Leveraged' if leveraged else 'Standard / unspecified'
-            rows.append(dict(symbol=symbol, yahoo_symbol=symbol + '.L', name=name,
-                active=True, instrument='etf', main_listing=True, region_code='gb', region='UK / London candidates',
-                exchange='London candidate', quote_currency=record['Price - Currency'],
+            yahoo_symbol = record.get('Yahoo Symbol') or (symbol + '.L')
+            region_code = record.get('Region') or 'gb'
+            exchange = record.get('Exchange') or 'London candidate'
+            region_name = REGIONS.get(region_code, 'UK / London candidates')
+            rows.append(dict(symbol=symbol, yahoo_symbol=yahoo_symbol, name=name,
+                active=True, instrument='etf', main_listing=True, region_code=region_code, region=region_name,
+                exchange=exchange, quote_currency=record['Price - Currency'],
                 price_source='CSV snapshot', catalogue_price_local=number(record['Price']), price_local=number(record['Price']), price_period=f'CSV {CATALOGUE_DATE} · capture time unknown',
                 change=number(record['Price change %, 1 day']),
                 turnover_local=number(record['Price × volume (turnover), 1 day']),
@@ -141,7 +145,7 @@ def import_catalogue(path=CATALOGUE):
                 nav_return_currency=None, holdings=number(record['Total holdings']),
                 asset_class=record['Asset class'], focus=record['Focus'], specialism=specialism(name,record['Focus']), product_type=product, exposure=exposure,
                 catalogue_date=CATALOGUE_DATE, catalogue_source=SOURCE,
-                mapping_status='Not checked', mapping_reason='London ticker candidate has not been verified against Yahoo metadata.'))
+                mapping_status='Not checked', mapping_reason='Ticker candidate has not been verified against Yahoo metadata.'))
     if not rows:
         raise ValueError('ETF catalogue is empty')
     return rows
@@ -151,8 +155,14 @@ def identity_error(row, metadata):
     if metadata.get('symbol', '').upper() != row['yahoo_symbol'].upper():
         return 'Yahoo returned a different symbol'
     is_etp_equity=metadata.get('instrumentType')=='EQUITY' and (row.get('product_type') in {'ETC','ETP'} or row.get('asset_class') in {'Commodities','Currency','Alternatives'})
-    if metadata.get('exchangeName') != 'LSE' or (metadata.get('instrumentType') != 'ETF' and not is_etp_equity):
-        return 'Yahoo does not confirm a compatible ETF/ETP on London Stock Exchange'
+    allowed_exchanges = {
+        'gb': {'LSE', 'LON', 'XLON'},
+        'de': {'GER', 'XETR', 'FRA', 'HAM', 'STU', 'DUS'},
+        'fr': {'PAR', 'XPAR', 'AMS', 'XAMS'},
+    }
+    valid = allowed_exchanges.get(row.get('region_code', 'gb'), {'LSE'})
+    if metadata.get('exchangeName') not in valid or (metadata.get('instrumentType') != 'ETF' and not is_etp_equity):
+        return f'Yahoo does not confirm a compatible ETF/ETP on {row.get("exchange", "specified exchange")}'
     normal = lambda c: 'GBP' if c in {'GBp', 'GBX'} else c
     # Both the base currency and pence denomination must match the catalogue.
     if normal(metadata.get('currency')) != normal(row['quote_currency']) or ((metadata.get('currency') in {'GBp','GBX'}) != (row['quote_currency'] in {'GBp','GBX'})):

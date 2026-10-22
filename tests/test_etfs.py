@@ -28,10 +28,10 @@ def metadata(row):
 
 def test_catalogue_units_and_coverage():
     rows=etfs.import_catalogue()
-    assert len(rows)==len({r['symbol'] for r in rows})==729
-    assert sum(r['expense_ratio'] is not None for r in rows)==724
-    assert sum(r['nav_return_3y'] is not None for r in rows)==605
-    assert sum(r['aum_local'] is not None for r in rows)==688
+    assert len(rows)==len({r['symbol'] for r in rows})==1992
+    assert sum(r['expense_ratio'] is not None for r in rows)==1990
+    assert sum(r['nav_return_3y'] is not None for r in rows)==1992
+    assert sum(r['aum_local'] is not None for r in rows)==1992
     row=next(r for r in rows if r['symbol']=='CSP1')
     converted=etfs.dollarise(row,{'GBP':{'rate':1.25}})
     assert converted['price']==pytest.approx(63565*.01*1.25)
@@ -60,7 +60,7 @@ def test_fund_history_and_import_dates():
     assert result['williams_r']==pytest.approx(-90)
     assert result['mapping_status']=='Verified'
     assert result['price_local']==92
-    assert result['catalogue_date']=='2026-10-09'
+    assert result['catalogue_date']=='2026-10-23'
     assert result['nav_return_3y']==row['nav_return_3y']
     assert result['expense_ratio']==row['expense_ratio']
     assert result['distribution_events'][0]['amount']==.5
@@ -85,16 +85,16 @@ def test_publication_is_separate_and_preserves_small_funds(tmp_path):
     row=sample(); row['aum_local']=1e6
     cache_path=tmp_path/'etfs.json';etfs.write_cache({'version':1,'rows':[row],'refresh':{}},cache_path)
     target=tmp_path/'site';status=etfs.publish(target,{'GBP':{'rate':1.25}},'fixed',cache_path)
-    assert status['total']==729
+    assert status['total']==1992
     source=json.loads(gzip.decompress((target/'stocks.json.gz').read_bytes()))
     rows=[dict(zip(source['fields'],v)) for v in source['rows']]
-    assert len(rows)==729
+    assert len(rows)==1992
     assert all(r['instrument']=='etf' for r in rows)
     assert not any('net_income' in r for r in rows)
     assert json.loads((target/'schema.json').read_text())['universe']=='etf'
     seed=json.loads(gzip.decompress((target/'seed.json.gz').read_bytes()))
-    assert len(seed['rows'])==729
-    assert {r['nav_return_3y_period'] for r in rows}=={'3Y cumulative · imported 2026-10-09 · return currency unknown'}
+    assert len(seed['rows'])==1992
+    assert {r['nav_return_3y_period'] for r in rows}=={'3Y cumulative · imported 2026-10-23 · return currency unknown'}
 
 
 def test_failed_refresh_retains_successful_history_and_metadata(tmp_path,monkeypatch):
@@ -153,7 +153,7 @@ def test_discontinuity_starts_new_segment_without_guessing_units():
 def test_latest_unit_conflict_replaces_bad_cached_quote_with_catalogue(tmp_path,monkeypatch):
     # Keep this fixture inside the catalogue's seven-day validation window.
     apply_history = etfs.apply_history
-    monkeypatch.setattr(etfs, 'apply_history', lambda row, history, metadata: apply_history(row, history, metadata, today=date(2026, 10, 9)))
+    monkeypatch.setattr(etfs, 'apply_history', lambda row, history, metadata: apply_history(row, history, metadata, today=date(2026, 10, 23)))
     imported=sample();old=dict(imported,price_local=1.,mapping_status='Verified',technical_fetched='2020-01-01T00:00:00+00:00',etf_history_version=2)
     monkeypatch.setattr(etfs,'import_catalogue',lambda:[imported])
     path=tmp_path/'etfs.json';etfs.write_cache(dict(version=1,rows=[old]),path)
