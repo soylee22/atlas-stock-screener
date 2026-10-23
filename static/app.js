@@ -90,6 +90,13 @@ function renderControls() {
     $(id).classList.toggle('active',oversold);
     $(id).setAttribute('aria-pressed',String(oversold));
   }
+  const atlasBtn = $('atlas-compounders');
+  if (atlasBtn) {
+    const isAtlas = state.filters.some(f => f.field === 'roe' && f.op === 'gte' && Number(f.value) === 10) &&
+      state.filters.some(f => f.field === 'div_years' && f.op === 'gte' && Number(f.value) === 2);
+    atlasBtn.classList.toggle('active', isAtlas);
+    atlasBtn.setAttribute('aria-pressed', String(isAtlas));
+  }
   $('search').value = state.search;
   $('column-count').textContent = state.columns.length;
   $('watch-count').textContent = watched.length ? `(${watched.length})` : '';
@@ -114,7 +121,8 @@ function renderTable() {
   const colors = ['#385943', '#4e4768', '#314c63', '#6c4c36', '#53653f', '#553f4f'];
   $('tbody').innerHTML = rows.map(row => {
     const color = colors[[...row.symbol].reduce((a, c) => a + c.charCodeAt(0), 0) % colors.length];
-    return `<tr><td class="company"><div class="company-cell"><button class="watch-star ${watched.includes(row.symbol) ? 'watched' : ''}" data-watch="${esc(row.symbol)}" aria-label="${watched.includes(row.symbol) ? 'Remove' : 'Add'} ${esc(row.symbol)} ${watched.includes(row.symbol) ? 'from' : 'to'} watchlist">${watched.includes(row.symbol) ? '★' : '☆'}</button>${companyIcon(row, color)}<button class="company-meta company-link" data-detail="${esc(row.symbol)}" title="Open ${esc(row.name)} deep dive"><span class="symbol-line"><span class="ticker">${esc(row.symbol)}</span><span class="ticker-tag">${SHORT[row.region_code]}</span></span><span class="company-name">${esc(row.name)}</span></button></div></td>` + state.columns.map(key => {
+    const isAtlas = !isETF && Number(row.roe) >= 10 && Number(row.div_years) >= 2;
+    return `<tr><td class="company"><div class="company-cell"><button class="watch-star ${watched.includes(row.symbol) ? 'watched' : ''}" data-watch="${esc(row.symbol)}" aria-label="${watched.includes(row.symbol) ? 'Remove' : 'Add'} ${esc(row.symbol)} ${watched.includes(row.symbol) ? 'from' : 'to'} watchlist">${watched.includes(row.symbol) ? '★' : '☆'}</button>${companyIcon(row, color)}<button class="company-meta company-link" data-detail="${esc(row.symbol)}" title="Open ${esc(row.name)} deep dive"><span class="symbol-line"><span class="ticker">${esc(row.symbol)}</span><span class="ticker-tag">${SHORT[row.region_code]}</span>${isAtlas ? '<span class="ticker-tag atlas-tag" title="Atlas Compounder: ROE ≥ 10%, Dividend streak ≥ 2 yrs">ATLAS</span>' : ''}</span><span class="company-name">${esc(row.name)}</span></button></div></td>` + state.columns.map(key => {
       const f = fields[key], val = row[key], period = key === 'net_income' || key === 'net_margin' || key === 'revenue' ? row.income_period : ['fcf', 'capex', 'operating_cf', 'fcf_yield'].includes(key) ? row.cf_period : key === 'fcf_change' ? row.fcf_growth_period : row[key + '_period'] || '';
       return `<td class="${f.kind === 'text' ? 'text' : ''} ${valueClass(val, key)}" title="${esc(period ? period + ' · ' : '')}${esc(val ?? row.dividend_quality_reasons?.[key] ?? row.annual_growth_missing?.[key] ?? 'Unavailable or awaiting retrieval')}">${fmt(val, f)}</td>`;
     }).join('') + '</tr>';
@@ -284,6 +292,18 @@ function bindEvents() {
   for (const [key,id] of [['williams_r','weekly-oversold'],['williams_monthly_r','monthly-oversold']]) {
     $(id).onclick = () => { const filters=state.filters.filter(f=>f.field!==key); if(!state.filters.some(f=>f.field===key&&f.op==='lte'&&Number(f.value)===-80))filters.push({field:key,op:'lte',value:-80}); update({filters,preset:''}); };
   }
+  const atlasBtn = $('atlas-compounders');
+  if (atlasBtn) {
+    atlasBtn.onclick = () => {
+      const isAtlas = state.filters.some(f => f.field === 'roe' && f.op === 'gte' && Number(f.value) === 10) &&
+        state.filters.some(f => f.field === 'div_years' && f.op === 'gte' && Number(f.value) === 2);
+      let filters = state.filters.filter(f => !(f.field === 'roe' && f.op === 'gte' && Number(f.value) === 10) && !(f.field === 'div_years' && f.op === 'gte' && Number(f.value) === 2));
+      if (!isAtlas) {
+        filters.push({ field: 'roe', op: 'gte', value: 10 }, { field: 'div_years', op: 'gte', value: 2 });
+      }
+      update({ filters, preset: !isAtlas ? 'atlas' : '' });
+    };
+  }
   $('table-section').onclick = () => { showSection('table'); markEdited(); persist('atlas.last.v1',state); };
   $('quadrant-section').onclick = () => { showSection('quadrant'); markEdited(); persist('atlas.last.v1',state); };
   $('markets').onclick = e => { const code = e.target.closest('[data-region]')?.dataset.region; if (!code) return; update({ regions: code === 'all' ? [] : state.regions.includes(code) ? state.regions.filter(x => x !== code) : [...state.regions, code] }); };
@@ -312,7 +332,14 @@ function bindEvents() {
   $('presets').onclick = e => {
     const preset = e.target.closest('[data-preset]')?.dataset.preset; if (!preset) return;
     if(preset==='compound'){qualityUI.openPreset();return;}
-    const sets = isETF ? {all:[],equity:[{field:"asset_class",op:"eq",value:"Equity"}],bonds:[{field:"asset_class",op:"eq",value:"Fixed income"}],lowcost:[{field:"expense_ratio",op:"lte",value:.2}],watch:[]} : { all: [], dividend: [{ field: 'div_yield', op: 'gte', value: 1 }, { field: 'div_years', op: 'gte', value: 5 }], cash: [{ field: 'fcf', op: 'gt', value: 0 }, { field: 'fcf_change', op: 'gt', value: 0 }], quality: [{ field: 'net_margin', op: 'gte', value: 15 }, { field: 'pe', op: 'between', value: 0, value2: 25 }], watch: [] };
+    const sets = isETF ? {all:[],equity:[{field:"asset_class",op:"eq",value:"Equity"}],bonds:[{field:"asset_class",op:"eq",value:"Fixed income"}],lowcost:[{field:"expense_ratio",op:"lte",value:.2}],watch:[]} : {
+      all: [],
+      atlas: [{ field: 'roe', op: 'gte', value: 10 }, { field: 'div_years', op: 'gte', value: 2 }],
+      dividend: [{ field: 'div_yield', op: 'gte', value: 1 }, { field: 'div_years', op: 'gte', value: 5 }],
+      cash: [{ field: 'fcf', op: 'gt', value: 0 }, { field: 'fcf_change', op: 'gt', value: 0 }],
+      quality: [{ field: 'net_margin', op: 'gte', value: 15 }, { field: 'pe', op: 'between', value: 0, value2: 25 }],
+      watch: []
+    };
     update({ filters: [...defaultFilters(),...sets[preset]], preset, watchOnly: preset === 'watch' });
   };
   $('columns').onclick = () => { renderColumns(); $('columns-dialog').showModal(); };

@@ -687,18 +687,28 @@ class Store:
         return conn
 
     def meta(self, key, default=None):
-        with self.connect() as conn:
+        conn = self.connect()
+        try:
             row = conn.execute("SELECT value FROM metadata WHERE key=?", (key,)).fetchone()
-        return json.loads(row[0]) if row else default
+            return json.loads(row[0]) if row else default
+        finally:
+            conn.close()
 
     def set_meta(self, key, value):
-        with self.connect() as conn:
-            conn.execute("INSERT OR REPLACE INTO metadata VALUES (?,?)", (key, json.dumps(value)))
+        conn = self.connect()
+        try:
+            with conn:
+                conn.execute("INSERT OR REPLACE INTO metadata VALUES (?,?)", (key, json.dumps(value)))
+        finally:
+            conn.close()
 
     def get(self, symbol):
-        with self.connect() as conn:
+        conn = self.connect()
+        try:
             row = conn.execute("SELECT data FROM stocks WHERE symbol=?", (symbol,)).fetchone()
-        return json.loads(row[0]) if row else None
+            return json.loads(row[0]) if row else None
+        finally:
+            conn.close()
 
     def upsert_many(self, rows, enriched=False):
         fx = self.meta("fx", {"USD": {"rate": 1}})

@@ -65,6 +65,7 @@ td { height: 56px; padding: 7px 14px; font-size: 16px; line-height: 22px; color:
 .company-meta { line-height: 20px; }
 .ticker { font-size: 16px; }
 .ticker-tag { font-size: 11px; }
+.atlas-tag { background: #163d26; color: #4ade80; font-weight: 700; font-size: 9px; padding: 1px 5px; border-radius: 3px; border: 1px solid rgba(74, 222, 128, 0.3); margin-left: 5px; letter-spacing: 0.5px; }
 .company-name { font-size: 15px; line-height: 19px; margin-top: 2px; color: #a9b4c2; }
 .usd-sign { font-size: 14px; color: #94a2b2; }
 .number-unit { font-size: 14px; color: #b1bcc9; }
