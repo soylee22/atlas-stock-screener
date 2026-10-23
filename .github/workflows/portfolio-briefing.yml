@@ -25,6 +25,13 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Restore market data cache
+        uses: actions/cache/restore@v4
+        with:
+          path: data
+          key: atlas-data-v1-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: atlas-data-v1-
+
       - name: Generate and dispatch portfolio briefing
         env:
           SMTP_HOST: ${{ secrets.SMTP_HOST }}

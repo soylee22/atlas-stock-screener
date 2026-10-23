@@ -19,8 +19,88 @@ ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(ROOT_DIR, 'data', 'screener.sqlite')
 
 
+FX_TO_USD = {
+    'USD': 1.0,
+    'EUR': 1.08,
+    'GBP': 1.30,
+    'GBX': 0.013,
+    'CHF': 1.15,
+    'CAD': 0.72,
+    'SEK': 0.096,
+    'DKK': 0.145,
+    'JPY': 0.0066,
+    'KRW': 0.00073,
+    'TWD': 0.031,
+    'AUD': 0.66,
+    'HKD': 0.128,
+}
+
+
+def ensure_database():
+    """Ensure data/screener.sqlite exists and has populated stock data."""
+    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+    if os.path.exists(DB_PATH):
+        try:
+            conn = sqlite3.connect(DB_PATH)
+            cur = conn.cursor()
+            cur.execute("SELECT COUNT(*) FROM stocks")
+            count = cur.fetchone()[0]
+            conn.close()
+            if count > 0:
+                return
+        except Exception:
+            pass
+
+    csv_path = os.path.join(ROOT_DIR, 'seed', 'stocks-2026-10-23.csv')
+    if not os.path.exists(csv_path):
+        return
+
+    import csv
+    conn = sqlite3.connect(DB_PATH)
+    cur = conn.cursor()
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS stocks (
+            symbol TEXT PRIMARY KEY,
+            region TEXT,
+            data TEXT NOT NULL,
+            enriched REAL DEFAULT 0,
+            attempted REAL DEFAULT 0
+        )
+    """)
+    rows = []
+    with open(csv_path, encoding='utf-8') as f:
+        for r in csv.DictReader(f):
+            sym = r.get('symbol')
+            if not sym:
+                continue
+            curr = (r.get('currency') or 'USD').upper()
+            rate = FX_TO_USD.get(curr, 1.0)
+            ni = float(r.get('net_income') or 0)
+            ni_usd = ni * rate
+            d = {
+                'symbol': sym,
+                'name': r.get('name') or sym,
+                'active': True,
+                'instrument': 'stock',
+                'net_income': ni_usd,
+                'net_income_local': ni,
+                'currency': curr,
+                'roe': float(r.get('roe') or 0),
+                'div_years': int(float(r.get('div_years') or 0)),
+                'williams_r': float(r.get('williams_r')) if r.get('williams_r') else None,
+                'sector': r.get('sector') or 'General',
+                'price': float(r.get('price') or 0),
+                'div_yield': float(r.get('div_yield') or 0)
+            }
+            rows.append((sym, r.get('region', 'us'), json.dumps(d), 1.0, 1.0))
+    cur.executemany("INSERT OR REPLACE INTO stocks (symbol, region, data, enriched, attempted) VALUES (?, ?, ?, ?, ?)", rows)
+    conn.commit()
+    conn.close()
+
+
 def get_atlas_picks():
     """Extract top Dream Zone candidates from screener.sqlite, seed CSV, or published data."""
+    ensure_database()
     candidates = []
 
     # 1. Try local SQLite database
@@ -47,7 +127,7 @@ def get_atlas_picks():
         except Exception:
             pass
 
-    # 2. Try seed CSV (always tracked in git, guaranteed on GitHub Actions)
+    # 2. Try seed CSV with FX conversion if database query yielded nothing
     if not candidates:
         import csv
         csv_path = os.path.join(ROOT_DIR, 'seed', 'stocks-2026-10-23.csv')
@@ -58,12 +138,15 @@ def get_atlas_picks():
                         try:
                             wr = float(r.get('williams_r') or 0)
                             ni = float(r.get('net_income') or 0)
+                            curr = (r.get('currency') or 'USD').upper()
+                            rate = FX_TO_USD.get(curr, 1.0)
+                            ni_usd = ni * rate
                             roe = float(r.get('roe') or 0)
                             div_years = int(float(r.get('div_years') or 0))
-                            if wr <= -80.0 and ni >= 2e9 and div_years >= 2 and roe >= 10.0:
+                            if wr <= -80.0 and ni_usd >= 2e9 and div_years >= 2 and roe >= 10.0:
                                 candidates.append({
                                     'symbol': r['symbol'], 'name': r['name'],
-                                    'net_income': ni, 'roe': roe, 'div_years': div_years, 'wr': wr,
+                                    'net_income': ni_usd, 'roe': roe, 'div_years': div_years, 'wr': wr,
                                     'sector': r.get('sector') or 'General'
                                 })
                         except Exception:
