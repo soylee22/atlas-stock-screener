@@ -79,9 +79,17 @@ def fetch_tv_market(market: str, min_mcap: float = 500_000_000, min_yield: float
     """Fetch primary stocks meeting market cap and profitability thresholds from TradingView."""
     url = f"https://scanner.tradingview.com/{market}/scan"
     cols = [
-        "name", "description", "close", "currency", "market_cap_basic",
-        "return_on_equity", "dividends_yield", "net_income",
-        "sector", "industry", "country", "exchange", "isin"
+        "name", "description", "close", "change", "volume", "currency", "fundamental_currency_code",
+        "market_cap_basic", "price_earnings_ttm", "price_book_ratio", "price_sales_ratio",
+        "return_on_equity", "return_on_invested_capital",
+        "net_margin", "operating_margin", "gross_margin",
+        "debt_to_equity", "current_ratio", "total_debt", "cash_n_equivalents_fq",
+        "free_cash_flow_ttm", "free_cash_flow_cagr_5y", "total_revenue_cagr_5y", "net_income_cagr_5y",
+        "continuous_dividend_growth", "continuous_dividend_payout",
+        "dividends_yield", "dividend_payout_ratio_ttm", "dividends_paid",
+        "W.R", "W.R|1W", "W.R|1M", "SMA200", "SMA200|1W",
+        "price_52_week_high", "price_52_week_low",
+        "net_income", "sector", "industry", "country", "exchange", "isin"
     ]
     filters = [
         {"left": "type", "operation": "in_range", "right": ["stock", "dr"]},
@@ -159,6 +167,13 @@ def build_catalogue(min_mcap: float = 500_000_000, min_yield: float = 0.0) -> li
             seen_symbols.add(ysym)
             matched += 1
 
+            close_price = r.get("close") or 0.0
+            high_52w = r.get("price_52_week_high") or 0.0
+            below_52w = ((high_52w - close_price) / high_52w * 100.0) if high_52w > 0 else None
+            fcf = r.get("free_cash_flow_ttm")
+            div_paid = r.get("dividends_paid")
+            fcf_payout = (abs(div_paid) / fcf * 100.0) if (fcf and fcf > 0 and div_paid is not None) else None
+
             catalogue.append({
                 "symbol": ysym,
                 "name": r["description"] or t212_item.get("name", ticker),
@@ -171,11 +186,39 @@ def build_catalogue(min_mcap: float = 500_000_000, min_yield: float = 0.0) -> li
                 "sector": r.get("sector") or "Unclassified",
                 "industry": r.get("industry") or "Unclassified",
                 "currency": r.get("currency", "USD"),
-                "price": r.get("close") or 0.0,
+                "price": close_price,
+                "change": r.get("change"),
+                "volume": r.get("volume"),
                 "market_cap": r.get("market_cap_basic") or 0.0,
+                "pe": r.get("price_earnings_ttm"),
+                "price_book": r.get("price_book_ratio"),
+                "price_sales": r.get("price_sales_ratio"),
                 "net_income": r.get("net_income") or 0.0,
                 "roe": r.get("return_on_equity") or 0.0,
+                "roic": r.get("return_on_invested_capital"),
+                "net_margin": r.get("net_margin"),
+                "operating_margin": r.get("operating_margin"),
+                "gross_margin": r.get("gross_margin"),
+                "fcf": fcf,
+                "fcf_growth_5y": r.get("free_cash_flow_cagr_5y"),
+                "rev_growth_5y": r.get("total_revenue_cagr_5y"),
+                "net_income_growth_5y": r.get("net_income_cagr_5y"),
+                "debt_to_equity": r.get("debt_to_equity"),
+                "current_ratio": r.get("current_ratio"),
+                "total_debt": r.get("total_debt"),
+                "cash": r.get("cash_n_equivalents_fq"),
                 "div_yield": r.get("dividends_yield") or 0.0,
+                "div_years": r.get("continuous_dividend_growth"),
+                "div_payout": r.get("dividend_payout_ratio_ttm"),
+                "fcf_payout": fcf_payout,
+                "williams_r": r.get("W.R|1W"),
+                "williams_monthly_r": r.get("W.R|1M"),
+                "williams_daily_r": r.get("W.R"),
+                "sma_200d": r.get("SMA200"),
+                "sma_200w": r.get("SMA200|1W"),
+                "high_52w": high_52w,
+                "low_52w": r.get("price_52_week_low"),
+                "below_52w_high": below_52w,
             })
         print(f"Market {market:12}: {len(rows):4} TradingView records -> {matched:4} matched on T212")
 
@@ -183,8 +226,14 @@ def build_catalogue(min_mcap: float = 500_000_000, min_yield: float = 0.0) -> li
     OUT_CSV.parent.mkdir(parents=True, exist_ok=True)
     fields = [
         "symbol", "name", "isin", "t212_ticker", "region_code", "market", "exchange",
-        "country", "sector", "industry", "currency", "price", "market_cap",
-        "net_income", "roe", "div_yield"
+        "country", "sector", "industry", "currency", "price", "change", "volume", "market_cap",
+        "pe", "price_book", "price_sales", "net_income", "roe", "roic",
+        "net_margin", "operating_margin", "gross_margin",
+        "fcf", "fcf_growth_5y", "rev_growth_5y", "net_income_growth_5y",
+        "debt_to_equity", "current_ratio", "total_debt", "cash",
+        "div_yield", "div_years", "div_payout", "fcf_payout",
+        "williams_r", "williams_monthly_r", "williams_daily_r",
+        "sma_200d", "sma_200w", "high_52w", "low_52w", "below_52w_high"
     ]
     with OUT_CSV.open("w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=fields)

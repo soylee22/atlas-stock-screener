@@ -156,9 +156,46 @@ def refresh_stocks(limit: int = 0, workers: int = 12, force: bool = False):
         net_inc = float(r.get("net_income") or 0)
         roe = float(r.get("roe") or 0)
         div_y = float(r.get("div_yield") or 0)
-        w_r = cached.get("williams_r")
+
+        # Valuation and margins
+        pe = float(r["pe"]) if r.get("pe") not in (None, "") else None
+        pb = float(r["price_book"]) if r.get("price_book") not in (None, "") else None
+        ps = float(r["price_sales"]) if r.get("price_sales") not in (None, "") else None
+        roic = float(r["roic"]) if r.get("roic") not in (None, "") else None
+        net_m = float(r["net_margin"]) if r.get("net_margin") not in (None, "") else None
+        op_m = float(r["operating_margin"]) if r.get("operating_margin") not in (None, "") else None
+        gr_m = float(r["gross_margin"]) if r.get("gross_margin") not in (None, "") else None
+
+        # Growth and cash flow
+        fcf = float(r["fcf"]) if r.get("fcf") not in (None, "") else None
+        fcf_g5 = float(r["fcf_growth_5y"]) if r.get("fcf_growth_5y") not in (None, "") else None
+        rev_g5 = float(r["rev_growth_5y"]) if r.get("rev_growth_5y") not in (None, "") else None
+        net_inc_g5 = float(r["net_income_growth_5y"]) if r.get("net_income_growth_5y") not in (None, "") else None
+        fcf_pay = float(r["fcf_payout"]) if r.get("fcf_payout") not in (None, "") else None
+        div_pay = float(r["div_payout"]) if r.get("div_payout") not in (None, "") else None
+
+        # Balance sheet
+        debt = float(r["total_debt"]) if r.get("total_debt") not in (None, "") else None
+        cash = float(r["cash"]) if r.get("cash") not in (None, "") else None
+        de = float(r["debt_to_equity"]) if r.get("debt_to_equity") not in (None, "") else None
+        cr = float(r["current_ratio"]) if r.get("current_ratio") not in (None, "") else None
+
+        # Technicals & Williams
+        tv_w_r = float(r["williams_r"]) if r.get("williams_r") not in (None, "") else None
+        tv_w_m = float(r["williams_monthly_r"]) if r.get("williams_monthly_r") not in (None, "") else None
+        w_r = cached.get("williams_r") if cached.get("williams_r") is not None else tv_w_r
+        w_m = cached.get("williams_monthly_r") if cached.get("williams_monthly_r") is not None else tv_w_m
         if w_r is not None:
             valid_williams += 1
+
+        change = float(r["change"]) if r.get("change") not in (None, "") else cached.get("change")
+        volume = float(r["volume"]) if r.get("volume") not in (None, "") else cached.get("volume")
+        high_52w = float(r["high_52w"]) if r.get("high_52w") not in (None, "") else None
+        low_52w = float(r["low_52w"]) if r.get("low_52w") not in (None, "") else None
+        below_52w = float(r["below_52w_high"]) if r.get("below_52w_high") not in (None, "") else None
+        sma_200d = float(r["sma_200d"]) if r.get("sma_200d") not in (None, "") else None
+        sma_200w = float(r["sma_200w"]) if r.get("sma_200w") not in (None, "") else None
+        div_years = int(float(r["div_years"])) if r.get("div_years") not in (None, "") else cached.get("div_years")
 
         record = {
             "symbol": sym,
@@ -173,21 +210,48 @@ def refresh_stocks(limit: int = 0, workers: int = 12, force: bool = False):
             "market_cap_local": mcap,
             "price": price,
             "price_local": price,
+            "change": change,
+            "volume": volume,
             "quote_currency": r.get("currency", "USD"),
             "financial_currency": r.get("currency", "USD"),
+            "pe": pe,
+            "price_book": pb,
+            "price_sales": ps,
             "net_income": net_inc,
             "net_income_local": net_inc,
+            "net_margin": net_m,
+            "operating_margin": op_m,
+            "gross_margin": gr_m,
             "roe": roe,
+            "roic_proxy": roic,
+            "fcf": fcf,
+            "fcf_growth_5y": fcf_g5,
+            "revenue_growth_5y": rev_g5,
+            "net_income_growth_5y": net_inc_g5,
+            "fcf_payout": fcf_pay,
+            "current_ratio": cr,
+            "debt": debt,
+            "cash": cash,
+            "debt_to_equity": de,
             "div_yield": div_y,
-            "div_years": cached.get("div_years"),
+            "div_years": div_years,
+            "div_payout": div_pay,
             "div_growth": cached.get("div_growth"),
             "sector": r.get("sector") or "Unclassified",
             "industry": r.get("industry") or "Unclassified",
             "exchange": r.get("exchange") or "Unknown",
+            "high_52w": high_52w,
+            "low_52w": low_52w,
+            "below_52w_high": below_52w,
+            "sma_200d": sma_200d,
+            "sma_200w": sma_200w,
             "williams_r": w_r,
-            "williams_zone": cached.get("williams_zone"),
-            "williams_r_period": cached.get("williams_r_period"),
+            "williams_zone": cached.get("williams_zone") or ("Oversold" if w_r is not None and w_r <= -80 else "Overbought" if w_r is not None and w_r >= -20 else "Neutral"),
+            "williams_r_period": cached.get("williams_r_period") or "14 weekly candles (TradingView audited)",
             "williams_asof": cached.get("williams_asof"),
+            "williams_monthly_r": w_m,
+            "williams_monthly_zone": "Oversold" if w_m is not None and w_m <= -80 else "Overbought" if w_m is not None and w_m >= -20 else "Neutral",
+            "williams_monthly_r_period": "14 monthly candles (TradingView audited)",
             "technical_version": 2 if w_r is not None else None,
             "financial_fetched": datetime.now(timezone.utc).isoformat(),
         }
