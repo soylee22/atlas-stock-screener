@@ -36,12 +36,12 @@ def column(key, label, kind='text', default=True, group='Fund', description=''):
 
 
 COLUMNS = [
-    column('aum', 'AUM', 'usd', description='CSV fund assets in GBP converted using cached FX. Fund size, not company market cap.'),
+    column('aum', 'AUM', 'usd', description='CSV fund assets or investment trust market capitalisation in GBP converted using cached FX. Fund size / market cap, not operating company earnings.'),
     column('price', 'Price', 'price', description='Previous completed Yahoo daily close in USD, or dated CSV price where history is unavailable.'),
     column('expense_ratio', 'TER / expense ratio', 'percent', description='Annual expense ratio from the CSV. 0.07 means 0.07%. Fees differ from total ownership costs.'),
     column('asset_class', 'Asset class'), column('focus', 'Focus'),
     column('specialism', 'Sector / specialism', description='Explicit sector focus from the CSV, or a theme hinted by the fund name. Confirm the benchmark and portfolio with the issuer.'),
-    column('product_type', 'Product type', default=False, description='ETF, ETC or ETP where explicitly stated in the imported name. Otherwise type unconfirmed.'),
+    column('product_type', 'Product type', default=False, description='ETF, ETC, ETP or Investment Trust where explicitly confirmed. Otherwise type unconfirmed.'),
     column('exposure', 'Exposure', default=False, description='Leveraged or inverse only where explicitly named. Standard / unspecified is not a certified exclusion of leverage.'),
     column('nav_return_3y', 'NAV total return 3Y', 'percent', description='Cumulative three-year NAV total return imported on 9 October 2026. Return currency is not supplied. Not CAGR or market-price return.'),
     column('williams_r', 'Williams %R · weekly', 'number', True, 'Technicals', '14 weekly Yahoo OHLC candles. Oversold <= -80. Includes the developing week through the latest completed exchange session.'),
@@ -120,7 +120,13 @@ def import_catalogue(path=CATALOGUE):
             if not re.fullmatch(r'[A-Z0-9_]+', symbol) or symbol in seen or not name:
                 raise ValueError('ETF catalogue needs unique bare symbols and descriptions')
             seen.add(symbol)
-            product = next((label for label in ['ETF', 'ETC', 'ETP'] if re.search(r'\b' + label + r'\b', name, re.I)), 'Unconfirmed')
+            product = record.get('Product type')
+            if not product or product == 'Unconfirmed':
+                product = next((label for label in ['ETF', 'ETC', 'ETP'] if re.search(r'\b' + label + r'\b', name, re.I)), None)
+            if not product and ('investment trust' in name.lower() or 'trust plc' in name.lower()):
+                product = 'Investment Trust'
+            if not product:
+                product = 'Unconfirmed'
             inverse_name=re.sub(r'\bshort[\s-]*(?:maturity|duration|term|dated)\b','',name,flags=re.I)
             inverse = bool(re.search(r'\b(inverse|short)\b', inverse_name, re.I))
             leveraged = bool(re.search(r'\b(leverage\w*|[235]x|[235]times)\b|\b[235]\s*x\b', name, re.I))
@@ -129,20 +135,22 @@ def import_catalogue(path=CATALOGUE):
             region_code = record.get('Region') or 'gb'
             exchange = record.get('Exchange') or 'London candidate'
             region_name = REGIONS.get(region_code, 'UK / London candidates')
+            aum_currency = record.get('Assets under management - Currency') or 'GBP'
+            aum_note = f'CSV {CATALOGUE_DATE} · market capitalisation in {aum_currency}' if product == 'Investment Trust' else f'CSV {CATALOGUE_DATE} · original AUM currency {aum_currency}'
             rows.append(dict(symbol=symbol, yahoo_symbol=yahoo_symbol, name=name,
                 active=True, instrument='etf', main_listing=True, region_code=region_code, region=region_name,
                 exchange=exchange, quote_currency=record['Price - Currency'],
                 price_source='CSV snapshot', catalogue_price_local=number(record['Price']), price_local=number(record['Price']), price_period=f'CSV {CATALOGUE_DATE} · capture time unknown',
-                change=number(record['Price change %, 1 day']),
-                turnover_local=number(record['Price × volume (turnover), 1 day']),
-                turnover_currency=record['Price × volume (turnover), 1 day - Currency'],
-                relative_volume=number(record['Relative volume, 1 day']),
-                aum_local=number(record['Assets under management']), aum_currency=record['Assets under management - Currency'],
-                expense_ratio=number(record['Expense ratio']), nav_return_3y=number(record['NAV total return, 3 years']),
+                change=number(record.get('Price change %, 1 day')),
+                turnover_local=number(record.get('Price × volume (turnover), 1 day')),
+                turnover_currency=record.get('Price × volume (turnover), 1 day - Currency'),
+                relative_volume=number(record.get('Relative volume, 1 day')),
+                aum_local=number(record.get('Assets under management')), aum_currency=aum_currency,
+                expense_ratio=number(record.get('Expense ratio')), nav_return_3y=number(record.get('NAV total return, 3 years')),
                 nav_return_3y_period=f'3Y cumulative · imported {CATALOGUE_DATE} · return currency unknown',
-                aum_period=f'CSV {CATALOGUE_DATE} · original AUM currency {record["Assets under management - Currency"]}',
+                aum_period=aum_note,
                 expense_ratio_period=f'CSV {CATALOGUE_DATE} · annual expense ratio',
-                nav_return_currency=None, holdings=number(record['Total holdings']),
+                nav_return_currency=None, holdings=number(record.get('Total holdings')),
                 asset_class=record['Asset class'], focus=record['Focus'], specialism=specialism(name,record['Focus']), product_type=product, exposure=exposure,
                 catalogue_date=CATALOGUE_DATE, catalogue_source=SOURCE,
                 mapping_status='Not checked', mapping_reason='Ticker candidate has not been verified against Yahoo metadata.'))
@@ -154,27 +162,30 @@ def import_catalogue(path=CATALOGUE):
 def identity_error(row, metadata):
     if metadata.get('symbol', '').upper() != row['yahoo_symbol'].upper():
         return 'Yahoo returned a different symbol'
-    is_etp_equity=metadata.get('instrumentType')=='EQUITY' and (row.get('product_type') in {'ETC','ETP'} or row.get('asset_class') in {'Commodities','Currency','Alternatives'})
+    is_etp_equity = metadata.get('instrumentType') in {'EQUITY', 'MUTUALFUND'} and (
+        row.get('product_type') in {'ETC', 'ETP', 'Investment Trust'}
+        or row.get('asset_class') in {'Commodities', 'Currency', 'Alternatives'}
+    )
     allowed_exchanges = {
         'gb': {'LSE', 'LON', 'XLON'},
         'de': {'GER', 'XETR', 'FRA', 'HAM', 'STU', 'DUS'},
         'fr': {'PAR', 'XPAR', 'AMS', 'XAMS'},
     }
     valid = allowed_exchanges.get(row.get('region_code', 'gb'), {'LSE'})
-    if metadata.get('exchangeName') not in valid or (metadata.get('instrumentType') != 'ETF' and not is_etp_equity):
+    if metadata.get('exchangeName') not in valid or (metadata.get('instrumentType') not in {'ETF', 'MUTUALFUND'} and not is_etp_equity):
         return f'Yahoo does not confirm a compatible ETF/ETP on {row.get("exchange", "specified exchange")}'
     normal = lambda c: 'GBP' if c in {'GBp', 'GBX'} else c
     # Both the base currency and pence denomination must match the catalogue.
     if normal(metadata.get('currency')) != normal(row['quote_currency']) or ((metadata.get('currency') in {'GBp','GBX'}) != (row['quote_currency'] in {'GBp','GBX'})):
         return 'Yahoo quote currency or denomination does not match the catalogue'
-    stop = {'etf','etc','etp','ucits','usd','gbp','eur','acc','dist','plc','fund','funds','class','the','and','a','i','ii','iii','iv','inc','distributing','accumulating','uc','h','gbx','gmbh','com','ag','sa'}
+    stop = {'etf','etc','etp','ucits','usd','gbp','eur','acc','dist','plc','fund','funds','class','the','and','a','i','ii','iii','iv','inc','distributing','accumulating','uc','h','gbx','gmbh','com','ag','sa','ord','shs','shares','trust','investment','ltd','limited'}
     tokens = lambda s: set(re.findall(r'[a-z0-9]+', s.lower())) - stop
     expected = tokens(row['name'])
     candidates = [tokens(s) for s in [metadata.get('longName'), metadata.get('shortName')] if s]
     matched = False
     for actual in candidates:
         if len(expected & actual) >= 2 or (is_etp_equity and len(expected & actual) >= 1):
-            if not is_etp_equity or actual.issubset(expected) or expected.issubset(actual) or (len(expected & actual) / max(1, len(expected | actual)) >= 0.8):
+            if not is_etp_equity or actual.issubset(expected) or expected.issubset(actual) or (len(expected & actual) / max(1, len(expected | actual)) >= 0.8) or (row.get('product_type') == 'Investment Trust' and len(expected & actual) >= 1):
                 matched = True
                 break
     if not matched:

@@ -165,7 +165,7 @@ async function loadStatus() {
 }
 function reset() { update({ filters: defaultFilters(), regions: [], search: '', preset: 'all', watchOnly: false, sort: defaultSort, direction: 'desc' }); }
 function renderSaved() {
-  $('saved-views').innerHTML = `<option value="">${isETF?'All ETFs & ETPs':'All stocks'}</option>` + Object.keys(saved).sort().map(name => `<option value="${esc(name)}">${esc(name)}</option>`).join('');
+  $('saved-views').innerHTML = `<option value="">${isETF?'All ETFs, ETPs & Investment Trusts':'All stocks'}</option>` + Object.keys(saved).sort().map(name => `<option value="${esc(name)}">${esc(name)}</option>`).join('');
   $('saved-views').value = state.view;
 }
 function filterOptions(key) {
@@ -332,7 +332,7 @@ function bindEvents() {
   $('presets').onclick = e => {
     const preset = e.target.closest('[data-preset]')?.dataset.preset; if (!preset) return;
     if(preset==='compound'){qualityUI.openPreset();return;}
-    const sets = isETF ? {all:[],equity:[{field:"asset_class",op:"eq",value:"Equity"}],bonds:[{field:"asset_class",op:"eq",value:"Fixed income"}],lowcost:[{field:"expense_ratio",op:"lte",value:.2}],watch:[]} : {
+    const sets = isETF ? {all:[],trusts:[{field:"product_type",op:"eq",value:"Investment Trust"}],equity:[{field:"asset_class",op:"eq",value:"Equity"}],bonds:[{field:"asset_class",op:"eq",value:"Fixed income"}],lowcost:[{field:"expense_ratio",op:"lte",value:.2}],watch:[]} : {
       all: [],
       atlas: [{ field: 'roe', op: 'gte', value: 10 }, { field: 'div_years', op: 'gte', value: 2 }],
       dividend: [{ field: 'div_yield', op: 'gte', value: 1 }, { field: 'div_years', op: 'gte', value: 5 }],

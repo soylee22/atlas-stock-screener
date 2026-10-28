@@ -3,38 +3,38 @@
 <head>
 <meta name="atlas-data-mode" content="snapshot"><meta name="atlas-universe" content="etf"><meta name="atlas-data-path" content="/etf-data/">
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Atlas | ETF explorer</title>
-  <meta name="description" content="Explore ETFs and ETPs with fees, fund size, NAV returns and weekly price position.">
+  <title>Atlas | ETF & Investment Trust explorer</title>
+  <meta name="description" content="Explore ETFs, ETPs and Investment Trusts with fees, fund size, NAV returns and weekly price position.">
   <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
   <header class="topbar">
     <a class="brand" href="/" aria-label="Atlas home"><span class="brandmark">A</span><span>ATLAS<span class="brand-dot">.</span></span></a>
-    <nav class="asset-nav" aria-label="Asset universe"><a href="/">Stocks</a><a href="/etfs.html" aria-current="page">ETFs & ETPs</a></nav>
+    <nav class="asset-nav" aria-label="Asset universe"><a href="/">Stocks</a><a href="/etfs.html" aria-current="page">ETFs, ETPs & Investment Trusts</a></nav>
     <div class="top-right"><span class="source"><span class="status-dot"></span> Yahoo Finance</span><span class="currency-badge">USD</span><button id="data-button" class="icon-button" aria-label="Data coverage and methodology">ⓘ</button></div>
   </header>
   <main>
     <section class="heading-row">
-      <div><div class="eyebrow">FUNDS & EXPOSURE</div><h1>ETF explorer<span class="heading-dot">.</span></h1><p class="subheading">Your ETF vault · fees, exposure and weekly price position.</p></div>
+      <div><div class="eyebrow">FUNDS & TRUSTS</div><h1>ETF & Investment Trust explorer<span class="heading-dot">.</span></h1><p class="subheading">Your ETF, ETP and investment trust vault · fees, exposure and weekly price position.</p></div>
       <div class="heading-actions"><span id="refresh-status" class="refresh-status">Connecting to Yahoo…</span><button id="refresh" class="button secondary"><span class="refresh-icon">↻</span> Refresh data</button></div>
     </section>
     <section class="market-strip" aria-label="Market selection" id="markets"></section>
     <section class="workspace" aria-label="ETF screening workspace">
       <nav class="section-nav" aria-label="Workspace section"><button id="table-section" class="active" aria-pressed="true">▦ Table</button><button id="quadrant-section" aria-pressed="false">◫ Quadrant explorer</button></nav>
       <div class="workspace-top">
-        <div class="screen-title"><span class="screen-symbol">▦</span><select id="saved-views" aria-label="Saved screen"><option value="">All ETFs & ETPs</option></select><span id="unsaved" class="unsaved" hidden>Edited</span></div>
+        <div class="screen-title"><span class="screen-symbol">▦</span><select id="saved-views" aria-label="Saved screen"><option value="">All ETFs, ETPs & Investment Trusts</option></select><span id="unsaved" class="unsaved" hidden>Edited</span></div>
         <div class="workspace-actions"><button id="save-view" class="button subtle">Save screen</button><button id="columns" class="button secondary">▥ <span>Columns</span><span id="column-count" class="tiny-count"></span></button><button id="export" class="button secondary">↓ <span>Export</span></button></div>
       </div>
       <div class="tools-row">
-        <label class="search"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg><input id="search" placeholder="Search fund or ticker" autocomplete="off" aria-label="Search fund or ticker"><kbd>/</kbd></label>
+        <label class="search"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg><input id="search" placeholder="Search fund, trust or ticker" autocomplete="off" aria-label="Search fund, trust or ticker"><kbd>/</kbd></label>
         <button id="add-filter" class="button filter-button">＋ Add filter</button>
         <label hidden class="listing-switch" title="Show confirmed primary ordinary listings. Hide foreign quotations, wrappers and unconfirmed listings."><input type="checkbox" id="main-only" checked><span>Main listings only</span></label>
         <button id="weekly-oversold" class="button secondary" aria-pressed="false" title="14-week Williams %R at or below -80">Weekly oversold</button><button id="monthly-oversold" class="button secondary" aria-pressed="false" title="14-month Williams %R at or below -80">Monthly oversold</button><button id="moving-averages" class="button secondary">Moving averages</button><span id="sma-setting-note" class="helper"></span><div class="quick-filters" id="quick-filters"><button data-field="aum">AUM <span>⌄</span></button><button data-field="expense_ratio">TER / fees <span>⌄</span></button><button data-field="asset_class">Asset class <span>⌄</span></button><button data-field="focus">Focus <span>⌄</span></button></div>
         <button id="reset" class="text-button" hidden>Reset</button>
       </div>
       <div id="active-filters" class="active-filters" hidden></div>
-      <div class="view-tabs"><div class="tabs" id="presets"><button class="active" data-preset="all">All ETFs & ETPs</button><button data-preset="equity">Equities</button><button data-preset="bonds">Bonds</button><button data-preset="lowcost">Low cost ≤ 0.20%</button><button data-preset="watch">☆ Watchlist <span id="watch-count"></span></button></div><span class="unit-note">AUM / prices in USD <span>•</span> NAV return currency unknown</span></div>
+      <div class="view-tabs"><div class="tabs" id="presets"><button class="active" data-preset="all">All ETFs, ETPs & Trusts</button><button data-preset="trusts">Investment Trusts</button><button data-preset="equity">Equities</button><button data-preset="bonds">Bonds</button><button data-preset="lowcost">Low cost ≤ 0.20%</button><button data-preset="watch">☆ Watchlist <span id="watch-count"></span></button></div><span class="unit-note">AUM / market cap in USD <span>•</span> NAV return currency unknown</span></div>
       <div id="table-view">
       <div class="results-bar"><div><strong id="result-count">Loading</strong><span id="result-label"> companies</span><span id="sort-note"></span></div><div class="live-note"><span id="loading-dot" class="status-dot"></span><span id="data-note">Loading market data</span></div></div>
       <div class="table-scroll" id="table-scroll"><table id="stock-table"><thead id="thead"></thead><tbody id="tbody"></tbody></table><div id="empty" class="empty" hidden><span>⌕</span><h2>No matches</h2><p>Try a wider range or remove a filter.</p><button id="empty-reset" class="button secondary">Clear filters</button></div></div>
@@ -42,7 +42,7 @@
       </div>
       <section id="quadrant-view" aria-label="Quadrant explorer" hidden></section>
     </section>
-    <div class="bottom-notes"><span>Fund metadata imported 9 Oct 2026. Yahoo refreshes price history. NAV 3Y is cumulative with unspecified return currency.</span><button id="method-button" class="text-button">Data & methodology ↗</button></div>
+    <div class="bottom-notes"><span>Fund and trust metadata imported via Trading 212 and TradingView. Yahoo refreshes price history. NAV 3Y is cumulative with unspecified return currency.</span><button id="method-button" class="text-button">Data & methodology ↗</button></div>
   </main>
   <dialog id="filter-dialog"><form id="filter-form"><div class="dialog-heading"><div><span class="eyebrow">SCREEN FILTER</span><h2>Add a filter</h2></div><button type="button" class="close" data-close="filter-dialog" aria-label="Close">×</button></div><label class="field-label">Metric<select id="filter-field"></select></label><p id="filter-description" class="helper"></p><div class="filter-inputs"><label class="field-label">Condition<select id="filter-op"></select></label><label class="field-label" id="filter-value-label">Value<input id="filter-value" placeholder="e.g. 10B" autocomplete="off"></label><label class="field-label" id="filter-value2-label" hidden>To<input id="filter-value2" placeholder="e.g. 100B" autocomplete="off"></label></div><p id="filter-error" class="form-error" role="alert"></p><div class="dialog-footer"><span class="helper">Combine filters with AND.</span><button type="submit" class="button primary">Apply filter</button></div></form></dialog>
   <dialog id="columns-dialog" class="wide-dialog"><div class="dialog-heading"><div><span class="eyebrow">COLUMN LAYOUT</span><h2>Choose columns</h2></div><button class="close" data-close="columns-dialog" aria-label="Close">×</button></div><p class="helper">Choose a metric to add it. Use the arrows to change the order.</p><div class="column-layout"><div><h3>Available metrics</h3><input class="column-search" id="column-search" placeholder="Find a metric" aria-label="Find a metric"><div id="column-options"></div></div><div><h3>Visible columns <span id="visible-count"></span></h3><div id="column-order"></div></div></div><div class="dialog-footer"><button id="default-columns" class="text-button">Restore defaults</button><button class="button primary" data-close="columns-dialog">Done</button></div></dialog>

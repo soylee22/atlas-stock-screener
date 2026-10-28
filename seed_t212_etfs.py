@@ -78,6 +78,107 @@ def fetch_tv_market(market: str, aum_min: float = 100_000_000) -> list[dict]:
     return all_data
 
 
+def fetch_tv_investment_trusts() -> list[dict]:
+    url = 'https://scanner.tradingview.com/uk/scan'
+    payload = {
+        'filter': [
+            {'left': 'industry', 'operation': 'equal', 'right': 'Investment Trusts/Mutual Funds'},
+            {'left': 'market_cap_basic', 'operation': 'nempty'}
+        ],
+        'options': {'lang': 'en'},
+        'symbols': {'query': {'types': []}, 'tickers': []},
+        'columns': [
+            'name', 'description', 'close', 'currency', 'change', 'Value.Traded',
+            'relative_volume_10d_calc', 'market_cap_basic', 'typespecs',
+            'Perf.3Y', 'total_shares_outstanding', 'sector', 'submarket', 'exchange'
+        ],
+        'sort': {'sortBy': 'market_cap_basic', 'sortOrder': 'desc'},
+        'range': [0, 500]
+    }
+    req = urllib.request.Request(
+        url,
+        data=json.dumps(payload).encode('utf-8'),
+        headers={'Content-Type': 'application/json', 'User-Agent': 'Mozilla/5.0'}
+    )
+    with urllib.request.urlopen(req, timeout=25) as resp:
+        res = json.loads(resp.read().decode())
+        items = [x for x in res.get('data', []) if x['s'].startswith('LSE:') and not x['d'][0].startswith('0')]
+
+    if not any(x['d'][0] == 'HGT' for x in items):
+        payload_hgt = {
+            'filter': [],
+            'options': {'lang': 'en'},
+            'symbols': {'tickers': ['LSE:HGT']},
+            'columns': [
+                'name', 'description', 'close', 'currency', 'change', 'Value.Traded',
+                'relative_volume_10d_calc', 'market_cap_basic', 'typespecs',
+                'Perf.3Y', 'total_shares_outstanding', 'sector', 'submarket', 'exchange'
+            ],
+            'sort': {'sortBy': 'market_cap_basic', 'sortOrder': 'desc'},
+            'range': [0, 1]
+        }
+        req_hgt = urllib.request.Request(
+            url,
+            data=json.dumps(payload_hgt).encode('utf-8'),
+            headers={'Content-Type': 'application/json', 'User-Agent': 'Mozilla/5.0'}
+        )
+        try:
+            with urllib.request.urlopen(req_hgt, timeout=15) as resp:
+                res_hgt = json.loads(resp.read().decode())
+                items.extend(res_hgt.get('data', []))
+        except Exception:
+            pass
+    return items
+
+
+def classify_it(sym: str, desc: str) -> tuple[str, str]:
+    n = f"{sym} {desc}".lower()
+    if any(k in n for k in ['property', 'reit', 'real estate', 'commercial property']):
+        ac = 'Real estate'
+    elif any(k in n for k in ['infrastructure', 'renewables', 'solar', 'wind', 'environmental', 'energy efficiency']):
+        ac = 'Infrastructure'
+    elif any(k in n for k in ['private equity', 'venture', 'growth capital', 'private markets']):
+        ac = 'Private equity'
+    elif any(k in n for k in ['debt', 'bond', 'credit', 'income fund', 'direct lending']):
+        ac = 'Fixed income'
+    elif any(k in n for k in ['gold', 'silver', 'commodities', 'mining', 'resources']):
+        ac = 'Commodities'
+    else:
+        ac = 'Equity'
+
+    if any(k in n for k in ['technology', 'tech']):
+        focus = 'Technology'
+    elif any(k in n for k in ['health', 'biotech', 'biopharma', 'life science']):
+        focus = 'Healthcare'
+    elif any(k in n for k in ['smaller', 'small cap', 'micro cap']):
+        focus = 'Small cap'
+    elif any(k in n for k in ['latin american', 'latin america']):
+        focus = 'Latin America'
+    elif any(k in n for k in ['india', 'indian']):
+        focus = 'India'
+    elif any(k in n for k in ['china', 'chinese']):
+        focus = 'China'
+    elif any(k in n for k in ['japan', 'japanese', 'shin nippon']):
+        focus = 'Japan'
+    elif any(k in n for k in ['asia', 'asian', 'oriental', 'pacific']):
+        focus = 'Asia Pacific'
+    elif any(k in n for k in ['emerging market', 'emerging markets', 'frontier', 'vietnam']):
+        focus = 'Emerging markets'
+    elif any(k in n for k in ['europe', 'european', 'continental']):
+        focus = 'Europe'
+    elif any(k in n for k in ['north american', 'american', 'us growth', 'u.s.']):
+        focus = 'US / North America'
+    elif any(k in n for k in ['uk ', 'british', 'claverhouse', 'mercantile', 'city of london']):
+        focus = 'UK'
+    elif any(k in n for k in ['dividend', 'equity income', 'high income']):
+        focus = 'High dividend yield'
+    elif any(k in n for k in ['global', 'worldwide', 'international', 'witan', 'scottish mortgage', 'monks', 'alliance', 'f&c', 'bankers', 'brunner', 'foreign & colonial']):
+        focus = 'Global'
+    else:
+        focus = 'UK' if ac == 'Equity' else 'General'
+    return ac, focus
+
+
 def classify_fund(name: str, existing_row: dict | None = None) -> tuple[str, str]:
     if existing_row and existing_row.get('Asset class') and existing_row.get('Focus'):
         return existing_row['Asset class'], existing_row['Focus']
@@ -175,6 +276,7 @@ def generate_catalogue(aum_min: float = 100_000_000, output_path: Path = OUT_CSV
                 'Expense ratio': cols[8] if cols[8] is not None else (old_row.get('Expense ratio') if old_row else ''),
                 'Asset class': asset_class,
                 'Focus': focus,
+                'Product type': old_row.get('Product type', 'ETF') if old_row else 'ETF',
                 'Yahoo Symbol': f'{sym}.L',
                 'Region': 'gb',
                 'Exchange': 'LSE'
@@ -216,6 +318,7 @@ def generate_catalogue(aum_min: float = 100_000_000, output_path: Path = OUT_CSV
                 'Expense ratio': cols[8] if cols[8] is not None else '',
                 'Asset class': asset_class,
                 'Focus': focus,
+                'Product type': 'ETF',
                 'Yahoo Symbol': f'{raw_sym}.DE',
                 'Region': 'de',
                 'Exchange': 'GER'
@@ -257,6 +360,7 @@ def generate_catalogue(aum_min: float = 100_000_000, output_path: Path = OUT_CSV
                 'Expense ratio': cols[8] if cols[8] is not None else '',
                 'Asset class': asset_class,
                 'Focus': focus,
+                'Product type': 'ETF',
                 'Yahoo Symbol': f'{raw_sym}.PA',
                 'Region': 'fr',
                 'Exchange': 'PAR'
@@ -264,6 +368,53 @@ def generate_catalogue(aum_min: float = 100_000_000, output_path: Path = OUT_CSV
             seen_symbols.add(sym)
             if isin:
                 seen_isins.add(isin)
+
+    # Pass 4: UK Investment Trusts (London closed-end investment trusts)
+    tv_it = fetch_tv_investment_trusts()
+    for item in tv_it:
+        cols = item['d']
+        raw_sym = cols[0].strip().upper()
+        desc = cols[1]
+        curr = cols[3]
+        aum_curr = 'GBP' if curr in ('GBX', 'GBP') else curr
+        ac, focus = classify_it(raw_sym, desc)
+
+        # Resolve any symbol collision with foreign lines (e.g. MTE Paris line)
+        if raw_sym in seen_symbols:
+            existing_idx = next((i for i, r in enumerate(records) if r['Symbol'] == raw_sym), None)
+            if existing_idx is not None and records[existing_idx]['Region'] in ('fr', 'de'):
+                region = records[existing_idx]['Region'].upper()
+                new_sym = f"{raw_sym}_{region}"
+                records[existing_idx]['Symbol'] = new_sym
+                seen_symbols.remove(raw_sym)
+                seen_symbols.add(new_sym)
+
+        if raw_sym not in seen_symbols:
+            old_row = old_catalogue.get(raw_sym)
+            price = cols[2] if cols[2] is not None else (old_row['Price'] if (old_row and old_row.get('Price')) else '')
+            aum = cols[7] if cols[7] is not None else (old_row.get('Assets under management') if old_row else '')
+            records.append({
+                'Symbol': raw_sym,
+                'Description': desc,
+                'Price': price if price is not None else '',
+                'Price - Currency': curr or 'GBX',
+                'Price change %, 1 day': cols[4] if cols[4] is not None else '',
+                'Price × volume (turnover), 1 day': cols[5] if cols[5] is not None else '',
+                'Price × volume (turnover), 1 day - Currency': curr or 'GBX',
+                'Relative volume, 1 day': cols[6] if cols[6] is not None else '',
+                'Assets under management': aum if aum is not None else '',
+                'Assets under management - Currency': aum_curr,
+                'NAV total return, 3 years': cols[9] if cols[9] is not None else (old_row.get('NAV total return, 3 years') if old_row else ''),
+                'Total holdings': old_row.get('Total holdings', '') if old_row else '',
+                'Expense ratio': cols[8] if cols[8] is not None else (old_row.get('Expense ratio') if old_row else ''),
+                'Asset class': ac,
+                'Focus': focus,
+                'Product type': 'Investment Trust',
+                'Yahoo Symbol': f'{raw_sym}.L',
+                'Region': 'gb',
+                'Exchange': 'LSE'
+            })
+            seen_symbols.add(raw_sym)
 
     # Ensure CSP1 is row 0 to preserve standard benchmark fixtures
     records.sort(key=lambda r: (0 if r['Symbol'] == 'CSP1' else 1, -(float(r['Assets under management'] or 0))))
@@ -273,7 +424,7 @@ def generate_catalogue(aum_min: float = 100_000_000, output_path: Path = OUT_CSV
         'Price × volume (turnover), 1 day', 'Price × volume (turnover), 1 day - Currency',
         'Relative volume, 1 day', 'Assets under management', 'Assets under management - Currency',
         'NAV total return, 3 years', 'Total holdings', 'Expense ratio', 'Asset class', 'Focus',
-        'Yahoo Symbol', 'Region', 'Exchange'
+        'Product type', 'Yahoo Symbol', 'Region', 'Exchange'
     ]
 
     output_path.parent.mkdir(parents=True, exist_ok=True)

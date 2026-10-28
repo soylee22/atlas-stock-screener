@@ -28,10 +28,10 @@ def metadata(row):
 
 def test_catalogue_units_and_coverage():
     rows=etfs.import_catalogue()
-    assert len(rows)==len({r['symbol'] for r in rows})==1992
-    assert sum(r['expense_ratio'] is not None for r in rows)==1990
-    assert sum(r['nav_return_3y'] is not None for r in rows)==1992
-    assert sum(r['aum_local'] is not None for r in rows)==1992
+    assert len(rows)==len({r['symbol'] for r in rows})==2254
+    assert sum(r['expense_ratio'] is not None for r in rows)==1986
+    assert sum(r['nav_return_3y'] is not None for r in rows)==2254
+    assert sum(r['aum_local'] is not None for r in rows)==2254
     row=next(r for r in rows if r['symbol']=='CSP1')
     converted=etfs.dollarise(row,{'GBP':{'rate':1.25}})
     assert converted['price']==pytest.approx(63565*.01*1.25)
@@ -42,6 +42,22 @@ def test_catalogue_units_and_coverage():
     assert etfs.dollarise(row,{})['aum'] is None
     assert converted['aum']>20e9
     assert any(etfs.dollarise(r,{'GBP':{'rate':1.25}}).get('aum',0) and etfs.dollarise(r,{'GBP':{'rate':1.25}})['aum']<20e9 for r in rows)
+
+
+def test_investment_trust_import_and_dollarised_market_cap():
+    rows=etfs.import_catalogue()
+    trusts=[r for r in rows if r['product_type']=='Investment Trust']
+    assert len(trusts)==266
+    brla=next(r for r in trusts if r['symbol']=='BRLA')
+    assert brla['name']=='Blackrock Latin American Investment Trust PLC'
+    assert brla['exchange']=='LSE'
+    assert brla['quote_currency'] in ('GBp', 'GBX')
+    assert brla['aum_currency']=='GBP'
+    assert brla['aum_local']>0
+    converted=etfs.dollarise(brla,{'GBP':{'rate':1.25}})
+    assert converted['aum']==pytest.approx(brla['aum_local']*1.25)
+    meta=dict(symbol='BRLA.L',currency='GBp',exchangeName='LSE',instrumentType='EQUITY',shortName='BLACKROCK LATIN AMERICAN INVEST')
+    assert etfs.identity_error(brla,meta) is None
 
 
 @pytest.mark.parametrize('change',[
@@ -85,15 +101,15 @@ def test_publication_is_separate_and_preserves_small_funds(tmp_path):
     row=sample(); row['aum_local']=1e6
     cache_path=tmp_path/'etfs.json';etfs.write_cache({'version':1,'rows':[row],'refresh':{}},cache_path)
     target=tmp_path/'site';status=etfs.publish(target,{'GBP':{'rate':1.25}},'fixed',cache_path)
-    assert status['total']==1992
+    assert status['total']==2254
     source=json.loads(gzip.decompress((target/'stocks.json.gz').read_bytes()))
     rows=[dict(zip(source['fields'],v)) for v in source['rows']]
-    assert len(rows)==1992
+    assert len(rows)==2254
     assert all(r['instrument']=='etf' for r in rows)
     assert not any('net_income' in r for r in rows)
     assert json.loads((target/'schema.json').read_text())['universe']=='etf'
     seed=json.loads(gzip.decompress((target/'seed.json.gz').read_bytes()))
-    assert len(seed['rows'])==1992
+    assert len(seed['rows'])==2254
     assert {r['nav_return_3y_period'] for r in rows}=={'3Y cumulative · imported 2026-10-23 · return currency unknown'}
 
 
