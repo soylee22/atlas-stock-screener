@@ -191,6 +191,9 @@ def build_site(database, output, seed=None, compress_details=False, compress_dat
     etf_html=(model.ROOT / 'static' / 'etfs.html').read_text().replace('href="/', 'href="./').replace('src="/', 'src="./')
     etf_html=etf_html.replace('./static/',f'./static/{version}/').replace('content="/etf-data/"','content="data/etfs/"')
     (output / 'etfs.html').write_text(etf_html)
+    transatlantic_html = (model.ROOT / 'static' / 'transatlantic.html').read_text().replace('href="/', 'href="./').replace('src="/', 'src="./')
+    transatlantic_html = transatlantic_html.replace('./static/', f'./static/{version}/').replace('content="/transatlantic-data/"', 'content="data/transatlantic/"')
+    (output / 'transatlantic.html').write_text(transatlantic_html)
     auth_html=(model.ROOT / 'static' / 'auth-callback.html').read_text().replace('./static/',f'./static/{version}/')
     (output / 'auth-callback.html').write_text(auth_html)
     (output / ".nojekyll").write_text("")
@@ -233,6 +236,8 @@ def build_site(database, output, seed=None, compress_details=False, compress_dat
     write_json(output / "data" / "status.json", status)
     import etfs
     etf_status=etfs.publish(output / 'data' / 'etfs', metadata.get('fx') or {}, built, store.path.parent / 'etfs.json', compress=compress_data)
+    import transatlantic
+    transatlantic_status = transatlantic.publish(output / 'data' / 'transatlantic', metadata.get('fx') or {}, built, compress=compress_data)
     if seed:
         # Browser-derived fields and storage are never part of the source seed.
         make_seed(seed, [public_row(r) for r in rows], metadata, assets, icon_root)

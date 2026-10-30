@@ -1147,6 +1147,11 @@ def etf_index():
     return FileResponse(ROOT / "static" / "etfs.html")
 
 
+@app.get("/transatlantic.html")
+def transatlantic_index():
+    return FileResponse(ROOT / "static" / "transatlantic.html")
+
+
 @app.get("/api/schema")
 def schema():
     return dict(columns=COLUMNS, regions=REGIONS)

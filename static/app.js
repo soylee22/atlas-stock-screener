@@ -1,5 +1,5 @@
 import { installRefreshProgress } from './refresh-progress.js';
-import { isETF, storageKey, defaultFilters, defaultSort, fundQuadrantDefaults } from './universe.js';
+import { isETF, isTransatlantic, storageKey, defaultFilters, defaultSort, fundQuadrantDefaults, transatlanticQuadrantDefaults } from './universe.js';
 import { isWilliamsMetric, williamsMetrics } from './williams.js';
 import { fundMethods, renderFundDetail } from './etf-ui.js';
 import { migrateLargeCapScreen } from './screen-policy.js';
@@ -11,12 +11,12 @@ import { api, isPublished, reloadSnapshot, exportSnapshot, chartRows, prepareTex
 import { createQuadrant, quadrantDefaults } from './quadrant.js';
 import { parseNumber, compact, escapeHtml as esc, annualDividends, quoteStatusSuffix } from './format.js';
 
-const screenQuadrantDefaults={...quadrantDefaults,...(isETF?fundQuadrantDefaults:{})};
+const screenQuadrantDefaults={...quadrantDefaults,...(isETF?fundQuadrantDefaults:(isTransatlantic?transatlanticQuadrantDefaults:{}))};
 const $ = id => document.getElementById(id);
-const FLAGS = { us: '🇺🇸', gb: '🇬🇧', ca: '🇨🇦', jp: '🇯🇵', kr: '🇰🇷', tw: '🇹🇼', de: '🇩🇪', es: '🇪🇸', it: '🇮🇹', nl: '🇳🇱', dk: '🇩🇰', se: '🇸🇪', fr: '🇫🇷', ch: '🇨🇭' };
-const SHORT = { us: 'US', gb: 'UK', ca: 'Canada', jp: 'Japan', kr: 'South Korea', tw: 'Taiwan', de: 'Germany', es: 'Spain', it: 'Italy', nl: 'Netherlands', dk: 'Denmark', se: 'Sweden', fr: 'France', ch: 'Switzerland' };
+const FLAGS = { us: '🇺🇸', gb: '🇬🇧', ca: '🇨🇦', jp: '🇯🇵', kr: '🇰🇷', tw: '🇹🇼', de: '🇩🇪', es: '🇪🇸', it: '🇮🇹', nl: '🇳🇱', dk: '🇩🇰', se: '🇸🇪', fr: '🇫🇷', ch: '🇨🇭', no: '🇳🇴', at: '🇦🇹', fi: '🇫🇮' };
+const SHORT = { us: 'US', gb: 'UK', ca: 'Canada', jp: 'Japan', kr: 'South Korea', tw: 'Taiwan', de: 'Germany', es: 'Spain', it: 'Italy', nl: 'Netherlands', dk: 'Denmark', se: 'Sweden', fr: 'France', ch: 'Switzerland', no: 'Norway', at: 'Austria', fi: 'Finland' };
 function readStorage(key, fallback) { try { return JSON.parse(localStorage.getItem(storageKey(key))) ?? fallback; } catch { return fallback; } }
-const state = { regions: [], search: '', filters: defaultFilters(), sort: defaultSort, direction: 'desc', columns: [], page: 0, pageSize: 100, includeOther: isETF, mainOnly: true, preset: 'all', watchOnly: false, view: '', section:'table', sma:{window:200,interval:'daily'}, quadrant:{...screenQuadrantDefaults} };
+const state = { regions: [], search: '', filters: defaultFilters(), sort: defaultSort, direction: isTransatlantic ? 'asc' : 'desc', columns: [], page: 0, pageSize: 100, includeOther: isETF, mainOnly: !isTransatlantic, preset: 'all', watchOnly: false, view: '', section: isTransatlantic ? 'quadrant' : 'table', sma:{window:200,interval:'daily'}, quadrant:{...screenQuadrantDefaults} };
 let quadrant, qualityUI, chartRefreshed = 0;
 let schema, fields, defaults, rows = [], total = 0, status = {}, saved = readStorage('atlas.views.v1', {}), watched = readStorage('atlas.watch.v1', []);
 let requestSeq = 0, selectedSymbol = null, dividendSymbol = null, filterIndex = -1, toastTimeout, refreshTimer, isLoading = false;
@@ -158,14 +158,15 @@ async function loadStatus() {
     const counts = status.counts || [], enriched = counts.reduce((a, c) => a + (state.mainOnly ? c.main_enriched : c.enriched), 0), stocks = counts.reduce((a, c) => a + (state.mainOnly ? c.main_stocks : c.stocks), 0);
     $('data-note').textContent = `${enriched.toLocaleString('en-GB')} / ${stocks.toLocaleString('en-GB')} company profiles loaded`;
     if(isETF)$('data-note').textContent=`${status.etfs?.williams||0} weekly · ${status.etfs?.williams_monthly||0} monthly / ${status.etfs?.total||0} funds · fund data ${status.etfs?.catalogue_date||'unknown'}`;
+    else if(isTransatlantic)$('data-note').textContent=`50 Transatlantic stocks · ${status.transatlantic?.weekly_oversold||0} weekly oversold · ${status.transatlantic?.monthly_oversold||0} monthly oversold`;
     $('refresh-status').textContent = isPublished ? `Snapshot ${new Date(status.snapshot.built).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })}${quoteStatusSuffix(status)}` : status.refreshing ? 'Refreshing market universe…' : status.error ? 'Refresh failed. Cached data shown.' : status.completed ? `Quotes fetched ${new Date(status.completed).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}` : 'First market scan in progress';
     if (!isPublished) $('refresh').disabled = !!status.refreshing;
     if ($('data-dialog').open) renderCoverage();
   } catch { $('refresh-status').textContent = isPublished ? 'Published data unavailable' : 'Local service unavailable'; }
 }
-function reset() { update({ filters: defaultFilters(), regions: [], search: '', preset: 'all', watchOnly: false, sort: defaultSort, direction: 'desc' }); }
+function reset() { update({ filters: defaultFilters(), regions: [], search: '', preset: 'all', watchOnly: false, sort: defaultSort, direction: isTransatlantic ? 'asc' : 'desc' }); }
 function renderSaved() {
-  $('saved-views').innerHTML = `<option value="">${isETF?'All ETFs, ETPs & Investment Trusts':'All stocks'}</option>` + Object.keys(saved).sort().map(name => `<option value="${esc(name)}">${esc(name)}</option>`).join('');
+  $('saved-views').innerHTML = `<option value="">${isETF?'All ETFs, ETPs & Investment Trusts':(isTransatlantic?'All Transatlantic 50 stocks':'All stocks')}</option>` + Object.keys(saved).sort().map(name => `<option value="${esc(name)}">${esc(name)}</option>`).join('');
   $('saved-views').value = state.view;
 }
 function filterOptions(key) {
@@ -234,8 +235,9 @@ async function exportRanked(points,options) {
   $('export-summary').textContent=`${points.length.toLocaleString('en-GB')} ranked listings ready to export.`;
   $('download-csv').hidden=true;$('copy-csv').disabled=false;
   $('copy-csv').onclick=async()=>{try{await navigator.clipboard.writeText(csv);toast('Ranked CSV copied');}catch{toast('Clipboard unavailable. Use Download CSV.');}};
-  const prepared=await prepareTextDownload(csv,(isETF?'atlas-ranked-funds.csv':'atlas-ranked-stocks.csv'),'text/csv');
-  $('download-csv').href=prepared.url;$('download-csv').download=(isETF?'atlas-ranked-funds.csv':'atlas-ranked-stocks.csv');$('download-csv').hidden=false;$('export-dialog').onclose=prepared.dispose;
+  const exportName = isETF ? 'atlas-ranked-funds.csv' : (isTransatlantic ? 'atlas-transatlantic-50-ranked.csv' : 'atlas-ranked-stocks.csv');
+  const prepared=await prepareTextDownload(csv,exportName,'text/csv');
+  $('download-csv').href=prepared.url;$('download-csv').download=exportName;$('download-csv').hidden=false;$('export-dialog').onclose=prepared.dispose;
 }
 async function openDetail(symbol) {
   selectedSymbol = symbol; $('detail').hidden = false;
@@ -315,7 +317,7 @@ function bindEvents() {
     const detail = e.target.closest('[data-detail]')?.dataset.detail; if (detail) openDetail(detail);
   };
   $('add-filter').onclick = () => openFilter();
-  if(!isETF)$('fair-values').onclick=()=>qualityUI.openValuation();
+  if(!isETF && !isTransatlantic && $('fair-values'))$('fair-values').onclick=()=>qualityUI.openValuation();
   $('quick-filters').onclick = e => { const key = e.target.closest('[data-field]')?.dataset.field; if (key) openFilter(key); };
   $('filter-field').onchange = e => filterOptions(e.target.value); $('filter-op').onchange = filterInputs;
   $('filter-form').onsubmit = e => {
@@ -331,16 +333,23 @@ function bindEvents() {
   $('reset').onclick = $('empty-reset').onclick = reset;
   $('presets').onclick = e => {
     const preset = e.target.closest('[data-preset]')?.dataset.preset; if (!preset) return;
-    if(preset==='compound'){qualityUI.openPreset();return;}
-    const sets = isETF ? {all:[],trusts:[{field:"product_type",op:"eq",value:"Investment Trust"}],equity:[{field:"asset_class",op:"eq",value:"Equity"}],bonds:[{field:"asset_class",op:"eq",value:"Fixed income"}],lowcost:[{field:"expense_ratio",op:"lte",value:.2}],watch:[]} : {
+    if(preset==='compound'){qualityUI?.openPreset();return;}
+    const sets = isETF ? {all:[],trusts:[{field:"product_type",op:"eq",value:"Investment Trust"}],equity:[{field:"asset_class",op:"eq",value:"Equity"}],bonds:[{field:"asset_class",op:"eq",value:"Fixed income"}],lowcost:[{field:"expense_ratio",op:"lte",value:.2}],watch:[]} : (isTransatlantic ? {
+      all: [],
+      'weekly-oversold': [{ field: 'williams_r', op: 'lte', value: -80 }],
+      'monthly-oversold': [{ field: 'williams_monthly_r', op: 'lte', value: -80 }],
+      us: [{ field: 'region_code', op: 'eq', value: 'us' }],
+      eu: [{ field: 'region_code', op: 'ne', value: 'us' }],
+      watch: []
+    } : {
       all: [],
       atlas: [{ field: 'roe', op: 'gte', value: 10 }, { field: 'div_years', op: 'gte', value: 2 }],
       dividend: [{ field: 'div_yield', op: 'gte', value: 1 }, { field: 'div_years', op: 'gte', value: 5 }],
       cash: [{ field: 'fcf', op: 'gt', value: 0 }, { field: 'fcf_change', op: 'gt', value: 0 }],
       quality: [{ field: 'net_margin', op: 'gte', value: 15 }, { field: 'pe', op: 'between', value: 0, value2: 25 }],
       watch: []
-    };
-    update({ filters: [...defaultFilters(),...sets[preset]], preset, watchOnly: preset === 'watch' });
+    });
+    update({ filters: [...defaultFilters(),...(sets[preset] || [])], preset, watchOnly: preset === 'watch' });
   };
   $('columns').onclick = () => { renderColumns(); $('columns-dialog').showModal(); };
   $('column-search').oninput = renderColumns;
@@ -355,8 +364,8 @@ function bindEvents() {
   $('save-view').onclick = () => { $('view-name').value = state.view; $('delete-view').hidden = !state.view; $('save-dialog').showModal(); };
   $('save-form').onsubmit = e => { e.preventDefault(); const name = $('view-name').value.trim(); if (!name) return; state.view = name; saved[name] = JSON.parse(JSON.stringify(state)); persist('atlas.views.v1', saved); persist('atlas.last.v1', state); renderSaved(); $('unsaved').hidden = true; $('save-dialog').close(); toast('Screen saved in this browser'); };
   $('delete-view').onclick = () => { delete saved[state.view]; state.view = ''; persist('atlas.views.v1', saved); renderSaved(); $('save-dialog').close(); toast('Saved screen removed'); };
-  $('saved-views').onchange = e => { const name = e.target.value; if (name && saved[name]) { Object.assign(state, { mainOnly: true, section:'table', quadrant:{...screenQuadrantDefaults} }, saved[name], { page: 0, view: name }); $('page-size').value = state.pageSize; } else Object.assign(state, { view: '', columns: [...defaults], filters: defaultFilters(), search: '', regions: [], preset: 'all', watchOnly: false, mainOnly: true, sort: defaultSort, direction: 'desc', page: 0, section:'table', quadrant:{...screenQuadrantDefaults} }); if(!isETF)migrateLargeCapScreen(state); showSection(state.section,false); $('unsaved').hidden = true; renderControls(); loadRows(); persist('atlas.last.v1', state); };
-  $('export').onclick = async () => { $('export-title').textContent=isETF?'Export matching funds':'Export matching companies';$('export-description').textContent='All matching rows, your selected columns and reporting periods. Numbers use raw USD values.';$('download-csv').download=(isETF?'atlas-etfs-usd.csv':'atlas-stocks-usd.csv');const p = params(); p.set('columns', [...new Set([...state.columns, ...(state.section === 'quadrant' ? [state.quadrant.x,state.quadrant.y] : [])])].join(',')); if (isPublished || usesValuation(p) || [...state.columns,state.sort,...state.filters.map(f=>f.field),...(state.section==='quadrant'?[state.quadrant.x,state.quadrant.y]:[])].some(k=>k.startsWith('sma_custom'))) {
+  $('saved-views').onchange = e => { const name = e.target.value; if (name && saved[name]) { Object.assign(state, { mainOnly: !isTransatlantic, section: isTransatlantic ? 'quadrant' : 'table', quadrant:{...screenQuadrantDefaults} }, saved[name], { page: 0, view: name }); $('page-size').value = state.pageSize; } else Object.assign(state, { view: '', columns: [...defaults], filters: defaultFilters(), search: '', regions: [], preset: 'all', watchOnly: false, mainOnly: !isTransatlantic, sort: defaultSort, direction: isTransatlantic ? 'asc' : 'desc', page: 0, section: isTransatlantic ? 'quadrant' : 'table', quadrant:{...screenQuadrantDefaults} }); if(!isETF && !isTransatlantic)migrateLargeCapScreen(state); showSection(state.section,false); $('unsaved').hidden = true; renderControls(); loadRows(); persist('atlas.last.v1', state); };
+  $('export').onclick = async () => { const exportTitle = isETF?'Export matching funds':(isTransatlantic?'Export matching Transatlantic 50 stocks':'Export matching companies'); $('export-title').textContent=exportTitle; $('export-description').textContent='All matching rows, your selected columns and reporting periods. Numbers use raw USD values.'; const downloadName = isETF?'atlas-etfs-usd.csv':(isTransatlantic?'atlas-transatlantic-50-usd.csv':'atlas-stocks-usd.csv'); $('download-csv').download=downloadName; const p = params(); p.set('columns', [...new Set([...state.columns, ...(state.section === 'quadrant' ? [state.quadrant.x,state.quadrant.y] : [])])].join(',')); if (isPublished || usesValuation(p) || [...state.columns,state.sort,...state.filters.map(f=>f.field),...(state.section==='quadrant'?[state.quadrant.x,state.quadrant.y]:[])].some(k=>k.startsWith('sma_custom'))) {
       $('export-dialog').showModal(); $('export-summary').textContent = 'Preparing your CSV…';
       $('download-csv').hidden = true; $('copy-csv').disabled = true;
       try {
@@ -367,7 +376,7 @@ function bindEvents() {
         $('export-dialog').onclose = prepared.dispose;
       } catch (error) { $('export-summary').textContent = error.message; }
       return;
-    } const a = document.createElement('a'); a.href = '/api/export?' + p; a.download = (isETF?'atlas-etfs-usd.csv':'atlas-stocks-usd.csv'); a.click(); toast('Exporting all matching rows with raw numeric USD values'); };
+    } const a = document.createElement('a'); a.href = '/api/export?' + p; a.download = downloadName; a.click(); toast('Exporting all matching rows with raw numeric USD values'); };
   $('refresh').onclick = async () => { if (isPublished) { await reloadSnapshot(); await Promise.all([loadRows(), loadStatus()]); toast('Latest published snapshot loaded'); return; } await api('/api/refresh', { method: 'POST' }); toast('Quote and FX refresh queued'); setTimeout(loadStatus, 800); };
   $('data-button').onclick = $('method-button').onclick = () => { renderCoverage(); $('data-dialog').showModal(); };
   $('include-other').onchange = e => update({ includeOther: e.target.checked });
@@ -385,24 +394,24 @@ function bindEvents() {
 async function boot() {
   schema = await api('/api/schema').then(r => r.json()); fields = Object.fromEntries(schema.columns.map(f => [f.key, f])); fields.symbol = { key: 'symbol', kind: 'text', label: isETF?'Fund':'Company' }; defaults = schema.columns.filter(f => f.default).map(f => f.key);
   const last = readStorage('atlas.last.v1', null); if (last) Object.assign(state, last, { page: 0 });
-  if(!isETF)migrateLargeCapScreen(state);
+  if(!isETF && !isTransatlantic)migrateLargeCapScreen(state);
   state.sma={window:200,interval:'daily',...state.sma};
   if(!['daily','weekly'].includes(state.sma.interval)||!Number.isInteger(state.sma.window)||state.sma.window<2||state.sma.window>(state.sma.interval==='daily'?500:260))state.sma={window:200,interval:'daily'};
-  if(!isETF&&!readStorage('atlas.listing-policy.v4',false)){state.mainOnly=true;persist('atlas.listing-policy.v4',true);}
+  if(!isETF&&!isTransatlantic&&!readStorage('atlas.listing-policy.v4',false)){state.mainOnly=true;persist('atlas.listing-policy.v4',true);}
   $('sma-setting-note').textContent=`Custom SMA: ${state.sma.window} ${state.sma.interval==='daily'?'days':'weeks'}`;
   state.columns = state.columns.length ? state.columns.filter(k => fields[k]) : [...defaults];
   state.filters = state.filters.filter(f => fields[f.field]);
   state.regions = state.regions.filter(r => FLAGS[r]); if (!fields[state.sort]) state.sort = defaultSort;
   quadrant = createQuadrant($('quadrant-view'), { fields, defaults:screenQuadrantDefaults, noun:isETF?'fund':'stock', settings:state.quadrant, loadData: settings => chartRows(params(),settings.x,settings.y), format:fmt, onDetail:openDetail, onExport:exportRanked, onChange:settings=>{state.quadrant=settings;markEdited();persist('atlas.last.v1',state);} });
   state.quadrant = quadrant.settings(); showSection(state.section,false);
-  if(!isETF)qualityUI=installQualityUI({state,getCoverage:()=>status.dividend_quality,apply:(rules,options)=>{state.columns=[...new Set([...state.columns,'fcf_payout','current_ratio','roic_proxy',`fcf_growth_${options.horizon}y`,`div_fiscal_growth_${options.horizon}y`,`fcf_div_growth_gap_${options.horizon}y`,...(options.fcfYieldGate?['fcf_yield']:[]),...(options.marginGate?['fair_value','margin_of_safety']:[])])];update({filters:[...defaultFilters(),...rules],preset:'compound',watchOnly:false});},refresh:symbol=>{loadRows();if(selectedSymbol===symbol)openDetail(symbol);},findStock:symbol=>api('/api/stock/'+encodeURIComponent(symbol)).then(r=>r.json()),toast});
+  if(!isETF && !isTransatlantic)qualityUI=installQualityUI({state,getCoverage:()=>status.dividend_quality,apply:(rules,options)=>{state.columns=[...new Set([...state.columns,'fcf_payout','current_ratio','roic_proxy',`fcf_growth_${options.horizon}y`,`div_fiscal_growth_${options.horizon}y`,`fcf_div_growth_gap_${options.horizon}y`,...(options.fcfYieldGate?['fcf_yield']:[]),...(options.marginGate?['fair_value','margin_of_safety']:[])])];update({filters:[...defaultFilters(),...rules],preset:'compound',watchOnly:false});},refresh:symbol=>{loadRows();if(selectedSymbol===symbol)openDetail(symbol);},findStock:symbol=>api('/api/stock/'+encodeURIComponent(symbol)).then(r=>r.json()),toast});
   $('page-size').value = state.pageSize; renderSaved(); bindEvents(); renderControls(); await Promise.all([loadRows(), loadStatus()]);
   if(isPublished)installRefreshProgress({button:$('refresh'),getSnapshotBuilt:()=>status.snapshot?.built,onPublished:async()=>{await reloadSnapshot();await Promise.all([loadRows(),loadStatus()]);}});
   refreshTimer = setInterval(async () => { if (document.hidden) return; await loadStatus(); await loadRows(true); if (selectedSymbol && !$('dividend-dialog').open) openDetail(selectedSymbol); if ($('dividend-dialog').open && dividendSymbol) { const row = await api('/api/stock/' + encodeURIComponent(dividendSymbol)).then(r => r.json()); if (row.financial_fetched !== dividendRow?.financial_fetched) { dividendRow = row; renderDividends(); } } }, isPublished ? 60000 : 12000);
   const context = document.modelContext;
   if (context?.registerTool) {
     const lifecycle = new AbortController();
-    Promise.resolve(context.registerTool({ name: isETF?'set_etf_screen':'set_stock_screen', title: isETF?'Set ETF screen':'Set stock screen', description: 'Update the visible screener search, market selection and numeric sorting.', inputSchema: { type: 'object', properties: { search: { type: 'string' }, regions: { type: 'array', items: { enum: Object.keys(schema.regions) } }, sort: { enum: schema.columns.map(c => c.key) }, direction: { enum: ['asc', 'desc'] } }, additionalProperties: false }, annotations: { readOnlyHint: false, untrustedContentHint: false }, async execute(input) { if (!input || typeof input !== 'object' || Object.keys(input).some(k => !['search','regions','sort','direction'].includes(k)) || (input.regions && (!Array.isArray(input.regions) || input.regions.some(r => !schema.regions[r]))) || (input.sort && !fields[input.sort]) || (input.direction && !['asc','desc'].includes(input.direction)) || (input.search !== undefined && typeof input.search !== 'string')) throw new Error('Invalid screen settings'); Object.assign(state, input, { page: 0 }); markEdited(); renderControls(); await loadRows(); return { matches: total, symbols: rows.slice(0, 10).map(r => r.symbol) }; } }, { signal: lifecycle.signal })).catch(() => {});
+    Promise.resolve(context.registerTool({ name: isETF?'set_etf_screen':(isTransatlantic?'set_transatlantic_screen':'set_stock_screen'), title: isETF?'Set ETF screen':(isTransatlantic?'Set Transatlantic screen':'Set stock screen'), description: 'Update the visible screener search, market selection and numeric sorting.', inputSchema: { type: 'object', properties: { search: { type: 'string' }, regions: { type: 'array', items: { enum: Object.keys(schema.regions) } }, sort: { enum: schema.columns.map(c => c.key) }, direction: { enum: ['asc', 'desc'] } }, additionalProperties: false }, annotations: { readOnlyHint: false, untrustedContentHint: false }, async execute(input) { if (!input || typeof input !== 'object' || Object.keys(input).some(k => !['search','regions','sort','direction'].includes(k)) || (input.regions && (!Array.isArray(input.regions) || input.regions.some(r => !schema.regions[r]))) || (input.sort && !fields[input.sort]) || (input.direction && !['asc','desc'].includes(input.direction)) || (input.search !== undefined && typeof input.search !== 'string')) throw new Error('Invalid screen settings'); Object.assign(state, input, { page: 0 }); markEdited(); renderControls(); await loadRows(); return { matches: total, symbols: rows.slice(0, 10).map(r => r.symbol) }; } }, { signal: lifecycle.signal })).catch(() => {});
     window.addEventListener('pagehide', () => lifecycle.abort(), { once: true });
   }
 }
