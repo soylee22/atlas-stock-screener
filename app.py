@@ -1152,6 +1152,11 @@ def transatlantic_index():
     return FileResponse(ROOT / "static" / "transatlantic.html")
 
 
+@app.get("/winner.html")
+def winner_index():
+    return FileResponse(ROOT / "static" / "winner.html")
+
+
 @app.get("/api/schema")
 def schema():
     return dict(columns=COLUMNS, regions=REGIONS)

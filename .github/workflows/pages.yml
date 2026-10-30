@@ -68,6 +68,7 @@ jobs:
           node --experimental-default-type=module tests/test_williams.mjs
           node --experimental-default-type=module tests/test_etfs.mjs
           node --experimental-default-type=module tests/test_transatlantic.mjs
+          node --experimental-default-type=module tests/test_winner.mjs
           node --experimental-default-type=module tests/test_dividend_quality.mjs
           node --experimental-default-type=module tests/test_refresh_progress.mjs
           node --experimental-default-type=module tests/test_refresh_auth.mjs

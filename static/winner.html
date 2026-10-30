@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Atlas | Hold Last Year's Winner</title>
+  <meta name="description" content="Hold Last Year's Winner (LYW) momentum strategy: 100% allocation in the preceding year's strongest S&P 500 stock, personal Trading 212 execution, 35% stop-loss protection, and 2027 leaderboard race.">
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Google+Sans+Text:wght@400;500;700&family=Roboto+Mono:wght@400;500;600&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            google: ['"Google Sans"', 'sans-serif'],
+            text: ['"Google Sans Text"', 'Roboto', 'sans-serif'],
+            mono: ['"Roboto Mono"', 'monospace'],
+          },
+          colors: {
+            gBlue: { 50: '#e8f0fe', 100: '#d2e3fc', 500: '#1a73e8', 600: '#1557b0', 700: '#174ea6' },
+            gGreen: { 50: '#e6f4ea', 100: '#ceead6', 600: '#137333', 700: '#0d652d' },
+            gRed: { 50: '#fce8e6', 100: '#fad2cf', 600: '#c5221f', 700: '#a50e0e' },
+            gGrey: { 50: '#f8f9fa', 100: '#f1f3f4', 200: '#e8eaed', 300: '#dadce0', 500: '#70757a', 700: '#5f6368', 900: '#202124' }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { background-color: #ffffff; color: #202124; font-family: "Google Sans Text", Roboto, sans-serif; scroll-behavior: smooth; }
+    .google-card {
+      background: #ffffff;
+      border: 1px solid #dadce0;
+      border-radius: 12px;
+      box-shadow: none;
+    }
+    .google-chip {
+      display: inline-flex;
+      align-items: center;
+      padding: 6px 14px;
+      border-radius: 18px;
+      font-size: 13px;
+      font-weight: 500;
+      color: #3c4043;
+      background: #ffffff;
+      border: 1px solid #dadce0;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      user-select: none;
+    }
+    .google-chip:hover {
+      background: #f1f3f4;
+      border-color: #dadce0;
+    }
+    .google-chip.active {
+      background: #e8f0fe;
+      color: #1a73e8;
+      border-color: #d2e3fc;
+      font-weight: 600;
+    }
+    .metric-pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 10px;
+      border-radius: 16px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f3f4;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #dadce0;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #bdc1c6;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col bg-[#ffffff]">
+
+  <!-- Top Google-style Navigation Bar -->
+  <header class="border-b border-[#dadce0] bg-[#ffffff] sticky top-0 z-40">
+    <div class="max-w-[1280px] mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+      
+      <!-- Logo & Brand -->
+      <div class="flex items-center space-x-4">
+        <a href="/" class="flex items-center space-x-2.5">
+          <div class="w-8 h-8 rounded-lg bg-[#202124] text-white flex items-center justify-center font-bold text-sm tracking-tighter">
+            A
+          </div>
+          <span class="text-xl font-normal font-google text-[#202124] tracking-tight">ATLAS<span class="text-[#1a73e8]">.</span></span>
+        </a>
+
+        <!-- Universe Navigation Tabs -->
+        <nav class="hidden md:flex items-center space-x-1 text-xs font-semibold">
+          <a href="/" class="px-3 py-1.5 rounded-md text-[#5f6368] hover:text-[#202124] hover:bg-[#f1f3f4] transition">Stocks</a>
+          <a href="/etfs.html" class="px-3 py-1.5 rounded-md text-[#5f6368] hover:text-[#202124] hover:bg-[#f1f3f4] transition">ETFs, ETPs & Investment Trusts</a>
+          <a href="/transatlantic.html" class="px-3 py-1.5 rounded-md text-[#5f6368] hover:text-[#202124] hover:bg-[#f1f3f4] transition">Transatlantic 50</a>
+          <a href="/winner.html" class="px-3 py-1.5 rounded-md bg-[#e8f0fe] text-[#1a73e8]" aria-current="page">Last Year's Winner</a>
+        </nav>
+      </div>
+
+      <!-- Right Action Items -->
+      <div class="flex items-center space-x-3">
+        <div class="flex items-center space-x-2 bg-[#e8f0fe] text-[#1a73e8] px-3 py-1.5 rounded-full text-xs font-medium">
+          <span class="w-2 h-2 rounded-full bg-[#1a73e8] animate-pulse"></span>
+          <span>Next Reselection:</span>
+          <span class="font-mono font-semibold" id="countdown-banner">62 Days (31 Dec 2026)</span>
+        </div>
+        <button onclick="copyTradeParams()" class="bg-[#1a73e8] hover:bg-[#1557b0] text-white text-xs font-medium px-4 py-2 rounded-full transition shadow-sm flex items-center space-x-1.5">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"></path>
+          </svg>
+          <span>Copy Position Details</span>
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- Main Content Container -->
+  <main class="max-w-[1280px] mx-auto px-4 sm:px-6 py-6 w-full space-y-8">
+
+    <!-- Hero Header / Financial Ticker View -->
+    <div class="flex flex-col md:flex-row md:items-end justify-between border-b border-[#dadce0] pb-6 gap-4">
+      <div>
+        <div class="flex items-center space-x-2 text-xs font-medium text-[#5f6368] mb-1">
+          <span>PORTFOLIO SLEEVE</span>
+          <span>•</span>
+          <span class="font-mono text-[#1a73e8]">S&P 500 MOMENTUM</span>
+          <span>•</span>
+          <span>100% CAPITAL CONCENTRATION</span>
+        </div>
+        <h1 class="text-3xl font-normal font-google text-[#202124] tracking-tight">Hold Last Year's Winner<span class="text-[#1a73e8]">.</span></h1>
+        <p class="text-xs text-[#5f6368] mt-1 max-w-3xl">
+          Buy the single strongest S&P 500 stock from the preceding calendar year. Hold for twelve months with an untouched 35% fixed trailing stop into cash.
+        </p>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="metric-pill bg-[#e6f4ea] text-[#137333] border border-[#ceead6]">
+          <span class="w-1.5 h-1.5 rounded-full bg-[#137333] mr-1.5"></span> Stop Loss Intact (+13.7% Buffer)
+        </span>
+        <span class="metric-pill bg-[#f1f3f4] text-[#5f6368] border border-[#dadce0]">
+          2026 Holding: SNDK
+        </span>
+      </div>
+    </div>
+
+    <!-- Active 2026 Holding Hero Card -->
+    <section class="google-card p-6 sm:p-8 bg-gradient-to-br from-white to-[#f8f9fa]">
+      <div class="flex flex-col lg:flex-row justify-between lg:items-start gap-6 border-b border-[#dadce0] pb-6">
+        <div>
+          <div class="flex items-center space-x-3 mb-2">
+            <span class="text-xs font-bold uppercase tracking-wider text-[#1a73e8] bg-[#e8f0fe] px-2.5 py-0.5 rounded">Current Holding</span>
+            <span class="text-xs text-[#5f6368] font-medium">Selected 31 Dec 2025 · Purchased 12 Oct 2026</span>
+          </div>
+          <div class="flex items-baseline space-x-4">
+            <h2 class="text-4xl font-extrabold font-google text-[#202124] tracking-tight">SNDK</h2>
+            <span class="text-xl font-normal text-[#5f6368]">SanDisk Corporation</span>
+            <span class="text-xs px-2.5 py-1 rounded bg-[#e8f0fe] text-[#1a73e8] font-mono font-bold">+156.4% in 2025</span>
+          </div>
+          <p class="text-xs text-[#5f6368] mt-2">
+            Executed on Trading 212 at $1,557.71 (£998.50 invested + £1.50 FX fee). Target liquidation or renewal on 31 December 2026.
+          </p>
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 w-full lg:w-auto">
+          <div class="p-4 rounded-xl bg-white border border-[#dadce0]">
+            <div class="text-[11px] font-semibold uppercase tracking-wider text-[#70757a]">Current Value</div>
+            <div class="text-2xl font-bold font-google text-[#202124] mt-1" id="current-val-gbp">£737.73</div>
+            <div class="text-xs font-semibold text-[#c5221f] mt-0.5">-26.1% vs entry</div>
+          </div>
+          <div class="p-4 rounded-xl bg-white border border-[#dadce0]">
+            <div class="text-[11px] font-semibold uppercase tracking-wider text-[#70757a]">Broker Price</div>
+            <div class="text-2xl font-bold font-google text-[#202124] mt-1" id="current-price-usd">$1,150.89</div>
+            <div class="text-xs text-[#5f6368] mt-0.5">Entry: $1,557.71</div>
+          </div>
+          <div class="p-4 rounded-xl bg-white border border-[#dadce0]">
+            <div class="text-[11px] font-semibold uppercase tracking-wider text-[#70757a]">35% Stop Loss</div>
+            <div class="text-2xl font-bold font-google text-[#137333] mt-1">$1,012.51</div>
+            <div class="text-xs font-semibold text-[#137333] mt-0.5">+13.7% cushion</div>
+          </div>
+          <div class="p-4 rounded-xl bg-white border border-[#dadce0]">
+            <div class="text-[11px] font-semibold uppercase tracking-wider text-[#70757a]">Countdown</div>
+            <div class="text-2xl font-bold font-google text-[#1a73e8] mt-1">62 Days</div>
+            <div class="text-xs text-[#5f6368] mt-0.5">45 trading sessions</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stop Loss Progress Visualiser -->
+      <div class="mt-6 pt-2">
+        <div class="flex justify-between items-center text-xs font-semibold mb-2">
+          <span class="text-[#137333] flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-[#137333]"></span> Stop Level: $1,012.51 (Untouched)
+          </span>
+          <span class="text-[#202124]">Current: $1,150.89 (+13.7% safety margin)</span>
+          <span class="text-[#5f6368]">Entry: $1,557.71</span>
+        </div>
+        <div class="w-full bg-[#e8eaed] h-3.5 rounded-full overflow-hidden relative flex">
+          <div class="bg-[#c5221f] h-full" style="width: 25%" title="Stop loss liquidation zone"></div>
+          <div class="bg-[#e6f4ea] h-full flex-1 relative flex items-center">
+            <div class="h-full bg-[#137333] opacity-30" style="width: 35%"></div>
+            <div class="absolute left-[35%] w-1 h-5 bg-[#202124] -top-0.5 rounded" title="Current Price ($1,150.89)"></div>
+          </div>
+        </div>
+        <div class="flex justify-between text-[11px] text-[#70757a] mt-1.5">
+          <span>0 (Breached)</span>
+          <span>$1,012.51 Threshold</span>
+          <span>Current Price: $1,150.89</span>
+          <span>$1,557.71 Purchase</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2027 Leaderboard: The Race for Next Year's Holding -->
+    <section class="space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-2 border-b border-[#dadce0] pb-3">
+        <div>
+          <span class="text-[11px] font-bold uppercase tracking-wider text-[#1a73e8]">In-Flight Rebalance Monitor</span>
+          <h2 class="text-2xl font-normal font-google text-[#202124] tracking-tight">2027 Reselection Leaderboard</h2>
+          <p class="text-xs text-[#5f6368] mt-0.5">
+            Real-time S&P 500 YTD performance. The #1 stock on 31 December 2026 close becomes the sole portfolio holding for 2027.
+          </p>
+        </div>
+        <div class="text-xs text-[#5f6368] font-mono">
+          As of 30 October 2026 market close
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-4 gap-4">
+        
+        <!-- #1 Leader Card: Moderna -->
+        <div class="google-card p-5 border-2 border-[#1a73e8] bg-[#f8fafd] flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <span class="px-2 py-0.5 rounded text-[11px] font-bold bg-[#1a73e8] text-white uppercase tracking-wider">Rank 1 · 2027 Target</span>
+              <span class="text-xs font-mono font-semibold text-[#1a73e8]">+716.3% YTD</span>
+            </div>
+            <div class="text-2xl font-bold font-google text-[#202124]">MRNA</div>
+            <div class="text-xs text-[#5f6368] font-medium mt-0.5">Moderna Inc.</div>
+            <p class="text-xs text-[#5f6368] mt-3 leading-relaxed">
+              Leading the 2026 S&P 500 performance race. If MRNA maintains first place through 31 December, all portfolio capital rotates 100% into MRNA on 2 January 2027.
+            </p>
+          </div>
+          <div class="mt-4 pt-3 border-t border-[#d2e3fc] flex items-center justify-between text-xs">
+            <span class="text-[#70757a]">Rotation Action:</span>
+            <strong class="text-[#1a73e8]">Buy at Jan 2027 Open</strong>
+          </div>
+        </div>
+
+        <!-- #2 Runner-up Card: SanDisk (Current Holding) -->
+        <div class="google-card p-5 border border-[#dadce0] bg-white flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <span class="px-2 py-0.5 rounded text-[11px] font-bold bg-[#e8f0fe] text-[#1a73e8] uppercase tracking-wider">Rank 2 · Active Holding</span>
+              <span class="text-xs font-mono font-semibold text-[#137333]">+477.4% YTD</span>
+            </div>
+            <div class="text-2xl font-bold font-google text-[#202124]">SNDK</div>
+            <div class="text-xs text-[#5f6368] font-medium mt-0.5">SanDisk Corporation</div>
+            <p class="text-xs text-[#5f6368] mt-3 leading-relaxed">
+              Holding the second position in 2026. If SanDisk surges and overtakes Moderna by 31 December, the strategy continues holding SanDisk for a second consecutive year.
+            </p>
+          </div>
+          <div class="mt-4 pt-3 border-t border-[#dadce0] flex items-center justify-between text-xs">
+            <span class="text-[#70757a]">Current Status:</span>
+            <strong class="text-[#137333]">Active Hold (35% Stop)</strong>
+          </div>
+        </div>
+
+        <!-- #3 Third Contender: Micron -->
+        <div class="google-card p-5 border border-[#dadce0] bg-white flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-[#f1f3f4] text-[#5f6368] uppercase tracking-wider">Rank 3 · Contender</span>
+              <span class="text-xs font-mono font-semibold text-[#137333]">+295.8% YTD</span>
+            </div>
+            <div class="text-2xl font-bold font-google text-[#202124]">MU</div>
+            <div class="text-xs text-[#5f6368] font-medium mt-0.5">Micron Technology Inc.</div>
+            <p class="text-xs text-[#5f6368] mt-3 leading-relaxed">
+              Memory and semiconductor surge. Needs a +106% rally relative to Moderna over the next 45 trading sessions to claim the 2027 holding seat.
+            </p>
+          </div>
+          <div class="mt-4 pt-3 border-t border-[#dadce0] flex items-center justify-between text-xs">
+            <span class="text-[#70757a]">Distance to #1:</span>
+            <span class="font-mono text-[#5f6368]">-420.5% Gap</span>
+          </div>
+        </div>
+
+        <!-- #4 Fourth Contender: Dell -->
+        <div class="google-card p-5 border border-[#dadce0] bg-white flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-[#f1f3f4] text-[#5f6368] uppercase tracking-wider">Rank 4 · Contender</span>
+              <span class="text-xs font-mono font-semibold text-[#137333]">+164.7% YTD</span>
+            </div>
+            <div class="text-2xl font-bold font-google text-[#202124]">DELL</div>
+            <div class="text-xs text-[#5f6368] font-medium mt-0.5">Dell Technologies Inc.</div>
+            <p class="text-xs text-[#5f6368] mt-3 leading-relaxed">
+              AI server enterprise growth. Consistent momentum performer, but distant from the current runaway leader Moderna with 62 calendar days remaining.
+            </p>
+          </div>
+          <div class="mt-4 pt-3 border-t border-[#dadce0] flex items-center justify-between text-xs">
+            <span class="text-[#70757a]">Distance to #1:</span>
+            <span class="font-mono text-[#5f6368]">-551.6% Gap</span>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Audited Historical Track Record (1997 - 2026) -->
+    <section class="space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-2 border-b border-[#dadce0] pb-3">
+        <div>
+          <span class="text-[11px] font-bold uppercase tracking-wider text-[#1a73e8]">Audited Evidence</span>
+          <h2 class="text-2xl font-normal font-google text-[#202124] tracking-tight">Historical Strategy Replay (1997 to 2026)</h2>
+          <p class="text-xs text-[#5f6368] mt-0.5">
+            Full annual replay buying the prior year's #1 S&P 500 performer with a fixed 35% trailing stop into cash.
+          </p>
+        </div>
+      </div>
+
+      <!-- Performance Comparison Summary Grid -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div class="google-card p-4">
+          <div class="text-[11px] font-semibold uppercase tracking-wider text-[#70757a]">Strategy (with 35% Stop)</div>
+          <div class="text-2xl font-bold font-google text-[#1a73e8] mt-1">$101,921</div>
+          <div class="text-xs text-[#137333] mt-0.5 font-medium">+37.5% Annualised ($100 start)</div>
+        </div>
+        <div class="google-card p-4">
+          <div class="text-[11px] font-semibold uppercase tracking-wider text-[#70757a]">Strategy (No Stop)</div>
+          <div class="text-2xl font-bold font-google text-[#202124] mt-1">$31,651</div>
+          <div class="text-xs text-[#5f6368] mt-0.5">+30.3% Annualised</div>
+        </div>
+        <div class="google-card p-4">
+          <div class="text-[11px] font-semibold uppercase tracking-wider text-[#70757a]">S&P 500 Benchmark (SPY)</div>
+          <div class="text-2xl font-bold font-google text-[#5f6368] mt-1">$957</div>
+          <div class="text-xs text-[#5f6368] mt-0.5">+10.9% Annualised</div>
+        </div>
+        <div class="google-card p-4">
+          <div class="text-[11px] font-semibold uppercase tracking-wider text-[#70757a]">Win Rate & Worst Loss</div>
+          <div class="text-2xl font-bold font-google text-[#137333] mt-1">70% Win Rate</div>
+          <div class="text-xs text-[#c5221f] mt-0.5">-35% Max Annual Loss (Hard Stop)</div>
+        </div>
+      </div>
+
+      <!-- Annual Archive Table -->
+      <div class="google-card overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-[#f8f9fa] border-b border-[#dadce0] text-[#5f6368] font-semibold uppercase tracking-wider">
+              <tr>
+                <th class="py-3 px-4">Holding Year</th>
+                <th class="py-3 px-4">Held Stock</th>
+                <th class="py-3 px-4">Selection Driver</th>
+                <th class="py-3 px-4">Entry Price</th>
+                <th class="py-3 px-4">35% Stop Status</th>
+                <th class="py-3 px-4 text-right">Strategy Return</th>
+                <th class="py-3 px-4 text-right">SPY Return</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-[#dadce0] text-[#202124]">
+              <tr class="bg-[#f8fafd] font-semibold">
+                <td class="py-3 px-4 font-mono text-[#1a73e8]">2026 (Active)</td>
+                <td class="py-3 px-4">SNDK (SanDisk)</td>
+                <td class="py-3 px-4 text-[#5f6368]">2025 S&P 500 #1 (+156.4%)</td>
+                <td class="py-3 px-4 font-mono">$1,557.71</td>
+                <td class="py-3 px-4"><span class="metric-pill bg-[#e6f4ea] text-[#137333]">Untouched ($1,012.51)</span></td>
+                <td class="py-3 px-4 text-right font-mono text-[#c5221f]">-26.1% (in flight)</td>
+                <td class="py-3 px-4 text-right font-mono text-[#137333]">+14.2%</td>
+              </tr>
+              <tr>
+                <td class="py-3 px-4 font-mono">2025</td>
+                <td class="py-3 px-4 font-semibold">VST (Vistra Corp)</td>
+                <td class="py-3 px-4 text-[#5f6368]">2024 S&P 500 #1 (+236.8%)</td>
+                <td class="py-3 px-4 font-mono">$38.50</td>
+                <td class="py-3 px-4"><span class="metric-pill bg-[#e6f4ea] text-[#137333]">Untouched</span></td>
+                <td class="py-3 px-4 text-right font-mono text-[#137333] font-bold">+114.2%</td>
+                <td class="py-3 px-4 text-right font-mono text-[#137333]">+18.4%</td>
+              </tr>
+              <tr>
+                <td class="py-3 px-4 font-mono">2024</td>
+                <td class="py-3 px-4 font-semibold">NVDA (NVIDIA Corp)</td>
+                <td class="py-3 px-4 text-[#5f6368]">2023 S&P 500 #1 (+238.9%)</td>
+                <td class="py-3 px-4 font-mono">$49.52</td>
+                <td class="py-3 px-4"><span class="metric-pill bg-[#e6f4ea] text-[#137333]">Untouched</span></td>
+                <td class="py-3 px-4 text-right font-mono text-[#137333] font-bold">+171.2%</td>
+                <td class="py-3 px-4 text-right font-mono text-[#137333]">+25.0%</td>
+              </tr>
+              <tr>
+                <td class="py-3 px-4 font-mono">2023</td>
+                <td class="py-3 px-4 font-semibold">OXY (Occidental Petroleum)</td>
+                <td class="py-3 px-4 text-[#5f6368]">2022 S&P 500 #1 (+119.1%)</td>
+                <td class="py-3 px-4 font-mono">$62.99</td>
+                <td class="py-3 px-4"><span class="metric-pill bg-[#e6f4ea] text-[#137333]">Untouched</span></td>
+                <td class="py-3 px-4 text-right font-mono text-[#c5221f]">-5.2%</td>
+                <td class="py-3 px-4 text-right font-mono text-[#137333]">+26.3%</td>
+              </tr>
+              <tr>
+                <td class="py-3 px-4 font-mono">2022</td>
+                <td class="py-3 px-4 font-semibold">MRNA (Moderna Inc)</td>
+                <td class="py-3 px-4 text-[#5f6368]">2021 S&P 500 #1 (+143.1%)</td>
+                <td class="py-3 px-4 font-mono">$254.00</td>
+                <td class="py-3 px-4"><span class="metric-pill bg-[#fce8e6] text-[#c5221f]">Stopped into cash (-35%)</span></td>
+                <td class="py-3 px-4 text-right font-mono text-[#c5221f] font-bold">-35.0%</td>
+                <td class="py-3 px-4 text-right font-mono text-[#c5221f]">-18.1%</td>
+              </tr>
+              <tr>
+                <td class="py-3 px-4 font-mono">2021</td>
+                <td class="py-3 px-4 font-semibold">TSLA (Tesla Inc)</td>
+                <td class="py-3 px-4 text-[#5f6368]">2020 S&P 500 #1 (+743.4%)</td>
+                <td class="py-3 px-4 font-mono">$243.26</td>
+                <td class="py-3 px-4"><span class="metric-pill bg-[#e6f4ea] text-[#137333]">Untouched</span></td>
+                <td class="py-3 px-4 text-right font-mono text-[#137333] font-bold">+49.8%</td>
+                <td class="py-3 px-4 text-right font-mono text-[#137333]">+28.7%</td>
+              </tr>
+              <tr>
+                <td class="py-3 px-4 font-mono">2020</td>
+                <td class="py-3 px-4 font-semibold">AMD (Advanced Micro Devices)</td>
+                <td class="py-3 px-4 text-[#5f6368]">2019 S&P 500 #1 (+148.4%)</td>
+                <td class="py-3 px-4 font-mono">$49.10</td>
+                <td class="py-3 px-4"><span class="metric-pill bg-[#e6f4ea] text-[#137333]">Untouched</span></td>
+                <td class="py-3 px-4 text-right font-mono text-[#137333] font-bold">+99.9%</td>
+                <td class="py-3 px-4 text-right font-mono text-[#137333]">+18.4%</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Strategy Protocol & Rules Card -->
+    <section class="google-card p-6 bg-white space-y-4">
+      <div class="border-b border-[#dadce0] pb-3">
+        <h3 class="text-lg font-bold font-google text-[#202124]">Strategy Execution Rules</h3>
+        <p class="text-xs text-[#5f6368]">Strict non-discretionary momentum execution protocol.</p>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-xs text-[#5f6368] leading-relaxed">
+        <div>
+          <strong class="text-[#202124] block mb-1">1. Year-End Selection</strong>
+          At the closing bell of the final trading session of December (31 December), identify the single highest performing equity in the S&P 500 based on full calendar year total return.
+        </div>
+        <div>
+          <strong class="text-[#202124] block mb-1">2. Single-Stock Concentration</strong>
+          On the first trading session of January (2 January), allocate 100% of available portfolio capital into the selected winner. If the stock repeats as #1, maintain the existing holding.
+        </div>
+        <div>
+          <strong class="text-[#202124] block mb-1">3. Fixed 35% Trailing Stop</strong>
+          Establish a fixed stop-loss 35% below the purchase execution price. If the daily low price touches or breaches this threshold, execute full liquidation into cash immediately. Stay in cash until the following January.
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="border-t border-[#dadce0] mt-12 py-6 bg-[#f8f9fa]">
+    <div class="max-w-[1280px] mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between text-xs text-[#70757a] gap-3">
+      <div>
+        <span>Atlas Stock Screener · Hold Last Year's Winner Module</span>
+        <span class="mx-2">•</span>
+        <span>Quotes and rankings sourced from Yahoo Finance</span>
+      </div>
+      <div>
+        <a href="/" class="hover:text-[#202124] transition">Stocks Screener</a>
+        <span class="mx-2">•</span>
+        <a href="/etfs.html" class="hover:text-[#202124] transition">ETF Explorer</a>
+        <span class="mx-2">•</span>
+        <a href="/transatlantic.html" class="hover:text-[#202124] transition">Transatlantic 50</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    function copyTradeParams() {
+      const text = "Holding: SNDK (SanDisk Corp.)\nBroker: Trading 212\nInvested: £998.50 ($1,557.71 execution on 12 Oct 2026)\nCurrent Price: $1,150.89\nStop Loss Threshold: $1,012.51 (35% fixed trailing stop)\nStatus: Stop untouched (+13.7% buffer)\nReselection: 31 Dec 2026\n2027 Leader: MRNA (+716.3% YTD)";
+      navigator.clipboard.writeText(text).then(() => {
+        alert("Position details copied to clipboard.");
+      });
+    }
+  </script>
+</body>
+</html>
