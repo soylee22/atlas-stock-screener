@@ -4,9 +4,9 @@ dimon_briefing.py - Jamie Dimon Morning Reading Routine Dispatcher.
 
 Extracts top lead stories across Jamie Dimon's five morning publications in exact
 sequence (street pulse to global macro), plus The Economist on weekends.
-Extracts complete multi-paragraph reporting across open sources and wire syndication,
-publishes a unified Morning Edition to Telegraph for native Telegram Instant View,
-and dispatches executive briefing cards to Telegram thread 4 (Reading topic).
+Extracts multiple front-page stories per publication, attaches https://archive.md/
+unpaywalled full-article links, publishes a unified Morning Edition to Telegraph for
+native Telegram Instant View, and dispatches executive cards to Telegram thread 4.
 """
 from __future__ import annotations
 import os
@@ -79,7 +79,24 @@ def tg_esc(text: str) -> str:
     return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 
-def fetch_feed(url: str, limit: int = 1) -> list[dict]:
+def make_archive_url(original_url: str) -> str:
+    """Construct an archive.md bypass link for reading paywalled articles."""
+    if not original_url:
+        return ""
+    if "bing.com/news/apiclick" in original_url or "google.com/url" in original_url:
+        try:
+            parsed = urllib.parse.urlparse(original_url)
+            qs = urllib.parse.parse_qs(parsed.query)
+            inner = qs.get("url", [""])[0]
+            if inner:
+                original_url = inner
+        except Exception:
+            pass
+    clean_url = original_url.split("?")[0] if any(d in original_url for d in ["wsj.com", "ft.com", "washingtonpost.com", "nytimes.com"]) else original_url
+    return f"https://archive.md/{clean_url}"
+
+
+def fetch_feed(url: str, limit: int = 3) -> list[dict]:
     """Fetch an RSS feed and return parsed items with headline, description and link."""
     items = []
     try:
@@ -96,7 +113,8 @@ def fetch_feed(url: str, limit: int = 1) -> list[dict]:
                     items.append({
                         "title": title,
                         "desc": desc,
-                        "link": link
+                        "link": link,
+                        "archive_link": make_archive_url(link)
                     })
     except Exception as exc:
         print(f"Feed fetch failed for {url}: {exc}", file=sys.stderr)
@@ -138,7 +156,7 @@ def extract_full_story(pub_name: str, item: dict) -> list[str]:
     if words:
         search_q = "+".join(words)
         wire_url = f"https://news.google.com/rss/search?q={search_q}&hl=en-US&gl=US&ceid=US:en"
-        wire_items = fetch_feed(wire_url, limit=4)
+        wire_items = fetch_feed(wire_url, limit=3)
         for w in wire_items:
             w_desc = clean_html(w.get("desc") or "")
             if (
@@ -149,7 +167,7 @@ def extract_full_story(pub_name: str, item: dict) -> list[str]:
             ):
                 paragraphs.append(w_desc)
 
-    # 3. Add strategic context to ensure a rich 4-to-6 paragraph story
+    # 3. Add strategic context to ensure a rich 3-to-5 paragraph story
     if len(paragraphs) < 3:
         if pub_name == "The Washington Post":
             paragraphs.append(
@@ -217,13 +235,13 @@ def create_telegraph_edition(sections_data: list[dict], date_str: str) -> str | 
             token_ph = json.loads(resp.read().decode("utf-8"))["result"]["access_token"]
 
         content: list[dict] = [
-            {"tag": "p", "children": [f"Morning Intelligence for {date_str}"]},
+            {"tag": "p", "children": [f"Morning Executive Intelligence · {date_str}"]},
             {
                 "tag": "p",
                 "children": [
                     "Curated in Jamie Dimon's daily reading progression: "
                     "Street Reality ➔ Washington Policy ➔ National Economy ➔ Deals & Banking ➔ Global Macro. "
-                    "Every article below contains the complete extracted reporting and context."
+                    "Includes complete reporting and archive.md full-article bypass links for every paywalled story."
                 ]
             },
             {"tag": "hr"}
@@ -231,11 +249,18 @@ def create_telegraph_edition(sections_data: list[dict], date_str: str) -> str | 
 
         for s in sections_data:
             content.append({"tag": "h3", "children": [f"{s['num']}. {s['pub']} · {s['role']}"]})
-            for it in s["items"]:
-                content.append({"tag": "h4", "children": [it["title"]]})
-                for para in it["full_paragraphs"]:
-                    content.append({"tag": "p", "children": [para]})
-                if it.get("link"):
+            for idx, it in enumerate(s["items"]):
+                role_label = "Lead Story" if idx == 0 else f"Front Page Wire {idx}"
+                content.append({"tag": "h4", "children": [f"{role_label}: {it['title']}"]})
+                for para in it.get("full_paragraphs", [it.get("desc")]):
+                    if para:
+                        content.append({"tag": "p", "children": [para]})
+                if it.get("archive_link") and s["pub"] != "The New York Post":
+                    content.append({"tag": "p", "children": [
+                        "🔓 Read Unpaywalled Full Article: ",
+                        {"tag": "a", "attrs": {"href": it["archive_link"]}, "children": [it["archive_link"]]}
+                    ]})
+                elif it.get("link"):
                     content.append({"tag": "p", "children": [
                         "Original publication: ",
                         {"tag": "a", "attrs": {"href": it["link"]}, "children": [it["link"]]}
@@ -275,35 +300,35 @@ def get_publication_sections() -> list[dict]:
             "pub": "The New York Post",
             "role": "Local NYC street pulse and crime",
             "url": "https://nypost.com/metro/feed/",
-            "limit": 1
+            "limit": 3
         },
         {
             "num": 2,
             "pub": "The Washington Post",
             "role": "National policy and Capitol Hill",
             "url": "https://www.bing.com/news/search?q=site:washingtonpost.com/politics&format=rss",
-            "limit": 1
+            "limit": 3
         },
         {
             "num": 3,
             "pub": "The New York Times",
             "role": "National agenda and economy",
             "url": "https://rss.nytimes.com/services/xml/rss/nyt/Business.xml",
-            "limit": 1
+            "limit": 3
         },
         {
             "num": 4,
             "pub": "The Wall Street Journal",
             "role": "Corporate banking and deals",
             "url": "https://feeds.a.dj.com/rss/WSJcomUSBusiness.xml",
-            "limit": 1
+            "limit": 3
         },
         {
             "num": 5,
             "pub": "The Financial Times",
             "role": "Global macro and international trade",
             "url": "https://www.ft.com/world?format=rss",
-            "limit": 1
+            "limit": 3
         }
     ]
 
@@ -313,7 +338,7 @@ def get_publication_sections() -> list[dict]:
             "pub": "The Economist",
             "role": "Weekend strategic synthesis",
             "url": "https://www.economist.com/leaders/rss.xml",
-            "limit": 1
+            "limit": 3
         })
 
     return sections
@@ -329,8 +354,12 @@ def build_dimon_briefing() -> tuple[str, str | None]:
     for s in sections_def:
         items = fetch_feed(s["url"], limit=s["limit"])
         if items:
-            for it in items:
-                it["full_paragraphs"] = extract_full_story(s["pub"], it)
+            for idx, it in enumerate(items):
+                # Full extraction for lead story, desc for secondary
+                if idx == 0:
+                    it["full_paragraphs"] = extract_full_story(s["pub"], it)
+                else:
+                    it["full_paragraphs"] = [it["desc"]] if it["desc"] else []
             sections_data.append({
                 "num": s["num"],
                 "pub": s["pub"],
@@ -346,22 +375,42 @@ def build_dimon_briefing() -> tuple[str, str | None]:
     ]
 
     if telegraph_url:
-        lines.append(f"⚡ <b><a href=\"{telegraph_url}\">Tap for Telegram Instant View Edition</a></b>\n")
+        lines.append(f"⚡ <b><a href=\"{telegraph_url}\">Open Full Morning Edition in Instant View</a></b>\n")
 
     for s in sections_data:
         lines.append(f"📰 <b>{s['num']}. {s['pub']}</b> · <i>{s['role']}</i>")
-        for it in s["items"]:
-            title_link = it["link"] or telegraph_url or "https://news.google.com"
-            t = tg_esc(it["title"])
-            lines.append(f"• <b><a href=\"{title_link}\">{t}</a></b>")
-            # Present the opening paragraph in readable prose with bold lead-in
-            if it["full_paragraphs"]:
-                first_p = tg_esc(it["full_paragraphs"][0])
-                lines.append(f"{first_p}")
+        lead = s["items"][0]
+        lead_link = lead.get("archive_link") if s["pub"] != "The New York Post" else lead["link"]
+        t = tg_esc(lead["title"])
+        lines.append(f"• <b><a href=\"{lead_link}\">{t}</a></b>")
+
+        # Lead story narrative paragraphs
+        paras = lead.get("full_paragraphs", [])
+        if paras:
+            p1 = tg_esc(paras[0])
+            lines.append(f"{p1}")
+            if len(paras) > 1 and s["pub"] != "The New York Post":
+                p2 = tg_esc(paras[1])
+                lines.append(f"{p2}")
+
+        if s["pub"] != "The New York Post":
+            lines.append(f"🔓 <i><a href=\"{lead['archive_link']}\">Read full unpaywalled article on archive.md</a></i>")
+        else:
+            lines.append(f"📖 <i><a href=\"{lead['link']}\">Read full verbatim article on NY Post</a></i>")
+
+        # Secondary front-page wire items
+        if len(s["items"]) > 1:
+            lines.append("<i>Front-page wire:</i>")
+            for sec in s["items"][1:]:
+                st = tg_esc(sec["title"])
+                s_link = sec.get("archive_link") if s["pub"] != "The New York Post" else sec["link"]
+                lines.append(f"  ▫ <a href=\"{s_link}\">{st}</a>")
         lines.append("")
 
+    lines.append("━━━━━━━━━━━━━━━━━━━━━")
     if telegraph_url:
-        lines.append(f"⚡ <b><a href=\"{telegraph_url}\">Read full self-contained edition in Telegram Instant View</a></b>")
+        lines.append(f"⚡ <b><a href=\"{telegraph_url}\">Read complete multi-story edition in Telegram Instant View</a></b>")
+    lines.append("🔓 <i>Tap any archive.md link above to read the full original unpaywalled article.</i>")
 
     return "\n".join(lines), telegraph_url
 
