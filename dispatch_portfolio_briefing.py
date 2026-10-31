@@ -708,23 +708,11 @@ def get_atlas_picks() -> tuple[list[dict], list[dict]]:
 
 
 def get_lyw_data() -> dict:
-    """Calculate Hold Last Year's Winner tracking and 2027 lookahead contenders."""
+    """Calculate Hold Last Year's Winner tracking and live 2027 lookahead contenders across the full S&P 500 universe."""
     entry_price = 1557.71
     entry_gbp = 998.50
     stop_price = 1012.51
-    current_price = 1354.69
-    try:
-        import yfinance as yf
-        t = yf.Ticker("SNDK")
-        hist = t.history(period="5d")
-        if not hist.empty:
-            current_price = float(hist["Close"].iloc[-1])
-    except Exception:
-        pass
-
-    perf_pct = (current_price - entry_price) / entry_price * 100.0
-    val_gbp = entry_gbp * (current_price / entry_price)
-    cushion_pct = (current_price - stop_price) / stop_price * 100.0
+    current_price = 1150.89
 
     now = datetime.datetime.now(datetime.timezone.utc)
     target_date = datetime.date(now.year, 12, 31)
@@ -736,23 +724,62 @@ def get_lyw_data() -> dict:
             trading_days += 1
         cur_d += datetime.timedelta(days=1)
 
-    contenders = [
-        {"symbol": "MRNA", "name": "Moderna Inc.", "ytd": 716.3},
-        {"symbol": "SNDK", "name": "SanDisk Corp.", "ytd": 477.4},
-        {"symbol": "MU", "name": "Micron Technology", "ytd": 295.8},
-        {"symbol": "DELL", "name": "Dell Technologies", "ytd": 164.7}
-    ]
+    # Load full S&P 500 constituent roster
+    constituents_file = os.path.join(ROOT_DIR, "seed", "sp500_constituents.json")
+    constituents = []
+    if os.path.exists(constituents_file):
+        try:
+            with open(constituents_file, "r", encoding="utf-8") as f:
+                constituents = json.load(f)
+        except Exception as exc:
+            print(f"Error loading S&P 500 constituents: {exc}", file=sys.stderr)
+
+    sym_map = {c["symbol"].replace(".", "-"): c for c in constituents}
+    tickers = list(sym_map.keys())
+    if "SNDK" not in tickers:
+        tickers.append("SNDK")
+
+    contenders = []
     try:
         import yfinance as yf
-        for c in contenders:
-            tkr = yf.Ticker(c["symbol"])
-            h = tkr.history(period="1y")
-            if not h.empty:
-                ret = (h["Close"].iloc[-1] - h["Close"].iloc[0]) / h["Close"].iloc[0] * 100.0
-                c["ytd"] = round(float(ret), 1)
-        contenders.sort(key=lambda x: x["ytd"], reverse=True)
-    except Exception:
-        pass
+        if tickers:
+            print(f"Performing live S&P 500 YTD momentum scan across {len(tickers)} symbols...", flush=True)
+            df = yf.download(tickers, period="ytd", auto_adjust=True, threads=True, progress=False)["Close"]
+
+            if "SNDK" in df.columns:
+                sndk_series = df["SNDK"].dropna()
+                if not sndk_series.empty:
+                    current_price = float(sndk_series.iloc[-1])
+
+            for tkr in df.columns:
+                series = df[tkr].dropna()
+                if len(series) >= 2:
+                    ret = (series.iloc[-1] - series.iloc[0]) / series.iloc[0] * 100.0
+                    info = sym_map.get(tkr, {"name": tkr, "sector": ""})
+                    contenders.append({
+                        "symbol": tkr,
+                        "name": info.get("name", tkr),
+                        "ytd": round(float(ret), 1),
+                        "price": round(float(series.iloc[-1]), 2)
+                    })
+            contenders.sort(key=lambda x: x["ytd"], reverse=True)
+            print(f"S&P 500 scan complete. Top leader: {contenders[0]['symbol']} (+{contenders[0]['ytd']}%)", flush=True)
+    except Exception as exc:
+        print(f"Error computing live S&P 500 YTD scan: {exc}", file=sys.stderr)
+
+    # Fallback if download failed
+    if not contenders:
+        contenders = [
+            {"symbol": "MRNA", "name": "Moderna Inc.", "ytd": 618.5, "price": 221.72},
+            {"symbol": "SNDK", "name": "SanDisk Corp.", "ytd": 318.1, "price": 1150.89},
+            {"symbol": "DELL", "name": "Dell Technologies", "ytd": 235.5, "price": 424.30},
+            {"symbol": "MU", "name": "Micron Technology", "ytd": 180.7, "price": 884.74},
+            {"symbol": "MPC", "name": "Marathon Petroleum", "ytd": 172.4, "price": 444.73}
+        ]
+
+    perf_pct = (current_price - entry_price) / entry_price * 100.0
+    val_gbp = entry_gbp * (current_price / entry_price)
+    cushion_pct = (current_price - stop_price) / stop_price * 100.0
 
     return {
         "holding": "SNDK (SanDisk Corp.)",
@@ -1012,9 +1039,42 @@ def render_t212_html_card(t212: dict) -> str:
     """
 
 
-def render_html_briefing(top_pick, runners_up, days_to_eom, days_to_lyw, as_of_str, t212_data: dict | None = None):
+def render_html_briefing(top_pick, runners_up, days_to_eom, days_to_lyw, as_of_str, lyw_data: dict | None = None, t212_data: dict | None = None):
     """Render bulletproof table-based briefing with SNDK, Atlas, and T212 factor cards."""
     t212_card_html = render_t212_html_card(t212_data) if t212_data else ""
+
+    if lyw_data is None:
+        lyw_data = get_lyw_data()
+
+    lyw_cur_price = lyw_data.get("current_price", 1150.89)
+    lyw_entry_price = lyw_data.get("entry_price", 1557.71)
+    lyw_entry_gbp = lyw_data.get("entry_gbp", 998.50)
+    lyw_cur_gbp = lyw_data.get("current_gbp", 737.73)
+    lyw_perf_pct = lyw_data.get("perf_pct", -26.1)
+    lyw_stop_price = lyw_data.get("stop_price", 1012.51)
+    lyw_cushion_pct = lyw_data.get("cushion_pct", 13.7)
+    perf_sign = "+" if lyw_perf_pct >= 0 else ""
+    perf_color = "#34c759" if lyw_perf_pct >= 0 else "#ff3b30"
+    cushion_sign = "+" if lyw_cushion_pct >= 0 else ""
+
+    contenders = lyw_data.get("contenders", [])
+    top_c = contenders[0] if contenders else {"symbol": "MRNA", "name": "Moderna Inc.", "ytd": 618.5}
+    runner_c = contenders[1] if len(contenders) > 1 else {"symbol": "SNDK", "name": "SanDisk Corp.", "ytd": 318.1}
+    gap_ytd = top_c["ytd"] - runner_c["ytd"]
+
+    contender_rows = []
+    for idx, c in enumerate(contenders[:4], 1):
+        accent_col = "#0071e3" if idx == 1 else "#1d1d1f"
+        held_badge = " (Held)" if c["symbol"] == "SNDK" else ""
+        ytd_sign = "+" if c["ytd"] >= 0 else ""
+        ytd_col = "#34c759" if c["ytd"] >= 0 else "#ff3b30"
+        contender_rows.append(f"""
+                <tr>
+                  <td width="22%" style="padding: 7px 0; font-size: 14px; font-weight: 700; color: {accent_col};">#{idx} {c['symbol']}</td>
+                  <td width="48%" style="padding: 7px 0; font-size: 13px; color: #1d1d1f;">{c['name']}{held_badge}</td>
+                  <td width="30%" align="right" style="padding: 7px 0; font-size: 14px; font-weight: 700; color: {ytd_col};">{ytd_sign}{c['ytd']:.1f}% YTD</td>
+                </tr>""")
+    contenders_table_html = "".join(contender_rows)
 
     return f"""<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
@@ -1147,7 +1207,7 @@ def render_html_briefing(top_pick, runners_up, days_to_eom, days_to_lyw, as_of_s
                     <span style="font-size: 40px; font-weight: 800; letter-spacing: -0.03em; color: #1d1d1f; line-height: 1;">SNDK</span>
                   </td>
                   <td align="right" valign="bottom">
-                    <div style="font-size: 15px; font-weight: 700; color: #34c759; margin-bottom: 2px;">+400.7% Unrealised Gain</div>
+                    <div style="font-size: 15px; font-weight: 700; color: {perf_color}; margin-bottom: 2px;">{perf_sign}{lyw_perf_pct:.1f}% Return (£{lyw_cur_gbp:,.2f})</div>
                     <div style="font-size: 13px; color: #86868b;">SanDisk · 2026 Holding</div>
                   </td>
                 </tr>
@@ -1157,22 +1217,22 @@ def render_html_briefing(top_pick, runners_up, days_to_eom, days_to_lyw, as_of_s
               <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 20px;">
                 <tr>
                   <td width="50%" align="left" valign="top" style="padding-bottom: 16px; padding-right: 12px;">
-                    <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #86868b; margin-bottom: 4px;">2 Jan 2026 Entry Price</div>
-                    <div style="font-size: 22px; font-weight: 700; color: #1d1d1f; letter-spacing: -0.02em;">$275.24</div>
+                    <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #86868b; margin-bottom: 4px;">Entry Execution Price</div>
+                    <div style="font-size: 22px; font-weight: 700; color: #1d1d1f; letter-spacing: -0.02em;">${lyw_entry_price:,.2f}</div>
                   </td>
                   <td width="50%" align="left" valign="top" style="padding-bottom: 16px; padding-left: 12px;">
                     <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #86868b; margin-bottom: 4px;">Latest Market Price</div>
-                    <div style="font-size: 22px; font-weight: 700; color: #34c759; letter-spacing: -0.02em;">$1,378.22</div>
+                    <div style="font-size: 22px; font-weight: 700; color: {perf_color}; letter-spacing: -0.02em;">${lyw_cur_price:,.2f}</div>
                   </td>
                 </tr>
                 <tr>
                   <td width="50%" align="left" valign="top" style="padding-right: 12px;">
                     <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #86868b; margin-bottom: 4px;">Fixed 35% Stop Level</div>
-                    <div style="font-size: 20px; font-weight: 600; color: #1d1d1f; letter-spacing: -0.02em;">$178.91 (Safe)</div>
+                    <div style="font-size: 20px; font-weight: 600; color: #1d1d1f; letter-spacing: -0.02em;">${lyw_stop_price:,.2f} (Untouched)</div>
                   </td>
                   <td width="50%" align="left" valign="top" style="padding-left: 12px;">
-                    <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #86868b; margin-bottom: 4px;">2026 Lowest Drawdown</div>
-                    <div style="font-size: 20px; font-weight: 600; color: #1d1d1f; letter-spacing: -0.02em;">$244.00 (Never Hit)</div>
+                    <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #86868b; margin-bottom: 4px;">Stop Cushion Margin</div>
+                    <div style="font-size: 20px; font-weight: 600; color: #34c759; letter-spacing: -0.02em;">{cushion_sign}{lyw_cushion_pct:.1f}% Buffer</div>
                   </td>
                 </tr>
               </table>
@@ -1181,7 +1241,7 @@ def render_html_briefing(top_pick, runners_up, days_to_eom, days_to_lyw, as_of_s
               <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 24px;">
                 <tr>
                   <td style="background-color: #f5f5f7; border-left: 3px solid #34c759; border-radius: 0 10px 10px 0; padding: 12px 14px; font-size: 12px; color: #555e6d; line-height: 1.45;">
-                    <strong style="color: #1d1d1f;">Current Instruction:</strong> <strong>RIDE SNDK TO 31 DECEMBER 2026.</strong> Stop is untouched ($178.91). Position is compounding at +400.7% YTD. Zero action required until the 31 December closing print.
+                    <strong style="color: #1d1d1f;">Current Instruction:</strong> <strong>HOLD SNDK TO 31 DECEMBER 2026.</strong> Fixed 35% stop is untouched at ${lyw_stop_price:,.2f} ({cushion_sign}{lyw_cushion_pct:.1f}% safety cushion). Zero action required until the 31 December closing print.
                   </td>
                 </tr>
               </table>
@@ -1190,31 +1250,17 @@ def render_html_briefing(top_pick, runners_up, days_to_eom, days_to_lyw, as_of_s
               <table width="100%" border="0" cellspacing="0" cellpadding="0" style="border-top: 1px solid #e5e5ea; padding-top: 18px; margin-bottom: 16px;">
                 <tr>
                   <td colspan="3" style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #86868b; padding-bottom: 12px;">
-                    Next Year (2027) Leaderboard Contenders (Top 3)
+                    Next Year (2027) Leaderboard Contenders (Live S&P 500 Scan)
                   </td>
                 </tr>
-                <tr>
-                  <td width="22%" style="padding: 7px 0; font-size: 14px; font-weight: 700; color: #0071e3;">#1 MRNA</td>
-                  <td width="48%" style="padding: 7px 0; font-size: 13px; color: #1d1d1f;">Moderna Inc.</td>
-                  <td width="30%" align="right" style="padding: 7px 0; font-size: 14px; font-weight: 700; color: #34c759;">+629.1% YTD</td>
-                </tr>
-                <tr>
-                  <td width="22%" style="padding: 7px 0; font-size: 13px; font-weight: 700; color: #1d1d1f;">#2 SNDK</td>
-                  <td width="48%" style="padding: 7px 0; font-size: 13px; color: #86868b;">SanDisk (Held)</td>
-                  <td width="30%" align="right" style="padding: 7px 0; font-size: 13px; font-weight: 600; color: #1d1d1f;">+474.7% YTD</td>
-                </tr>
-                <tr>
-                  <td width="22%" style="padding: 7px 0; font-size: 13px; font-weight: 700; color: #1d1d1f;">#3 DELL</td>
-                  <td width="48%" style="padding: 7px 0; font-size: 13px; color: #86868b;">Dell Technologies</td>
-                  <td width="30%" align="right" style="padding: 7px 0; font-size: 13px; font-weight: 600; color: #1d1d1f;">+362.8% YTD</td>
-                </tr>
+                {contenders_table_html}
               </table>
 
               <!-- Lookahead Action Gate -->
               <table width="100%" border="0" cellspacing="0" cellpadding="0">
                 <tr>
                   <td style="font-size: 11px; color: #86868b; line-height: 1.4; padding-top: 6px;">
-                    <strong>Lookahead Gate:</strong> MRNA currently leads SNDK by +154.4%. On 31 December close, if MRNA wins the full year with solid December support, rotate SNDK into MRNA on 2 January 2027. If SNDK rallies to take #1, roll SNDK over into 2027!
+                    <strong>Lookahead Gate:</strong> {top_c['symbol']} currently leads #{runner_c['symbol']} by +{gap_ytd:.1f}%. If {top_c['symbol']} finishes as the undisputed #1 winner at the 31 December close, rotate 100% of capital into {top_c['symbol']} on 2 January 2027 with a fresh 35% fixed trailing stop. If SNDK rallies to claim #1, roll SNDK over into 2027.
                   </td>
                 </tr>
               </table>
@@ -1265,7 +1311,7 @@ def main():
     t212_data = get_t212_holdings()
 
     as_of_str = today.strftime('%d %B %Y')
-    html_body = render_html_briefing(top_pick, runners_up, days_to_eom, days_to_lyw, as_of_str, t212_data=t212_data)
+    html_body = render_html_briefing(top_pick, runners_up, days_to_eom, days_to_lyw, as_of_str, lyw_data=lyw_data, t212_data=t212_data)
 
     out_path = os.path.join(ROOT_DIR, 'public', 'portfolio_briefing.html')
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
@@ -1288,11 +1334,12 @@ def main():
     notify_email = os.environ.get('NOTIFY_EMAIL') or smtp_user
 
     if smtp_host and smtp_user and smtp_pass and notify_email:
+        top_contender = lyw_data['contenders'][0] if lyw_data.get('contenders') else {'symbol': 'MRNA', 'ytd': 618.5}
         msg = EmailMessage()
         msg['Subject'] = f"Portfolio Briefing: {days_to_eom} Days to Month-End · {top_pick['symbol']} & SNDK Status ({as_of_str})"
         msg['From'] = f"SecondBrain Portfolio <{smtp_user}>"
         msg['To'] = notify_email
-        msg.set_content(f"Atlas #1: {top_pick['symbol']} (${top_pick['net_income']/1e9:.2f}B NI, W%R {top_pick['wr']}). Active 2026 LYW: SNDK ($1,378.22, +400.7% gain, Stop $178.91 untouched). T212 Equity: £{t212_data.get('total_gbp', 0.0):,.2f}.")
+        msg.set_content(f"Atlas #1: {top_pick['symbol']} (${top_pick['net_income']/1e9:.2f}B NI, W%R {top_pick['wr']}). Active 2026 LYW: SNDK (${lyw_data['current_price']:,.2f}, {lyw_data['perf_pct']:+.1f}% vs entry, Stop ${lyw_data['stop_price']:,.2f} untouched). 2027 Leader: {top_contender['symbol']} (+{top_contender['ytd']:.1f}% YTD). T212 Equity: £{t212_data.get('total_gbp', 0.0):,.2f}.")
         msg.add_alternative(html_body, subtype='html')
 
         try:
