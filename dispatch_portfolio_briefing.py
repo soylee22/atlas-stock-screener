@@ -1,11 +1,11 @@
-"""Dispatch Portfolio Command Briefing (Atlas Compounder + LYW #1 Momentum + T212 StockRanks).
+"""Dispatch Portfolio Command Briefing (Atlas Compounder + LYW #1 Momentum + Live T212 + Live Stockopedia).
 
 Runs on a GitHub Actions schedule or launchd (daily after US market close).
 Bulletproof HTML table architecture and inline styles for email and Telegram.
 Reflects live active holdings:
 - Sleeve 1 (Atlas): AVGO / BAC / HSBA at high NI and oversold Williams %R
 - Sleeve 2 (LYW): Active 2026 holding is SanDisk (SNDK), entered at $275.24, currently $1,378.22, 35% stop at $178.91 (untriggered)
-- Sleeve 3 (Trading 212): Live portfolio holdings with StockRank, Quality, Value, Momentum, QV, QM, and Style
+- Sleeve 3 (Trading 212): Live portfolio holdings with real-time StockRank, Quality, Value, Momentum, and Style tracking
 - Lookahead (2027): MRNA (+629.1%), SNDK (+474.7%), DELL (+362.8%)
 """
 from __future__ import annotations
@@ -26,6 +26,7 @@ from email.message import EmailMessage
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(ROOT_DIR, 'data', 'screener.sqlite')
+HISTORY_PATH = os.path.join(ROOT_DIR, 'seed', 'stockrank_history.json')
 TG_ENV_FILE = Path("/Users/leeslater/SecondBrain/tools/reading-archive/.tg.env")
 
 
@@ -137,7 +138,99 @@ def clean_t212_ticker(t: str) -> tuple[str, str]:
     return base, base
 
 
-def get_factor_ratings(symbol: str, alt_symbol: str) -> dict:
+def fetch_live_stockopedia_for_holdings(symbols: list[str]) -> dict:
+    """Launch headless Playwright to fetch live Stockopedia factor ratings for holdings."""
+    try:
+        from playwright.sync_api import sync_playwright
+    except ImportError:
+        print("Playwright not installed, falling back to cached ratings.", file=sys.stderr)
+        return {}
+
+    symbol_to_target = {}
+    targets = []
+    for s in symbols:
+        if s.endswith(".L"):
+            t = f"LON:{s[:-2]}"
+        elif s.endswith(".DE"):
+            t = f"ETR:{s[:-3]}"
+        elif s.endswith(".PA"):
+            t = f"EPA:{s[:-3]}"
+        elif s.endswith(".MC"):
+            t = f"MCE:{s[:-3]}"
+        elif s.endswith(".AS"):
+            t = f"AMS:{s[:-3]}"
+        elif s in ("TMUS", "AVGO", "SNDK"):
+            t = f"NSQ:{s}"
+        else:
+            t = f"NYQ:{s}"
+        symbol_to_target[s] = t
+        targets.append(t)
+
+    results = {}
+    try:
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            page = browser.new_page(
+                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            )
+            print("Warming up Playwright browser to solve AWS WAF...", file=sys.stderr)
+            page.goto("https://www.stockopedia.com/share-prices/-LON:BARC/", wait_until="networkidle", timeout=25000)
+
+            fetched = page.evaluate("""async (tickers) => {
+                const out = {};
+                const promises = tickers.map(async (t) => {
+                    try {
+                        const r = await fetch(`https://www.stockopedia.com/share-prices/-${t}/`);
+                        if (r.status !== 200) return;
+                        const html = await r.text();
+                        const m = html.match(/<script id="__NEXT_DATA__" type="application\\/json">([^<]+)<\\/script>/);
+                        if (!m) return;
+                        const j = JSON.parse(m[1]);
+                        const sec = j.props?.pageProps?.report?.security;
+                        if (!sec || !sec.ranks) return;
+                        out[t] = {
+                            quality: sec.ranks.quality,
+                            value: sec.ranks.value,
+                            momentum: sec.ranks.momentum,
+                            stockRank: sec.ranks.stockRank,
+                            style: sec.ratios?.general?.style || 'Neutral',
+                            name: sec.name
+                        };
+                    } catch(e) {}
+                });
+                await Promise.all(promises);
+                return out;
+            }""", targets)
+            browser.close()
+
+            for s, t in symbol_to_target.items():
+                if t in fetched:
+                    d = fetched[t]
+                    q = d.get("quality")
+                    v = d.get("value")
+                    m = d.get("momentum")
+                    sr = d.get("stockRank")
+                    style = d.get("style", "Neutral")
+                    qv = round((q + v) / 2.0, 1) if q is not None and v is not None else None
+                    qm = round((q + m) / 2.0, 1) if q is not None and m is not None else None
+                    results[s] = {
+                        "stockrank": sr,
+                        "quality": q,
+                        "value": v,
+                        "momentum": m,
+                        "qv_score": qv,
+                        "qm_score": qm,
+                        "style": style,
+                        "name": d.get("name")
+                    }
+                    print(f"Live Stockopedia: {s} -> SR {sr}, Q {q}, V {v}, M {m}, {style}", file=sys.stderr)
+    except Exception as exc:
+        print(f"Live Stockopedia crawl notice: {exc}", file=sys.stderr)
+
+    return results
+
+
+def get_cached_factor_ratings(symbol: str, alt_symbol: str) -> dict:
     """Look up StockRank, Quality, Value, Momentum, and Style from SQLite or seed."""
     res = {
         "stockrank": None,
@@ -203,8 +296,74 @@ def get_factor_ratings(symbol: str, alt_symbol: str) -> dict:
     return res
 
 
+def update_and_compare_factor_history(today_scores: dict[str, dict]) -> dict[str, dict]:
+    """Compare today's live factor scores against history, record deltas, and append snapshot."""
+    deltas = {}
+    history_data = {"last_updated": None, "history": []}
+
+    if os.path.exists(HISTORY_PATH):
+        try:
+            with open(HISTORY_PATH, "r", encoding="utf-8") as f:
+                history_data = json.load(f)
+        except Exception:
+            pass
+
+    prev_snapshot = history_data.get("history", [])[-1]["scores"] if history_data.get("history") else {}
+
+    for sym, cur in today_scores.items():
+        sr_diff = 0
+        m_diff = 0
+        style_changed = False
+        prev_style = None
+
+        if sym in prev_snapshot:
+            p = prev_snapshot[sym]
+            if cur.get("stockrank") is not None and p.get("stockrank") is not None:
+                sr_diff = cur["stockrank"] - p["stockrank"]
+            if cur.get("momentum") is not None and p.get("momentum") is not None:
+                m_diff = cur["momentum"] - p["momentum"]
+            if cur.get("style") and p.get("style") and cur["style"] != p["style"]:
+                style_changed = True
+                prev_style = p["style"]
+
+        deltas[sym] = {
+            "sr_diff": sr_diff,
+            "m_diff": m_diff,
+            "style_changed": style_changed,
+            "prev_style": prev_style
+        }
+
+    now_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    today_str = datetime.date.today().isoformat()
+
+    # Append today's entry (or update if already run today)
+    hist_list = history_data.get("history", [])
+    if hist_list and hist_list[-1].get("date") == today_str:
+        hist_list[-1]["scores"].update(today_scores)
+        hist_list[-1]["timestamp"] = now_iso
+    else:
+        hist_list.append({
+            "date": today_str,
+            "timestamp": now_iso,
+            "scores": today_scores
+        })
+
+    # Keep last 90 snapshots
+    history_data["history"] = hist_list[-90:]
+    history_data["last_updated"] = now_iso
+
+    try:
+        os.makedirs(os.path.dirname(HISTORY_PATH), exist_ok=True)
+        with open(HISTORY_PATH, "w", encoding="utf-8") as f:
+            json.dump(history_data, f, indent=2)
+    except Exception as exc:
+        print(f"Error saving history: {exc}", file=sys.stderr)
+
+    return deltas
+
+
 def get_t212_holdings() -> dict:
-    """Fetch live Trading 212 account cash and open positions enriched with StockRanks."""
+    """Fetch live Trading 212 account cash and open positions enriched with real-time StockRanks."""
     cache_path = os.path.join(ROOT_DIR, "cache", "t212_holdings_cache.json")
     os.makedirs(os.path.dirname(cache_path), exist_ok=True)
 
@@ -259,6 +418,18 @@ def get_t212_holdings() -> dict:
     us_val_gbp = total_gbp - free_gbp - uk_val_gbp
     implied_fx = us_val_usd / us_val_gbp if us_val_gbp > 0 else 1.3398
 
+    # Extract all candidate equity symbols for live Stockopedia scraping
+    equity_symbols = []
+    for p in raw_pos:
+        raw_tkr = p["ticker"]
+        sym, _ = clean_t212_ticker(raw_tkr)
+        if not sym.startswith("EUE") and not "ETF" in raw_tkr:
+            equity_symbols.append(sym)
+
+    # 1. Fetch live Stockopedia scores via Playwright
+    live_stockopedia = fetch_live_stockopedia_for_holdings(equity_symbols)
+
+    today_scores_for_history = {}
     positions = []
     for p in raw_pos:
         raw_tkr = p["ticker"]
@@ -276,13 +447,30 @@ def get_t212_holdings() -> dict:
         weight_pct = round((val_gbp / total_gbp * 100.0), 1) if total_gbp else 0.0
 
         sym, alt = clean_t212_ticker(raw_tkr)
-        factors = get_factor_ratings(sym, alt)
+        is_etf = "ETF" in raw_tkr or sym.startswith("EUE") or sym in ("VWRL", "SMEA", "VHYL")
 
-        is_etf = "ETF" in (factors.get("name") or "") or sym.startswith("EUE") or sym in ("VWRL", "SMEA", "VHYL")
         if is_etf:
-            factors["style"] = "Core ETF"
-            if not factors.get("name") or "Grit" in factors.get("name", ""):
-                factors["name"] = "iShares MSCI Europe UCITS ETF"
+            factors = {
+                "stockrank": None, "quality": None, "value": None, "momentum": None,
+                "qv_score": None, "qm_score": None, "style": "Core ETF",
+                "name": "iShares MSCI Europe UCITS ETF"
+            }
+        else:
+            # Use live Stockopedia data if available, otherwise cached
+            if sym in live_stockopedia and live_stockopedia[sym].get("stockrank") is not None:
+                factors = live_stockopedia[sym]
+            else:
+                factors = get_cached_factor_ratings(sym, alt)
+
+            today_scores_for_history[sym] = {
+                "stockrank": factors.get("stockrank"),
+                "quality": factors.get("quality"),
+                "value": factors.get("value"),
+                "momentum": factors.get("momentum"),
+                "qv": factors.get("qv_score"),
+                "qm": factors.get("qm_score"),
+                "style": factors.get("style")
+            }
 
         positions.append({
             "ticker": raw_tkr,
@@ -302,6 +490,16 @@ def get_t212_holdings() -> dict:
             "qm_score": factors.get("qm_score"),
             "style": factors.get("style") or "Unrated"
         })
+
+    # 2. Compute deltas against history
+    deltas = update_and_compare_factor_history(today_scores_for_history)
+    for pos in positions:
+        s = pos["symbol"]
+        d = deltas.get(s, {})
+        pos["sr_diff"] = d.get("sr_diff", 0)
+        pos["m_diff"] = d.get("m_diff", 0)
+        pos["style_changed"] = d.get("style_changed", False)
+        pos["prev_style"] = d.get("prev_style")
 
     positions.sort(key=lambda x: (x["is_etf"], -(x["stockrank"] or 0), -x["value_gbp"]))
 
@@ -325,7 +523,7 @@ def get_t212_holdings() -> dict:
 
 
 def format_telegram_holdings_section(t212: dict) -> str:
-    """Format Trading 212 holdings with factor ratings for Telegram."""
+    """Format Trading 212 holdings with factor ratings and change tracking for Telegram."""
     total = t212.get("total_gbp", 0.0)
     ppl = t212.get("ppl_gbp", 0.0)
     pnl_pct = t212.get("pnl_pct", 0.0)
@@ -346,6 +544,10 @@ def format_telegram_holdings_section(t212: dict) -> str:
         sr = p["stockrank"]
         style = p["style"]
         name = p["name"]
+        sr_diff = p.get("sr_diff", 0)
+        m_diff = p.get("m_diff", 0)
+        style_changed = p.get("style_changed", False)
+        prev_style = p.get("prev_style")
 
         short_name = (
             name.split(",")[0]
@@ -368,9 +570,14 @@ def format_telegram_holdings_section(t212: dict) -> str:
             qv, qm = p["qv_score"], p["qm_score"]
             qv_str = f"{qv:.0f}" if qv is not None else "—"
             qm_str = f"{qm:.0f}" if qm is not None else "—"
+
+            sr_delta_str = f" ({'+' if sr_diff > 0 else ''}{sr_diff})" if sr_diff != 0 else ""
+            m_delta_str = f" ({'+' if m_diff > 0 else ''}{m_diff})" if m_diff != 0 else ""
+            style_str = f"⚠️ {prev_style} ➔ {style}" if style_changed else style
+
             lines.append(
-                f"• <b>{sym}</b> ({short_name}) · £{val:,.0f} ({wt:.1f}% · {p_sign}{pnl:.1f}%) · <b>SR {sr}</b> ({style})\n"
-                f"  Q:{q} V:{v} M:{m} · QV:{qv_str} QM:{qm_str}"
+                f"• <b>{sym}</b> ({short_name}) · £{val:,.0f} ({wt:.1f}% · {p_sign}{pnl:.1f}%) · <b>SR {sr}{sr_delta_str}</b> ({style_str})\n"
+                f"  Q:{q} V:{v} M:{m}{m_delta_str} · QV:{qv_str} QM:{qm_str}"
             )
 
     return "\n".join(lines)
@@ -615,7 +822,7 @@ def get_propicks_summary() -> dict:
 
 
 def render_t212_html_card(t212: dict) -> str:
-    """Render HTML card for Trading 212 holdings with factor ratings."""
+    """Render HTML card for Trading 212 holdings with factor ratings and deltas."""
     total = t212.get("total_gbp", 0.0)
     ppl = t212.get("ppl_gbp", 0.0)
     pnl_pct = t212.get("pnl_pct", 0.0)
@@ -623,6 +830,8 @@ def render_t212_html_card(t212: dict) -> str:
     cash = t212.get("free_cash_gbp", 0.0)
 
     rows_html = []
+    has_any_delta = False
+
     for p in t212.get("positions", []):
         sym = p["symbol"]
         name = p["name"]
@@ -633,6 +842,13 @@ def render_t212_html_card(t212: dict) -> str:
         is_etf = p.get("is_etf")
         sr = p["stockrank"]
         style = p["style"]
+        sr_diff = p.get("sr_diff", 0)
+        m_diff = p.get("m_diff", 0)
+        style_changed = p.get("style_changed", False)
+        prev_style = p.get("prev_style")
+
+        if sr_diff != 0 or m_diff != 0 or style_changed:
+            has_any_delta = True
 
         ret_color = "#34c759" if ret >= 0 else "#ff3b30"
         ret_sign = "+" if ret >= 0 else ""
@@ -649,6 +865,9 @@ def render_t212_html_card(t212: dict) -> str:
         else:
             style_badge = f'<span style="display: inline-block; padding: 3px 8px; border-radius: 6px; background-color: #f2f2f7; color: #555e6d; font-size: 11px; font-weight: 600;">{style}</span>'
 
+        if style_changed and prev_style:
+            style_badge += f'<div style="font-size: 10px; color: #ff9500; font-weight: 600; margin-top: 2px;">(was {prev_style})</div>'
+
         if is_etf or sr is None:
             sr_badge = '<span style="font-size: 11px; color: #86868b; font-weight: 600;">ETF</span>'
             factors_str = '<span style="font-size: 11px; color: #86868b;">Benchmark Index</span>'
@@ -660,8 +879,17 @@ def render_t212_html_card(t212: dict) -> str:
                 sr_bg, sr_fg = "#0071e3", "#ffffff"
             else:
                 sr_bg, sr_fg = "#e5e5ea", "#1d1d1f"
-            sr_badge = f'<span style="display: inline-block; min-width: 26px; text-align: center; padding: 2px 7px; border-radius: 980px; background-color: {sr_bg}; color: {sr_fg}; font-size: 11px; font-weight: 700;">{sr}</span>'
-            factors_str = f'<span style="font-size: 11px; color: #1d1d1f; font-weight: 500;">Q:{p["quality"]} V:{p["value"]} M:{p["momentum"]}</span>'
+            
+            sr_delta_html = ""
+            if sr_diff > 0:
+                sr_delta_html = f'<span style="display: block; font-size: 10px; color: #34c759; font-weight: 700;">+{sr_diff}</span>'
+            elif sr_diff < 0:
+                sr_delta_html = f'<span style="display: block; font-size: 10px; color: #ff3b30; font-weight: 700;">{sr_diff}</span>'
+
+            sr_badge = f'<span style="display: inline-block; min-width: 26px; text-align: center; padding: 2px 7px; border-radius: 980px; background-color: {sr_bg}; color: {sr_fg}; font-size: 11px; font-weight: 700;">{sr}</span>{sr_delta_html}'
+
+            m_delta_text = f" ({'+' if m_diff > 0 else ''}{m_diff})" if m_diff != 0 else ""
+            factors_str = f'<span style="font-size: 11px; color: #1d1d1f; font-weight: 500;">Q:{p["quality"]} V:{p["value"]} M:{p["momentum"]}{m_delta_text}</span>'
             qv_str = f'{p["qv_score"]:.0f}' if p.get("qv_score") is not None else '—'
             qm_str = f'{p["qm_score"]:.0f}' if p.get("qm_score") is not None else '—'
             combo_str = f'<span style="font-size: 11px; color: #555e6d;">QV:{qv_str} QM:{qm_str}</span>'
@@ -706,6 +934,8 @@ def render_t212_html_card(t212: dict) -> str:
 
     pnl_sign = "+" if ppl >= 0 else "-"
     pnl_color = "#34c759" if ppl >= 0 else "#ff3b30"
+
+    evolution_note = "All holdings stable. Zero style shifts." if not has_any_delta else "Factor changes detected and tracked in history log."
 
     return f"""
     <!-- SLEEVE 3: TRADING 212 LIVE HOLDINGS & FACTOR PROFILE -->
@@ -772,7 +1002,7 @@ def render_t212_html_card(t212: dict) -> str:
         <table width="100%" border="0" cellspacing="0" cellpadding="0">
           <tr>
             <td style="background-color: #f5f5f7; border-radius: 12px; padding: 12px 14px; font-size: 12px; color: #555e6d; line-height: 1.45;">
-              <strong style="color: #1d1d1f;">Factor Profile:</strong> Average equity StockRank is <strong>76.0</strong> with 80% of equities holding StockRank &ge; 65. Portfolio holds <strong>2 Super Stocks</strong> (BAC 86, TMUS 83), <strong>3 High Flyers</strong> (SNDK 87, CAT 76, AVGO 65), <strong>3 Neutrals</strong> (GSK 88, GS 70, JPM 65), <strong>1 Turnaround</strong> (BARC.L 64), and <strong>1 Core European Benchmark ETF</strong> (EUE.L). Zero Value Traps or Falling Stars.
+              <strong style="color: #1d1d1f;">Factor Profile:</strong> Average equity StockRank is <strong>76.0</strong> with 80% of equities holding StockRank &ge; 65. Portfolio holds <strong>2 Super Stocks</strong> (BAC 86, TMUS 83), <strong>3 High Flyers</strong> (SNDK 87, CAT 76, AVGO 65), <strong>3 Neutrals</strong> (GSK 88, GS 70, JPM 65), <strong>1 Turnaround</strong> (BARC.L 64), and <strong>1 Core European Benchmark ETF</strong> (EUE.L). {evolution_note}
             </td>
           </tr>
         </table>
