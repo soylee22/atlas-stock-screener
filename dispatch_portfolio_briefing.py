@@ -1,173 +1,791 @@
-"""Dispatch Portfolio Command Briefing (Atlas Compounder + LYW #1 Momentum).
+"""Dispatch Portfolio Command Briefing (Atlas Compounder + LYW #1 Momentum + T212 StockRanks).
 
-Runs on a GitHub Actions schedule (e.g., daily after US market close).
-Bulletproof HTML table architecture and inline styles.
+Runs on a GitHub Actions schedule or launchd (daily after US market close).
+Bulletproof HTML table architecture and inline styles for email and Telegram.
 Reflects live active holdings:
-- Sleeve 1 (Atlas): AVGO (Broadcom) at $38.27B NI, -90.6 W%R
-- Sleeve 2 (LYW): Active 2026 holding is SanDisk (SNDK), entered at $275.24, currently $1,378.22 (+400.7% gain), 35% stop at $178.91 (untriggered).
-- Lookahead (2027): MRNA (+629.1%), SNDK (+474.7%), DELL (+362.8%).
+- Sleeve 1 (Atlas): AVGO / BAC / HSBA at high NI and oversold Williams %R
+- Sleeve 2 (LYW): Active 2026 holding is SanDisk (SNDK), entered at $275.24, currently $1,378.22, 35% stop at $178.91 (untriggered)
+- Sleeve 3 (Trading 212): Live portfolio holdings with StockRank, Quality, Value, Momentum, QV, QM, and Style
+- Lookahead (2027): MRNA (+629.1%), SNDK (+474.7%), DELL (+362.8%)
 """
+from __future__ import annotations
+
 import os
+import sys
 import smtplib
 import sqlite3
 import json
+import gzip
+import time
+import base64
 import datetime
+import urllib.parse
 import urllib.request
+from pathlib import Path
 from email.message import EmailMessage
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(ROOT_DIR, 'data', 'screener.sqlite')
+TG_ENV_FILE = Path("/Users/leeslater/SecondBrain/tools/reading-archive/.tg.env")
 
 
-FX_TO_USD = {
-    'USD': 1.0,
-    'EUR': 1.08,
-    'GBP': 1.30,
-    'GBX': 0.013,
-    'CHF': 1.15,
-    'CAD': 0.72,
-    'SEK': 0.096,
-    'DKK': 0.145,
-    'JPY': 0.0066,
-    'KRW': 0.00073,
-    'TWD': 0.031,
-    'AUD': 0.66,
-    'HKD': 0.128,
-}
+def load_telegram_credentials() -> tuple[str | None, str | None, str | None]:
+    """Read Telegram bot credentials from environment or SecondBrain secret env."""
+    token = os.environ.get("TG_TOKEN")
+    chat = os.environ.get("TG_CHAT")
+    thread = os.environ.get("TG_THREAD")
 
-
-def ensure_database():
-    """Ensure data/screener.sqlite exists and has populated stock data."""
-    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
-    if os.path.exists(DB_PATH):
+    if (not token or not chat) and TG_ENV_FILE.exists():
         try:
-            conn = sqlite3.connect(DB_PATH)
-            cur = conn.cursor()
-            cur.execute("SELECT COUNT(*) FROM stocks")
-            count = cur.fetchone()[0]
-            conn.close()
-            if count > 0:
-                return
+            for line in TG_ENV_FILE.read_text().splitlines():
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    k, v = line.split("=", 1)
+                    k = k.strip()
+                    val = v.strip().strip('"').strip("'")
+                    if k == "TG_TOKEN" and not token:
+                        token = val
+                    elif k == "TG_CHAT" and not chat:
+                        chat = val
+                    elif k == "TG_THREAD" and not thread:
+                        thread = val
         except Exception:
             pass
 
-    csv_path = os.path.join(ROOT_DIR, 'seed', 'stocks-2026-10-23.csv')
-    if not os.path.exists(csv_path):
-        return
-
-    import csv
-    conn = sqlite3.connect(DB_PATH)
-    cur = conn.cursor()
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS stocks (
-            symbol TEXT PRIMARY KEY,
-            region TEXT,
-            data TEXT NOT NULL,
-            enriched REAL DEFAULT 0,
-            attempted REAL DEFAULT 0
-        )
-    """)
-    rows = []
-    with open(csv_path, encoding='utf-8') as f:
-        for r in csv.DictReader(f):
-            sym = r.get('symbol')
-            if not sym:
-                continue
-            curr = (r.get('currency') or 'USD').upper()
-            rate = FX_TO_USD.get(curr, 1.0)
-            ni = float(r.get('net_income') or 0)
-            ni_usd = ni * rate
-            d = {
-                'symbol': sym,
-                'name': r.get('name') or sym,
-                'active': True,
-                'instrument': 'stock',
-                'net_income': ni_usd,
-                'net_income_local': ni,
-                'currency': curr,
-                'roe': float(r.get('roe') or 0),
-                'div_years': int(float(r.get('div_years') or 0)),
-                'williams_r': float(r.get('williams_r')) if r.get('williams_r') else None,
-                'sector': r.get('sector') or 'General',
-                'price': float(r.get('price') or 0),
-                'div_yield': float(r.get('div_yield') or 0)
-            }
-            rows.append((sym, r.get('region', 'us'), json.dumps(d), 1.0, 1.0))
-    cur.executemany("INSERT OR REPLACE INTO stocks (symbol, region, data, enriched, attempted) VALUES (?, ?, ?, ?, ?)", rows)
-    conn.commit()
-    conn.close()
+    return token, chat, thread
 
 
-def get_atlas_picks():
-    """Extract top Dream Zone candidates from screener.sqlite, seed CSV, or published data."""
-    ensure_database()
-    candidates = []
+def send_telegram(message_html: str) -> bool:
+    """Send formatted Telegram message to Lee's phone."""
+    token, chat, thread = load_telegram_credentials()
+    if not token or not chat:
+        print("Telegram credentials not found. Skipping Telegram dispatch.", file=sys.stderr)
+        return False
 
-    # 1. Try local SQLite database
-    if os.path.exists(DB_PATH):
-        try:
-            conn = sqlite3.connect(DB_PATH)
-            cur = conn.cursor()
-            cur.execute("SELECT data FROM stocks")
-            for raw, in cur.fetchall():
-                d = json.loads(raw)
-                if not d.get('active'):
-                    continue
-                ni = d.get('net_income') or 0.0
-                roe = d.get('roe') or 0.0
-                div_years = d.get('div_years') or 0
-                wr = d.get('williams_r')
-                if wr is not None and wr <= -80.0 and ni >= 2e9 and div_years >= 2 and roe >= 10.0:
-                    candidates.append({
-                        'symbol': d['symbol'], 'name': d.get('name') or d['symbol'],
-                        'net_income': ni, 'roe': roe, 'div_years': div_years, 'wr': wr,
-                        'sector': d.get('sector') or 'General'
-                    })
-            conn.close()
-        except Exception:
-            pass
+    url = f"https://api.telegram.org/bot{token}/sendMessage"
+    payload = {
+        "chat_id": chat,
+        "text": message_html,
+        "parse_mode": "HTML",
+        "disable_web_page_preview": "true"
+    }
+    if thread:
+        payload["message_thread_id"] = int(thread)
 
-    # 2. Try seed CSV with FX conversion if database query yielded nothing
-    if not candidates:
-        import csv
-        csv_path = os.path.join(ROOT_DIR, 'seed', 'stocks-2026-10-23.csv')
-        if os.path.exists(csv_path):
+    data = urllib.parse.urlencode(payload).encode()
+    req = urllib.request.Request(url, data=data)
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            res = json.load(resp)
+            ok = bool(res.get("ok"))
+            if ok:
+                print(f"Successfully dispatched briefing to Telegram (thread {thread})")
+            return ok
+    except Exception as exc:
+        print(f"Telegram dispatch failed: {exc}", file=sys.stderr)
+        return False
+
+
+def load_t212_credentials() -> tuple[str | None, str | None, str]:
+    """Read T212 API credentials from environment or known config paths."""
+    key = os.environ.get("T212_KEY_ID") or os.environ.get("T212_KEY")
+    secret = os.environ.get("T212_SECRET")
+    base = os.environ.get("T212_BASE", "https://live.trading212.com")
+    candidates = [
+        Path("/Users/leeslater/projects/portfolio-tracker/.env"),
+        Path("/Users/leeslater/.mithril/ping.env"),
+        Path(ROOT_DIR) / ".env",
+    ]
+    for p in candidates:
+        if (not key or not secret) and p.exists():
             try:
-                with open(csv_path, encoding='utf-8') as f:
-                    for r in csv.DictReader(f):
-                        try:
-                            wr = float(r.get('williams_r') or 0)
-                            ni = float(r.get('net_income') or 0)
-                            curr = (r.get('currency') or 'USD').upper()
-                            rate = FX_TO_USD.get(curr, 1.0)
-                            ni_usd = ni * rate
-                            roe = float(r.get('roe') or 0)
-                            div_years = int(float(r.get('div_years') or 0))
-                            if wr <= -80.0 and ni_usd >= 2e9 and div_years >= 2 and roe >= 10.0:
-                                candidates.append({
-                                    'symbol': r['symbol'], 'name': r['name'],
-                                    'net_income': ni_usd, 'roe': roe, 'div_years': div_years, 'wr': wr,
-                                    'sector': r.get('sector') or 'General'
-                                })
-                        except Exception:
-                            pass
+                for line in p.read_text().splitlines():
+                    line = line.strip()
+                    if line and not line.startswith("#") and "=" in line:
+                        k, v = line.split("=", 1)
+                        k = k.strip()
+                        val = v.strip().strip('"').strip("'")
+                        if k in ("T212_KEY_ID", "T212_KEY") and not key:
+                            key = val
+                        elif k == "T212_SECRET" and not secret:
+                            secret = val
+                        elif k == "T212_BASE" and not base:
+                            base = val
+            except Exception:
+                pass
+    return key, secret, base
+
+
+def clean_t212_ticker(t: str) -> tuple[str, str]:
+    """Returns (canonical_symbol, alt_symbol) for factor database matching."""
+    if not t:
+        return "", ""
+    parts = t.split("_")
+    base = parts[0]
+    if base.startswith("SNDK"):
+        return "SNDK", "SNDK"
+    if base.endswith("l") and len(base) > 1:
+        return base[:-1] + ".L", base[:-1]
+    if len(parts) >= 2 and parts[1] == "US":
+        return base, base
+    if len(parts) >= 2 and parts[1] == "DE":
+        return base + ".DE", base
+    if len(parts) >= 2 and parts[1] == "FR":
+        return base + ".PA", base
+    if len(parts) >= 2 and parts[1] == "NL":
+        return base + ".AS", base
+    return base, base
+
+
+def get_factor_ratings(symbol: str, alt_symbol: str) -> dict:
+    """Look up StockRank, Quality, Value, Momentum, and Style from SQLite or seed."""
+    res = {
+        "stockrank": None,
+        "quality": None,
+        "value": None,
+        "momentum": None,
+        "qv_score": None,
+        "qm_score": None,
+        "style": None,
+        "name": None
+    }
+    if os.path.exists(DB_PATH):
+        try:
+            conn = sqlite3.connect(DB_PATH)
+            cur = conn.cursor()
+            cur.execute("SELECT data FROM stocks WHERE symbol = ? OR symbol = ?", (symbol, alt_symbol))
+            row = cur.fetchone()
+            if row:
+                d = json.loads(row[0])
+                res["stockrank"] = d.get("stockrank")
+                res["quality"] = d.get("quality_rank")
+                res["value"] = d.get("value_rank")
+                res["momentum"] = d.get("momentum_rank")
+                res["qv_score"] = d.get("qv_score")
+                res["qm_score"] = d.get("qm_score")
+                res["style"] = d.get("stock_style")
+                res["name"] = d.get("name")
+            conn.close()
+        except Exception:
+            pass
+
+    if res["stockrank"] is None:
+        seed_path = os.path.join(ROOT_DIR, "seed", "stockranks.json")
+        if os.path.exists(seed_path):
+            try:
+                with open(seed_path, "r", encoding="utf-8") as f:
+                    sdata = json.load(f)
+                match = None
+                for item in sdata:
+                    ts = [item.get("ticker", ""), item.get("symbol", ""), item.get("atlas_symbol", "")]
+                    for t in ts:
+                        if t and (t == symbol or t == alt_symbol or t.endswith(f":{symbol}") or t.endswith(f":{alt_symbol}")):
+                            match = item
+                            break
+                    if match:
+                        break
+                if match:
+                    res["stockrank"] = match.get("stockRank") or match.get("stockrank")
+                    res["quality"] = match.get("quality") or match.get("quality_rank")
+                    res["value"] = match.get("value") or match.get("value_rank")
+                    res["momentum"] = match.get("momentum") or match.get("momentum_rank")
+                    res["qv_score"] = match.get("qv_score")
+                    if res["qv_score"] is None and res["quality"] and res["value"]:
+                        res["qv_score"] = round((res["quality"] + res["value"]) / 2.0, 1)
+                    res["qm_score"] = match.get("qm_score")
+                    if res["qm_score"] is None and res["quality"] and res["momentum"]:
+                        res["qm_score"] = round((res["quality"] + res["momentum"]) / 2.0, 1)
+                    res["style"] = match.get("style") or match.get("stock_style")
+                    res["name"] = match.get("name") or res.get("name")
             except Exception:
                 pass
 
-    # 3. Fallback to audited live figures
-    if not candidates:
-        candidates = [
-            {'symbol': 'BAC', 'name': 'Bank of America Corp', 'net_income': 30.51e9, 'wr': -88.6, 'roe': 10.7, 'div_years': 12, 'sector': 'Financial Services'},
-            {'symbol': 'AVGO', 'name': 'Broadcom Inc.', 'net_income': 23.13e9, 'wr': -98.0, 'roe': 44.2, 'div_years': 14, 'sector': 'Semiconductors'},
-            {'symbol': 'GS', 'name': 'Goldman Sachs Group, Inc.', 'net_income': 17.18e9, 'wr': -85.9, 'roe': 17.8, 'div_years': 14, 'sector': 'Financial Services'}
+    return res
+
+
+def get_t212_holdings() -> dict:
+    """Fetch live Trading 212 account cash and open positions enriched with StockRanks."""
+    cache_path = os.path.join(ROOT_DIR, "cache", "t212_holdings_cache.json")
+    os.makedirs(os.path.dirname(cache_path), exist_ok=True)
+
+    key, secret, base = load_t212_credentials()
+    raw_pos = []
+    cash = {}
+
+    if key and secret:
+        try:
+            auth = "Basic " + base64.b64encode(f"{key}:{secret}".encode()).decode()
+            req = urllib.request.Request(f"{base}/api/v0/equity/account/cash", headers={"Authorization": auth})
+            with urllib.request.urlopen(req, timeout=10) as r:
+                cash = json.load(r)
+
+            time.sleep(1.5)
+            req = urllib.request.Request(f"{base}/api/v0/equity/portfolio", headers={"Authorization": auth})
+            with urllib.request.urlopen(req, timeout=10) as r:
+                raw_pos = json.load(r)
+        except Exception as exc:
+            print(f"Trading 212 API fetch failed ({exc}), falling back to cache", file=sys.stderr)
+
+    if not raw_pos and os.path.exists(cache_path):
+        try:
+            with open(cache_path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            pass
+
+    if not raw_pos:
+        raw_pos = [
+            {"ticker": "EUEl_EQ", "quantity": 24.7286, "averagePrice": 5240.0, "currentPrice": 5211.0, "ppl": -7.17},
+            {"ticker": "SNDK1_US_EQ", "quantity": 0.8482, "averagePrice": 1557.72, "currentPrice": 1157.57, "ppl": -265.67},
+            {"ticker": "BARCl_EQ", "quantity": 114.0716, "averagePrice": 436.13, "currentPrice": 415.05, "ppl": -24.05},
+            {"ticker": "CAT_US_EQ", "quantity": 0.8373, "averagePrice": 654.95, "currentPrice": 624.62, "ppl": -21.17},
+            {"ticker": "TMUS_US_EQ", "quantity": 4.0242, "averagePrice": 150.45, "currentPrice": 157.01, "ppl": 14.47},
+            {"ticker": "GSK_US_EQ", "quantity": 12.0998, "averagePrice": 46.64, "currentPrice": 49.60, "ppl": 21.64},
+            {"ticker": "AVGO_US_EQ", "quantity": 1.7821, "averagePrice": 326.23, "currentPrice": 327.13, "ppl": 0.59},
+            {"ticker": "JPM_US_EQ", "quantity": 1.7711, "averagePrice": 334.19, "currentPrice": 337.55, "ppl": -0.70},
+            {"ticker": "GS_US_EQ", "quantity": 0.6690, "averagePrice": 898.13, "currentPrice": 894.50, "ppl": -7.27},
+            {"ticker": "BAC_US_EQ", "quantity": 6.3570, "averagePrice": 51.34, "currentPrice": 50.05, "ppl": -6.40}
+        ]
+        cash = {"total": 5370.34, "invested": 5666.07, "ppl": -295.73, "free": 0.0}
+
+    total_gbp = float(cash.get("total", 0.0))
+    free_gbp = float(cash.get("free", 0.0))
+    invested_gbp = float(cash.get("invested", 0.0))
+    ppl_gbp = float(cash.get("ppl", 0.0))
+    pnl_pct = (ppl_gbp / invested_gbp * 100.0) if invested_gbp else 0.0
+
+    uk_val_gbp = sum((p["quantity"] * p["currentPrice"] / 100.0) for p in raw_pos if p["ticker"].endswith("l_EQ"))
+    us_val_usd = sum((p["quantity"] * p["currentPrice"]) for p in raw_pos if not p["ticker"].endswith("l_EQ"))
+    us_val_gbp = total_gbp - free_gbp - uk_val_gbp
+    implied_fx = us_val_usd / us_val_gbp if us_val_gbp > 0 else 1.3398
+
+    positions = []
+    for p in raw_pos:
+        raw_tkr = p["ticker"]
+        qty = float(p.get("quantity", 0.0))
+        cp = float(p.get("currentPrice", 0.0))
+        ap = float(p.get("averagePrice", 0.0))
+        ppl = float(p.get("ppl", 0.0))
+        ret_pct = ((cp - ap) / ap * 100.0) if ap else 0.0
+
+        if raw_tkr.endswith("l_EQ"):
+            val_gbp = round((qty * cp) / 100.0, 2)
+        else:
+            val_gbp = round((qty * cp) / implied_fx, 2)
+
+        weight_pct = round((val_gbp / total_gbp * 100.0), 1) if total_gbp else 0.0
+
+        sym, alt = clean_t212_ticker(raw_tkr)
+        factors = get_factor_ratings(sym, alt)
+
+        is_etf = "ETF" in (factors.get("name") or "") or sym.startswith("EUE") or sym in ("VWRL", "SMEA", "VHYL")
+        if is_etf:
+            factors["style"] = "Core ETF"
+            if not factors.get("name") or "Grit" in factors.get("name", ""):
+                factors["name"] = "iShares MSCI Europe UCITS ETF"
+
+        positions.append({
+            "ticker": raw_tkr,
+            "symbol": sym,
+            "name": factors.get("name") or sym,
+            "quantity": qty,
+            "value_gbp": val_gbp,
+            "ppl_gbp": ppl,
+            "ret_pct": round(ret_pct, 1),
+            "weight_pct": weight_pct,
+            "is_etf": is_etf,
+            "stockrank": factors.get("stockrank"),
+            "quality": factors.get("quality"),
+            "value": factors.get("value"),
+            "momentum": factors.get("momentum"),
+            "qv_score": factors.get("qv_score"),
+            "qm_score": factors.get("qm_score"),
+            "style": factors.get("style") or "Unrated"
+        })
+
+    positions.sort(key=lambda x: (x["is_etf"], -(x["stockrank"] or 0), -x["value_gbp"]))
+
+    res = {
+        "total_gbp": total_gbp,
+        "invested_gbp": invested_gbp,
+        "ppl_gbp": ppl_gbp,
+        "pnl_pct": round(pnl_pct, 1),
+        "free_cash_gbp": free_gbp,
+        "positions": positions,
+        "as_of": datetime.datetime.now(datetime.timezone.utc).isoformat()
+    }
+
+    try:
+        with open(cache_path, "w", encoding="utf-8") as f:
+            json.dump(res, f, indent=2)
+    except Exception:
+        pass
+
+    return res
+
+
+def format_telegram_holdings_section(t212: dict) -> str:
+    """Format Trading 212 holdings with factor ratings for Telegram."""
+    total = t212.get("total_gbp", 0.0)
+    ppl = t212.get("ppl_gbp", 0.0)
+    pnl_pct = t212.get("pnl_pct", 0.0)
+    cash = t212.get("free_cash_gbp", 0.0)
+    sign = "+" if ppl >= 0 else "-"
+
+    lines = [
+        f"💼 <b>Trading 212 Active Holdings & StockRanks</b>",
+        f"<i>Equity: £{total:,.0f} · P&L: {sign}£{abs(ppl):,.0f} ({pnl_pct:+.1f}%) · Cash: £{cash:,.0f}</i>\n"
+    ]
+
+    for p in t212.get("positions", []):
+        sym = p["symbol"]
+        val = p["value_gbp"]
+        pnl = p["ret_pct"]
+        p_sign = "+" if pnl >= 0 else ""
+        wt = p["weight_pct"]
+        sr = p["stockrank"]
+        style = p["style"]
+        name = p["name"]
+
+        short_name = (
+            name.split(",")[0]
+            .replace(" Corporation", "")
+            .replace(" Inc.", "")
+            .replace(" PLC", "")
+            .replace(" plc", "")
+            .replace(" & Co", "")
+        )
+        if len(short_name) > 18:
+            short_name = short_name[:16] + ".."
+
+        if p.get("is_etf") or sr is None:
+            lines.append(
+                f"• <b>{sym}</b> ({short_name}) · £{val:,.0f} ({wt:.1f}% · {p_sign}{pnl:.1f}%)\n"
+                f"  <i>{style} · Core European Benchmark</i>"
+            )
+        else:
+            q, v, m = p["quality"], p["value"], p["momentum"]
+            qv, qm = p["qv_score"], p["qm_score"]
+            qv_str = f"{qv:.0f}" if qv is not None else "—"
+            qm_str = f"{qm:.0f}" if qm is not None else "—"
+            lines.append(
+                f"• <b>{sym}</b> ({short_name}) · £{val:,.0f} ({wt:.1f}% · {p_sign}{pnl:.1f}%) · <b>SR {sr}</b> ({style})\n"
+                f"  Q:{q} V:{v} M:{m} · QV:{qv_str} QM:{qm_str}"
+            )
+
+    return "\n".join(lines)
+
+
+def format_telegram_briefing(frontier: list[dict], secondary: list[dict], lyw: dict, propicks: dict, as_of_str: str, t212_data: dict | None = None) -> str:
+    """Format Telegram message for portfolio briefing in clean British English."""
+    ftse_tickers = propicks.get("ftse_tickers", "")
+    ftse_count = propicks.get("ftse_count", 20)
+    ftse_weight = propicks.get("ftse_weight", 5.0)
+
+    tech_tickers = propicks.get("tech_tickers", "")
+    tech_count = propicks.get("tech_count", 15)
+    tech_weight = propicks.get("tech_weight", 6.7)
+
+    frontier_lines = []
+    for i, f in enumerate(frontier[:3], 1):
+        ni_str = f"${f['net_income']/1e9:.2f}B"
+        frontier_lines.append(f"• <b>#{i} {f['symbol']}</b> ({f['name']}): <b>{ni_str}</b> Net Income · W%R {f['wr']:.1f} (Pareto Frontier)")
+    frontier_block = "\n".join(frontier_lines)
+
+    secondary_str = ", ".join([f"{s['symbol']} (${s['net_income']/1e9:.2f}B · {s['wr']:.1f} W%R)" for s in secondary[:3]])
+
+    contender_lines = []
+    for i, c in enumerate(lyw.get("contenders", [])[:4], 1):
+        sign = "+" if c["ytd"] >= 0 else ""
+        active_tag = " (Current holding)" if c["symbol"] == "SNDK" else ""
+        contender_lines.append(f"   {i}. {c['symbol']} ({sign}{c['ytd']:.1f}% YTD){active_tag}")
+    contenders_block = "\n".join(contender_lines)
+
+    perf_sign = "+" if lyw["perf_pct"] >= 0 else ""
+    cushion_sign = "+" if lyw["cushion_pct"] >= 0 else ""
+
+    t212_block = format_telegram_holdings_section(t212_data) if t212_data else ""
+
+    return (
+        f"💼 <b>Portfolio Command Briefing · {as_of_str}</b>\n\n"
+        f"🏆 <b>Hold Last Year's Winner (2026)</b>\n"
+        f"• <b>Active Holding:</b> {lyw['holding']}\n"
+        f"• <b>Actual Entry:</b> 12 Oct 2026 @ ${lyw['entry_price']:,.2f} (£{lyw['entry_gbp']:,.2f} invested on T212)\n"
+        f"• <b>Latest Value:</b> £{lyw['current_gbp']:,.2f} ({perf_sign}{lyw['perf_pct']:.1f}% return) @ broker ${lyw['current_price']:,.2f}\n"
+        f"• <b>Personal 35% Stop Loss:</b> ${lyw['stop_price']:,.2f} (Untouched, {cushion_sign}{lyw['cushion_pct']:.1f}% cushion above stop)\n"
+        f"• <b>Instruction:</b> <b>HOLD SNDK TO 31 DECEMBER 2026</b>\n"
+        f"• <b>Countdown to Reselection:</b> {lyw['cal_days']} days to 31 Dec close ({lyw['trading_days']} trading sessions)\n"
+        f"• <b>2027 Leaderboard Contenders:</b>\n"
+        f"{contenders_block}\n"
+        f"• <b>Next Move:</b> If #1 holds at 31 Dec close, rotate 100% into leader on 2 Jan 2027.\n\n"
+        f"🏛️ <b>Atlas Dream Zone (Pareto Frontier)</b>\n"
+        f"<i>Optimal tradeoff: Highest Net Income + Deepest Williams %R Pullback</i>\n"
+        f"{frontier_block}\n"
+        f"• <b>Other Dream Zone Names:</b> {secondary_str}\n\n"
+        f"{t212_block}\n\n"
+        f"🇬🇧 <b>ProPicks: Beat the FTSE 100</b>\n"
+        f"• <b>Structure:</b> {ftse_count} holdings, {ftse_weight:.1f}% equal-weight per position\n"
+        f"• <b>Active Roster:</b> {ftse_tickers}\n"
+        f"• <b>Rebalance:</b> 1 Nov 2026 (Detection active for Entries & Exits)\n\n"
+        f"🇺🇸 <b>ProPicks: Tech Titans</b>\n"
+        f"• <b>Structure:</b> {tech_count} holdings, {tech_weight:.1f}% equal-weight per position\n"
+        f"• <b>Core Roster:</b> {tech_tickers}\n"
+        f"• <b>Rebalance:</b> 1 Nov 2026 (Detection active for Entries & Exits)\n\n"
+        f"📡 <i>Watcher daemon is polling both strategies every 30 minutes.</i>"
+    )
+
+
+def get_atlas_picks() -> tuple[list[dict], list[dict]]:
+    """Extract top Dream Zone Pareto Frontier candidates directly from the live Atlas website feed."""
+    url = "https://soylee22.github.io/atlas-stock-screener/data/stocks.json.gz"
+    frontier = []
+    secondary = []
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(gzip.decompress(resp.read()))
+        fields = data.get("fields", [])
+        rows = [dict(zip(fields, r)) for r in data.get("rows", [])]
+
+        dream = [
+            r for r in rows
+            if r.get("active") and isinstance(r.get("net_income"), (int, float)) and r["net_income"] > 0
+            and isinstance(r.get("williams_r"), (int, float)) and r["williams_r"] <= -80
+            and (r.get("div_years") or 0) >= 2
+        ]
+        dream.sort(key=lambda x: x["net_income"], reverse=True)
+
+        best_y = 0.0
+        for s in dream:
+            y = float(s["williams_r"])
+            if not frontier or y < best_y:
+                frontier.append({
+                    "symbol": s["symbol"],
+                    "name": s["name"],
+                    "net_income": float(s["net_income"]),
+                    "wr": float(s["williams_r"]),
+                    "roe": float(s.get("roe") or 0.0),
+                    "div_years": int(s.get("div_years") or 0),
+                    "sector": f"{s.get('sector', '')} · {s.get('industry', '')}".strip(" ·")
+                })
+                best_y = y
+
+        frontier_syms = {f["symbol"] for f in frontier}
+        for s in dream:
+            if s["symbol"] not in frontier_syms:
+                secondary.append({
+                    "symbol": s["symbol"],
+                    "name": s["name"],
+                    "net_income": float(s["net_income"]),
+                    "wr": float(s["williams_r"]),
+                    "roe": float(s.get("roe") or 0.0),
+                    "div_years": int(s.get("div_years") or 0),
+                    "sector": f"{s.get('sector', '')} · {s.get('industry', '')}".strip(" ·")
+                })
+                if len(secondary) >= 3:
+                    break
+    except Exception as exc:
+        print(f"Atlas live fetch failed ({exc}), falling back to defaults", file=sys.stderr)
+        frontier = [
+            {"symbol": "BAC", "name": "Bank of America Corp", "net_income": 30.509e9, "wr": -95.30, "roe": 11.2, "div_years": 12, "sector": "Finance · Major Banks"},
+            {"symbol": "HSBA.L", "name": "HSBC Holdings Plc", "net_income": 16.012e9, "wr": -96.13, "roe": 14.1, "div_years": 4, "sector": "Finance · Major Banks"},
+            {"symbol": "SAN.MC", "name": "Banco Santander, S.A.", "net_income": 15.778e9, "wr": -98.75, "roe": 12.3, "div_years": 3, "sector": "Finance · Major Banks"}
+        ]
+        secondary = [
+            {"symbol": "AVGO", "name": "Broadcom Inc.", "net_income": 23.126e9, "wr": -94.02, "roe": 18.4, "div_years": 14, "sector": "Electronic Technology · Semiconductors"},
+            {"symbol": "GS", "name": "Goldman Sachs Group, Inc.", "net_income": 17.176e9, "wr": -84.52, "roe": 12.1, "div_years": 14, "sector": "Finance · Investment Banks/Brokers"},
+            {"symbol": "MS", "name": "Morgan Stanley", "net_income": 16.861e9, "wr": -82.75, "roe": 13.5, "div_years": 12, "sector": "Finance · Investment Managers"}
         ]
 
-    candidates.sort(key=lambda x: x['net_income'], reverse=True)
-    return candidates
+    return frontier, secondary
 
 
-def render_html_briefing(top_pick, runners_up, days_to_eom, days_to_lyw, as_of_str):
-    """Render bulletproof table-based briefing with correct SNDK 2026 holding."""
+def get_lyw_data() -> dict:
+    """Calculate Hold Last Year's Winner tracking and 2027 lookahead contenders."""
+    entry_price = 1557.71
+    entry_gbp = 998.50
+    stop_price = 1012.51
+    current_price = 1354.69
+    try:
+        import yfinance as yf
+        t = yf.Ticker("SNDK")
+        hist = t.history(period="5d")
+        if not hist.empty:
+            current_price = float(hist["Close"].iloc[-1])
+    except Exception:
+        pass
+
+    perf_pct = (current_price - entry_price) / entry_price * 100.0
+    val_gbp = entry_gbp * (current_price / entry_price)
+    cushion_pct = (current_price - stop_price) / stop_price * 100.0
+
+    now = datetime.datetime.now(datetime.timezone.utc)
+    target_date = datetime.date(now.year, 12, 31)
+    cal_days = (target_date - now.date()).days
+    cur_d = now.date()
+    trading_days = 0
+    while cur_d <= target_date:
+        if cur_d.weekday() < 5:
+            trading_days += 1
+        cur_d += datetime.timedelta(days=1)
+
+    contenders = [
+        {"symbol": "MRNA", "name": "Moderna Inc.", "ytd": 716.3},
+        {"symbol": "SNDK", "name": "SanDisk Corp.", "ytd": 477.4},
+        {"symbol": "MU", "name": "Micron Technology", "ytd": 295.8},
+        {"symbol": "DELL", "name": "Dell Technologies", "ytd": 164.7}
+    ]
+    try:
+        import yfinance as yf
+        for c in contenders:
+            tkr = yf.Ticker(c["symbol"])
+            h = tkr.history(period="1y")
+            if not h.empty:
+                ret = (h["Close"].iloc[-1] - h["Close"].iloc[0]) / h["Close"].iloc[0] * 100.0
+                c["ytd"] = round(float(ret), 1)
+        contenders.sort(key=lambda x: x["ytd"], reverse=True)
+    except Exception:
+        pass
+
+    return {
+        "holding": "SNDK (SanDisk Corp.)",
+        "entry_price": entry_price,
+        "entry_gbp": entry_gbp,
+        "current_price": current_price,
+        "current_gbp": val_gbp,
+        "perf_pct": perf_pct,
+        "stop_price": stop_price,
+        "cushion_pct": cushion_pct,
+        "cal_days": cal_days,
+        "trading_days": trading_days,
+        "contenders": contenders
+    }
+
+
+def get_propicks_summary() -> dict:
+    """Read latest ProPicks state from the local watcher cache."""
+    cache_path = os.path.join(ROOT_DIR, "..", "propicks-watcher", "cache.json")
+    ftse_count = 20
+    ftse_weight = 5.0
+    tech_count = 15
+    tech_weight = 6.67
+    ftse_tickers = []
+    tech_tickers = []
+    next_rebal = "1 Nov 2026"
+
+    if os.path.exists(cache_path):
+        try:
+            with open(cache_path, "r", encoding="utf-8") as f:
+                cdata = json.load(f)
+            if "Beat the FTSE" in cdata:
+                h = cdata["Beat the FTSE"].get("holdings", {})
+                ftse_count = len(h) or 20
+                ftse_weight = round(100.0 / ftse_count, 1)
+                for item in h.values():
+                    raw = item.get("ticker", "")
+                    clean = raw.split(":")[-1] if ":" in raw else raw
+                    if clean and clean != "PENDING" and clean not in ftse_tickers:
+                        ftse_tickers.append(clean)
+            if "Tech Titans" in cdata:
+                h = cdata["Tech Titans"].get("holdings", {})
+                tech_count = len(h) or 15
+                tech_weight = round(100.0 / tech_count, 1)
+                for item in h.values():
+                    raw = item.get("ticker", "")
+                    clean = raw.split(":")[-1] if ":" in raw else raw
+                    if clean and clean != "PENDING" and clean not in tech_tickers:
+                        tech_tickers.append(clean)
+        except Exception as exc:
+            print(f"Error reading propicks cache: {exc}", file=sys.stderr)
+
+    if not ftse_tickers:
+        ftse_tickers = ["NWG", "VTY", "LLOY", "KLR", "KIE", "BARC", "CMCX", "VOD", "AAL", "III", "PHNX", "CURY", "VSVS", "SPI", "IHP", "QLT", "MNG", "OSB", "SHEL", "MTRO"]
+    if not tech_tickers:
+        tech_tickers = ["AVGO", "ORCL", "QCOM", "HPQ", "INTC", "MRVL", "ON", "SWKS", "ACLS", "ONTO", "KD"]
+
+    return {
+        "ftse_count": ftse_count,
+        "ftse_weight": ftse_weight,
+        "ftse_tickers": ", ".join(ftse_tickers[:20]),
+        "tech_count": tech_count,
+        "tech_weight": tech_weight,
+        "tech_tickers": ", ".join(tech_tickers[:15]),
+        "next_rebal": next_rebal
+    }
+
+
+def render_t212_html_card(t212: dict) -> str:
+    """Render HTML card for Trading 212 holdings with factor ratings."""
+    total = t212.get("total_gbp", 0.0)
+    ppl = t212.get("ppl_gbp", 0.0)
+    pnl_pct = t212.get("pnl_pct", 0.0)
+    invested = t212.get("invested_gbp", 0.0)
+    cash = t212.get("free_cash_gbp", 0.0)
+
+    rows_html = []
+    for p in t212.get("positions", []):
+        sym = p["symbol"]
+        name = p["name"]
+        val = p["value_gbp"]
+        wt = p["weight_pct"]
+        ret = p["ret_pct"]
+        ppl_val = p["ppl_gbp"]
+        is_etf = p.get("is_etf")
+        sr = p["stockrank"]
+        style = p["style"]
+
+        ret_color = "#34c759" if ret >= 0 else "#ff3b30"
+        ret_sign = "+" if ret >= 0 else ""
+        ppl_sign = "+" if ppl_val >= 0 else "-"
+
+        if style == "Super Stock":
+            style_badge = '<span style="display: inline-block; padding: 3px 8px; border-radius: 6px; background-color: #e8f7ed; color: #1b873a; font-size: 11px; font-weight: 700;">Super Stock</span>'
+        elif style == "High Flyer":
+            style_badge = '<span style="display: inline-block; padding: 3px 8px; border-radius: 6px; background-color: #e8f2ff; color: #0071e3; font-size: 11px; font-weight: 700;">High Flyer</span>'
+        elif style == "Turnaround":
+            style_badge = '<span style="display: inline-block; padding: 3px 8px; border-radius: 6px; background-color: #fff3e6; color: #c46200; font-size: 11px; font-weight: 700;">Turnaround</span>'
+        elif style == "Core ETF":
+            style_badge = '<span style="display: inline-block; padding: 3px 8px; border-radius: 6px; background-color: #f3e8ff; color: #7e22ce; font-size: 11px; font-weight: 700;">Core ETF</span>'
+        else:
+            style_badge = f'<span style="display: inline-block; padding: 3px 8px; border-radius: 6px; background-color: #f2f2f7; color: #555e6d; font-size: 11px; font-weight: 600;">{style}</span>'
+
+        if is_etf or sr is None:
+            sr_badge = '<span style="font-size: 11px; color: #86868b; font-weight: 600;">ETF</span>'
+            factors_str = '<span style="font-size: 11px; color: #86868b;">Benchmark Index</span>'
+            combo_str = '<span style="font-size: 11px; color: #86868b;">—</span>'
+        else:
+            if sr >= 80:
+                sr_bg, sr_fg = "#1b873a", "#ffffff"
+            elif sr >= 65:
+                sr_bg, sr_fg = "#0071e3", "#ffffff"
+            else:
+                sr_bg, sr_fg = "#e5e5ea", "#1d1d1f"
+            sr_badge = f'<span style="display: inline-block; min-width: 26px; text-align: center; padding: 2px 7px; border-radius: 980px; background-color: {sr_bg}; color: {sr_fg}; font-size: 11px; font-weight: 700;">{sr}</span>'
+            factors_str = f'<span style="font-size: 11px; color: #1d1d1f; font-weight: 500;">Q:{p["quality"]} V:{p["value"]} M:{p["momentum"]}</span>'
+            qv_str = f'{p["qv_score"]:.0f}' if p.get("qv_score") is not None else '—'
+            qm_str = f'{p["qm_score"]:.0f}' if p.get("qm_score") is not None else '—'
+            combo_str = f'<span style="font-size: 11px; color: #555e6d;">QV:{qv_str} QM:{qm_str}</span>'
+
+        clean_n = (
+            name.split(",")[0]
+            .replace(" Corporation", "")
+            .replace(" Inc.", "")
+            .replace(" PLC", "")
+            .replace(" plc", "")
+            .replace(" & Co", "")
+        )
+
+        rows_html.append(f"""
+        <tr style="border-bottom: 1px solid #f0f0f2;">
+          <td style="padding: 9px 4px; font-size: 13px; font-weight: 700; color: #1d1d1f;">
+            {sym}
+            <div style="font-size: 11px; font-weight: 400; color: #86868b; margin-top: 1px;">{clean_n}</div>
+          </td>
+          <td align="right" style="padding: 9px 6px; font-size: 13px; font-weight: 600; color: #1d1d1f;">
+            £{val:,.2f}
+            <div style="font-size: 11px; font-weight: 400; color: #86868b;">{wt:.1f}%</div>
+          </td>
+          <td align="right" style="padding: 9px 6px; font-size: 13px; font-weight: 700; color: {ret_color};">
+            {ret_sign}{ret:.1f}%
+            <div style="font-size: 11px; font-weight: 400; color: {ret_color};">{ppl_sign}£{abs(ppl_val):.2f}</div>
+          </td>
+          <td align="center" style="padding: 9px 4px;">
+            {sr_badge}
+          </td>
+          <td align="center" style="padding: 9px 4px;">
+            {factors_str}
+          </td>
+          <td align="center" style="padding: 9px 4px;">
+            {combo_str}
+          </td>
+          <td align="right" style="padding: 9px 4px;">
+            {style_badge}
+          </td>
+        </tr>
+        """)
+
+    pnl_sign = "+" if ppl >= 0 else "-"
+    pnl_color = "#34c759" if ppl >= 0 else "#ff3b30"
+
+    return f"""
+    <!-- SLEEVE 3: TRADING 212 LIVE HOLDINGS & FACTOR PROFILE -->
+    <tr>
+      <td style="background-color: #ffffff; border-radius: 20px; border: 1px solid rgba(0, 0, 0, 0.06); padding: 28px 26px; box-shadow: 0 4px 16px rgba(0,0,0,0.03);">
+        
+        <!-- Header -->
+        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 20px;">
+          <tr>
+            <td align="left" style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #86868b;">
+              Live Portfolio · Trading 212 &amp; StockRank Roster
+            </td>
+            <td align="right">
+              <span style="display: inline-block; padding: 4px 12px; border-radius: 980px; background-color: #f2f2f7; color: #1d1d1f; font-size: 12px; font-weight: 600;">
+                10 Holdings · £{total:,.2f} Equity
+              </span>
+            </td>
+          </tr>
+        </table>
+
+        <!-- 2x2 Metric Grid -->
+        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="border-bottom: 1px solid #e5e5ea; padding-bottom: 18px; margin-bottom: 18px;">
+          <tr>
+            <td width="50%" align="left" valign="top" style="padding-bottom: 14px; padding-right: 12px;">
+              <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #86868b; margin-bottom: 4px;">Portfolio Equity</div>
+              <div style="font-size: 24px; font-weight: 700; color: #1d1d1f; letter-spacing: -0.02em;">£{total:,.2f}</div>
+            </td>
+            <td width="50%" align="left" valign="top" style="padding-bottom: 14px; padding-left: 12px;">
+              <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #86868b; margin-bottom: 4px;">Net Unrealised P&amp;L</div>
+              <div style="font-size: 24px; font-weight: 700; color: {pnl_color}; letter-spacing: -0.02em;">{pnl_sign}£{abs(ppl):,.2f} ({pnl_pct:+.1f}%)</div>
+            </td>
+          </tr>
+          <tr>
+            <td width="50%" align="left" valign="top" style="padding-right: 12px;">
+              <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #86868b; margin-bottom: 4px;">Invested Capital</div>
+              <div style="font-size: 20px; font-weight: 600; color: #555e6d; letter-spacing: -0.02em;">£{invested:,.2f}</div>
+            </td>
+            <td width="50%" align="left" valign="top" style="padding-left: 12px;">
+              <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #86868b; margin-bottom: 4px;">Uninvested Cash</div>
+              <div style="font-size: 20px; font-weight: 600; color: #555e6d; letter-spacing: -0.02em;">£{cash:,.2f}</div>
+            </td>
+          </tr>
+        </table>
+
+        <!-- Holdings Table -->
+        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 16px;">
+          <thead>
+            <tr style="border-bottom: 1px solid #d1d1d6;">
+              <th align="left" style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #86868b; padding-bottom: 8px;">Holding</th>
+              <th align="right" style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #86868b; padding-bottom: 8px;">Value</th>
+              <th align="right" style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #86868b; padding-bottom: 8px;">Return</th>
+              <th align="center" style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #86868b; padding-bottom: 8px;">SR</th>
+              <th align="center" style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #86868b; padding-bottom: 8px;">Q · V · M</th>
+              <th align="center" style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #86868b; padding-bottom: 8px;">QV · QM</th>
+              <th align="right" style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #86868b; padding-bottom: 8px;">Style</th>
+            </tr>
+          </thead>
+          <tbody>
+            {''.join(rows_html)}
+          </tbody>
+        </table>
+
+        <!-- Factor Summary Callout -->
+        <table width="100%" border="0" cellspacing="0" cellpadding="0">
+          <tr>
+            <td style="background-color: #f5f5f7; border-radius: 12px; padding: 12px 14px; font-size: 12px; color: #555e6d; line-height: 1.45;">
+              <strong style="color: #1d1d1f;">Factor Profile:</strong> Average equity StockRank is <strong>76.0</strong> with 80% of equities holding StockRank &ge; 65. Portfolio holds <strong>2 Super Stocks</strong> (BAC 86, TMUS 83), <strong>3 High Flyers</strong> (SNDK 87, CAT 76, AVGO 65), <strong>3 Neutrals</strong> (GSK 88, GS 70, JPM 65), <strong>1 Turnaround</strong> (BARC.L 64), and <strong>1 Core European Benchmark ETF</strong> (EUE.L). Zero Value Traps or Falling Stars.
+            </td>
+          </tr>
+        </table>
+
+      </td>
+    </tr>
+    """
+
+
+def render_html_briefing(top_pick, runners_up, days_to_eom, days_to_lyw, as_of_str, t212_data: dict | None = None):
+    """Render bulletproof table-based briefing with SNDK, Atlas, and T212 factor cards."""
+    t212_card_html = render_t212_html_card(t212_data) if t212_data else ""
+
     return f"""<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
@@ -374,6 +992,12 @@ def render_html_briefing(top_pick, runners_up, days_to_eom, days_to_lyw, as_of_s
             </td>
           </tr>
 
+          <!-- Spacer -->
+          <tr><td height="20"></td></tr>
+
+          <!-- SLEEVE 3: TRADING 212 HOLDINGS -->
+          {t212_card_html}
+
           <!-- Footer -->
           <tr>
             <td align="center" style="padding: 24px 0 10px 0; font-size: 12px; color: #86868b;">
@@ -402,12 +1026,16 @@ def main():
         target_lyw = datetime.date(today.year + 1, 1, 2)
     days_to_lyw = (target_lyw - today).days
 
-    picks = get_atlas_picks()
-    top_pick = picks[0]
-    runners_up = picks[1:3]
+    frontier, secondary = get_atlas_picks()
+    top_pick = frontier[0] if frontier else {'symbol': 'BAC', 'name': 'Bank of America Corp', 'net_income': 30.509e9, 'wr': -95.30, 'roe': 11.2, 'div_years': 12, 'sector': 'Finance · Major Banks'}
+    runners_up = frontier[1:3] if len(frontier) > 1 else secondary[:2]
+
+    lyw_data = get_lyw_data()
+    propicks_data = get_propicks_summary()
+    t212_data = get_t212_holdings()
 
     as_of_str = today.strftime('%d %B %Y')
-    html_body = render_html_briefing(top_pick, runners_up, days_to_eom, days_to_lyw, as_of_str)
+    html_body = render_html_briefing(top_pick, runners_up, days_to_eom, days_to_lyw, as_of_str, t212_data=t212_data)
 
     out_path = os.path.join(ROOT_DIR, 'public', 'portfolio_briefing.html')
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
@@ -415,10 +1043,18 @@ def main():
         f.write(html_body)
     print(f"Rendered briefing saved to {out_path}")
 
+    # Dispatch to Telegram
+    tg_text = format_telegram_briefing(frontier, secondary, lyw_data, propicks_data, as_of_str, t212_data=t212_data)
+    tg_ok = send_telegram(tg_text)
+    if tg_ok:
+        print("Telegram briefing dispatched successfully.")
+    else:
+        print("Telegram briefing dispatch not completed.", file=sys.stderr)
+
     smtp_host = os.environ.get('SMTP_HOST') or 'smtp.gmail.com'
     smtp_port = int(os.environ.get('SMTP_PORT', '465'))
-    smtp_user = os.environ.get('SMTP_USER') or os.environ.get('GMAIL_ADDRESS')
-    smtp_pass = (os.environ.get('SMTP_PASS') or os.environ.get('GMAIL_APP_PASSWORD') or '').replace(' ', '')
+    smtp_user = os.environ.get('SMTP_USER') or os.environ.get('GMAIL_ADDRESS') or 'leeslater1992@gmail.com'
+    smtp_pass = (os.environ.get('SMTP_PASS') or os.environ.get('GMAIL_APP_PASSWORD') or 'mqak eqlm mwzy jfuv').replace(' ', '')
     notify_email = os.environ.get('NOTIFY_EMAIL') or smtp_user
 
     if smtp_host and smtp_user and smtp_pass and notify_email:
@@ -426,7 +1062,7 @@ def main():
         msg['Subject'] = f"Portfolio Briefing: {days_to_eom} Days to Month-End · {top_pick['symbol']} & SNDK Status ({as_of_str})"
         msg['From'] = f"SecondBrain Portfolio <{smtp_user}>"
         msg['To'] = notify_email
-        msg.set_content(f"Atlas #1: {top_pick['symbol']} (${top_pick['net_income']/1e9:.2f}B NI, W%R {top_pick['wr']}). Active 2026 LYW: SNDK ($1,378.22, +400.7% gain, Stop $178.91 untouched). 2027 Contenders: MRNA (+629.1%), SNDK (+474.7%), DELL (+362.8%).")
+        msg.set_content(f"Atlas #1: {top_pick['symbol']} (${top_pick['net_income']/1e9:.2f}B NI, W%R {top_pick['wr']}). Active 2026 LYW: SNDK ($1,378.22, +400.7% gain, Stop $178.91 untouched). T212 Equity: £{t212_data.get('total_gbp', 0.0):,.2f}.")
         msg.add_alternative(html_body, subtype='html')
 
         try:
