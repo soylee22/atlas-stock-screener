@@ -151,6 +151,7 @@ jobs:
           python cloud_refresh.py --part history --seconds "$REFRESH_SECONDS"
       - name: Build public site
         run: |
+          python seed_stockranks.py
           python build_site.py --output public --compress-details --compress-data --seed public/data/cache-seed.tar.gz
       - name: Preserve refreshed data
         if: ${{ always() && steps.bootstrap-policy.outcome == 'success' }}
