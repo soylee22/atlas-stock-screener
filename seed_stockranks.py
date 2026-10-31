@@ -24,24 +24,41 @@ def seed_stockranks(database: Path = DB_PATH, ranks_path: Path = RANKS_PATH) -> 
         sr_data = json.load(f)
 
     sr_map = {}
+    suffix_map = {
+        "LON": ".L",
+        "TYO": ".T",
+        "KRX": ".KS",
+        "KOSDAQ": ".KQ",
+        "TPE": ".TW",
+        "TSE": ".TO",
+        "TOR": ".TO",
+        "EPA": ".PA",
+        "ETR": ".DE",
+        "AMS": ".AS",
+        "SWX": ".SW",
+        "MCE": ".MC",
+        "STO": ".ST",
+        "CPH": ".CO",
+        "BIT": ".MI",
+    }
     for s in sr_data:
-        t = s.get("ticker", "")
-        if ":" in t:
-            ex, code = t.split(":", 1)
-            code_clean = code.replace(".", "")
-            sr_map[code] = s
-            sr_map[code_clean] = s
-            if ex == "LON" or s.get("country") == "GB":
-                sr_map[code + ".L"] = s
-                sr_map[code_clean + ".L"] = s
-        if "raw_ticker" in s and ":" in s["raw_ticker"]:
-            ex2, code2 = s["raw_ticker"].split(":", 1)
-            code2_clean = code2.replace(".", "").replace("-", "")
-            sr_map[code2] = s
-            sr_map[code2_clean] = s
-            if ex2 == "LON" or s.get("country") == "GB":
-                sr_map[code2 + ".L"] = s
-                sr_map[code2_clean + ".L"] = s
+        if s.get("atlas_symbol"):
+            sr_map[s["atlas_symbol"]] = s
+            sr_map[s["atlas_symbol"].split(".")[0]] = s
+
+        for field in ("ticker", "raw_ticker"):
+            val = s.get(field, "")
+            if ":" in val:
+                ex, code = val.split(":", 1)
+                code_clean = code.replace(".", "")
+                sr_map[code] = s
+                sr_map[code_clean] = s
+                if ex in suffix_map:
+                    sr_map[code + suffix_map[ex]] = s
+                    sr_map[code_clean + suffix_map[ex]] = s
+                if s.get("country") == "GB":
+                    sr_map[code + ".L"] = s
+                    sr_map[code_clean + ".L"] = s
 
     conn = sqlite3.connect(database)
     cursor = conn.cursor()
