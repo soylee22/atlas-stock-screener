@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-10-31T09:50:51.255778+00:00",
+  "last_updated": "2026-10-31T09:55:02.769878+00:00",
   "history": [
     {
       "date": "2026-10-30",
@@ -85,6 +85,93 @@
           "qv": 53.0,
           "qm": 50.0,
           "style": "Turnaround"
+        }
+      }
+    },
+    {
+      "date": "2026-10-31",
+      "timestamp": "2026-10-31T09:55:02.769878+00:00",
+      "scores": {
+        "BARC.L": {
+          "stockrank": 64,
+          "quality": 28,
+          "value": 78,
+          "momentum": 72,
+          "qv": 53.0,
+          "qm": 50.0,
+          "style": "Turnaround"
+        },
+        "CAT": {
+          "stockrank": 76,
+          "quality": 95,
+          "value": 21,
+          "momentum": 89,
+          "qv": 58.0,
+          "qm": 92.0,
+          "style": "High Flyer"
+        },
+        "TMUS": {
+          "stockrank": 83,
+          "quality": 76,
+          "value": 72,
+          "momentum": 68,
+          "qv": 74.0,
+          "qm": 72.0,
+          "style": "Super Stock"
+        },
+        "GSK": {
+          "stockrank": 88,
+          "quality": 92,
+          "value": 45,
+          "momentum": 79,
+          "qv": 68.5,
+          "qm": 85.5,
+          "style": "Neutral"
+        },
+        "AVGO": {
+          "stockrank": 65,
+          "quality": 99,
+          "value": 12,
+          "momentum": 75,
+          "qv": 55.5,
+          "qm": 87.0,
+          "style": "High Flyer"
+        },
+        "JPM": {
+          "stockrank": 65,
+          "quality": 47,
+          "value": 52,
+          "momentum": 86,
+          "qv": 49.5,
+          "qm": 66.5,
+          "style": "Neutral"
+        },
+        "GS": {
+          "stockrank": 70,
+          "quality": 44,
+          "value": 62,
+          "momentum": 89,
+          "qv": 53.0,
+          "qm": 66.5,
+          "style": "Neutral"
+        },
+        "BAC": {
+          "stockrank": 86,
+          "quality": 63,
+          "value": 82,
+          "momentum": 77,
+          "qv": 72.5,
+          "qm": 70.0,
+          "style": "Super Stock"
+        },
+        "SNDK": {
+          "stockrank": 87,
+          "quality": 84,
+          "value": 42,
+          "momentum": 98,
+          "qv": 63.0,
+          "qm": 91.0,
+          "style": "High Flyer"
         }
       }
     }
