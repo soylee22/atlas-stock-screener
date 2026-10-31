@@ -174,8 +174,18 @@ export function createQuadrant(root, { fields, defaults=quadrantDefaults, noun='
     hovered=nearest; const tip=el('quad-tooltip');tip.hidden=!nearest;el('quad-canvas').style.cursor=nearest?'pointer':'grab';
     if(!nearest)return;
     const p=nearest,periods=[p.row.income_period,p.row.cf_period,p.row.fcf_growth_period,p.row[metricPeriodKey(options.x)],p.row[metricPeriodKey(options.y)]].filter(Boolean);
-    tip.innerHTML=`<strong>${esc(p.row.symbol)}</strong><span>${esc(p.row.name)}</span><dl><dt>${esc(fields[options.x].label)}</dt><dd>${format(p.x,fields[options.x])}</dd><dt>${esc(fields[options.y].label)}</dt><dd>${format(p.y,fields[options.y])}</dd></dl><b style="color:${ZONES[p.zone].colour}">${ZONES[p.zone].name}${p.pareto?' · Pareto frontier':''}</b><small>${esc([...new Set(periods)].join(' · '))}</small><small>Click for listing deep dive</small>`;
-    tip.style.left=Math.max(8,Math.min(x+16,rect.width-300))+'px';tip.style.top=Math.max(8,Math.min(y+16,rect.height-230))+'px';
+    const sr = p.row.stockrank;
+    let factorHtml = '';
+    if (sr != null) {
+      const q = p.row.quality_rank ?? '—', v = p.row.value_rank ?? '—', m = p.row.momentum_rank ?? '—';
+      const qv = p.row.qv_score != null ? (p.row.qv_score % 1 === 0 ? p.row.qv_score : p.row.qv_score.toFixed(1)) : '—';
+      const qm = p.row.qm_score != null ? (p.row.qm_score % 1 === 0 ? p.row.qm_score : p.row.qm_score.toFixed(1)) : '—';
+      const style = p.row.stock_style || '';
+      factorHtml = `<div class="quad-factor-badge"><div class="quad-factor-head"><span class="quad-factor-sr">StockRank ${sr}</span><span class="quad-factor-style">${esc(style)}</span></div><div class="quad-factor-grid"><div><div class="quad-factor-col-label">Q</div><b>${q}</b></div><div><div class="quad-factor-col-label">V</div><b>${v}</b></div><div><div class="quad-factor-col-label">M</div><b>${m}</b></div><div><div class="quad-factor-col-label">QV</div><b>${qv}</b></div><div><div class="quad-factor-col-label">QM</div><b>${qm}</b></div></div></div>`;
+    }
+    tip.innerHTML=`<strong>${esc(p.row.symbol)}</strong><span>${esc(p.row.name)}</span><dl><dt>${esc(fields[options.x].label)}</dt><dd>${format(p.x,fields[options.x])}</dd><dt>${esc(fields[options.y].label)}</dt><dd>${format(p.y,fields[options.y])}</dd></dl>${factorHtml}<b style="color:${ZONES[p.zone].colour}">${ZONES[p.zone].name}${p.pareto?' · Pareto frontier':''}</b><small>${esc([...new Set(periods)].join(' · '))}</small><small>Click for listing deep dive</small>`;
+    const tipH = sr != null ? 315 : 230;
+    tip.style.left=Math.max(8,Math.min(x+16,rect.width-300))+'px';tip.style.top=Math.max(8,Math.min(y+16,rect.height-tipH))+'px';
   }
   const canvas=el('quad-canvas');
   const local=e=>{const r=canvas.getBoundingClientRect();return {x:e.clientX-r.left,y:e.clientY-r.top};};

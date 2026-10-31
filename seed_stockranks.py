@@ -27,15 +27,21 @@ def seed_stockranks(database: Path = DB_PATH, ranks_path: Path = RANKS_PATH) -> 
     for s in sr_data:
         t = s.get("ticker", "")
         if ":" in t:
-            code = t.split(":")[1].replace(".", "")
+            ex, code = t.split(":", 1)
+            code_clean = code.replace(".", "")
             sr_map[code] = s
-            if s.get("country") == "GB":
+            sr_map[code_clean] = s
+            if ex == "LON" or s.get("country") == "GB":
                 sr_map[code + ".L"] = s
+                sr_map[code_clean + ".L"] = s
         if "raw_ticker" in s and ":" in s["raw_ticker"]:
-            code2 = s["raw_ticker"].split(":")[1].replace(".", "").replace("-", "")
+            ex2, code2 = s["raw_ticker"].split(":", 1)
+            code2_clean = code2.replace(".", "").replace("-", "")
             sr_map[code2] = s
-            if s.get("country") == "GB":
+            sr_map[code2_clean] = s
+            if ex2 == "LON" or s.get("country") == "GB":
                 sr_map[code2 + ".L"] = s
+                sr_map[code2_clean + ".L"] = s
 
     conn = sqlite3.connect(database)
     cursor = conn.cursor()

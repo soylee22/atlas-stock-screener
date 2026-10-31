@@ -1234,6 +1234,7 @@ def chart(x: str = "net_income", y: str = "div_years", search: str = "", regions
         raise HTTPException(400, str(exc)) from exc
     keys = sorted({"symbol", "name", "region", "region_code", "sector", "industry", "exchange",
                    "income_period", "cf_period", "fcf_growth_period", "financial_fetched", "quote_time", x, y,
+                   "stockrank", "quality_rank", "value_rank", "momentum_rank", "qm_score", "qv_score", "stock_style",
                    "williams_monthly_version", "williams_monthly_reason", "williams_monthly_asof", "williams_monthly_zone", "williams_monthly_provisional", "williams_monthly_source_note", "technical_asof", "technical_calendar", "williams_source_note", "williams_provisional", "williams_asof", "williams_zone", "williams_version", "eps_version", "eps_fetched", "eps_currency", "dividend_quality_fetched", "fcf_payout_basis", *[key.removesuffix("_distance") + "_period" for key in (x, y) if key in GROWTH_KEYS or key in CAPITAL_KEYS or key in DIVIDEND_QUALITY_KEYS or key in {"eps_diluted", "williams_r", "williams_monthly_r"} or key.startswith("sma_")]})
     # Project only plot fields and paired values. Do not load every dividend event or description.
     projection = "json_object(" + ",".join(f"'{key}',json_extract(data,'$.{key}')" for key in keys) + ")"
