@@ -4261,10 +4261,11 @@ function glyph(key){
         {v: sgn(y.strategy), cls: "k"},
         sgn(y.benchmark),
         {v: sgnpp(y.excess), cls: y.excess >= 0 ? "pos-val" : "neg-val"},
-        {v: y.strategy > y.benchmark ? "Outperformed" : "Underperformed", cls: y.strategy > y.benchmark ? "pos-val" : "neg-val"}
+        {v: "£" + (y.wealth ? Number(y.wealth).toLocaleString() : "—"), cls: "k"},
+        {v: "£" + (y.benchmarkWealth ? Number(y.benchmarkWealth).toLocaleString() : "—"), cls: ""}
       ];
     });
-    buildTable($("#tblDotcom"), ["Year", "Lodestar World", "MSCI World Core", "Excess Return", "Outcome"], dcRows);
+    buildTable($("#tblDotcom"), ["Year", "Lodestar World", "MSCI World Core", "Excess Alpha", "Lodestar Balance (£10k)", "MSCI World Balance (£10k)"], dcRows);
   }
 
   // ── 2. LYW Live Position & Contenders ──
@@ -4326,7 +4327,7 @@ function glyph(key){
     // Render LYW 29-Year Archive
     if (DATA.lyw.archive){
       var lywRows = DATA.lyw.archive.map(function(a){
-        var statusStr = a.stopped ? "Stopped (-35.0%)" : "Full Year Runner";
+        var statusStr = a.stopped ? "Stopped (-35.0%)" : "Full Runner";
         return [
           String(a.year),
           {v: a.ticker + " (" + a.name + ")", cls: "k"},
@@ -4335,12 +4336,12 @@ function glyph(key){
           sgn(a.benchmarkReturn),
           {v: sgnpp(a.excess), cls: a.excess >= 0 ? "pos-val" : "neg-val"},
           {v: statusStr, cls: a.stopped ? "neg-val" : "pos-val"},
-          a.entryPrice ? "$" + a.entryPrice.toFixed(2) : "—",
-          a.exitPrice ? "$" + a.exitPrice.toFixed(2) : "—"
+          {v: "$" + (a.wealth ? Number(a.wealth).toLocaleString() : "—"), cls: "k font-bold"},
+          {v: "$" + (a.benchmarkWealth ? Number(a.benchmarkWealth).toLocaleString() : "—"), cls: ""}
         ];
       });
       buildTable($("#tblLywArchive"),
-        ["Year", "Held Stock", "Prior Win Score", "Strategy Return", "S&P 500 Return", "Excess Alpha", "Stop Outcome", "Entry Price", "Exit Price"],
+        ["Year", "Held Stock", "Prior Win Score", "LYW Return", "SPY Return", "Excess Alpha", "Stop Outcome", "LYW Balance ($10k)", "SPY Balance ($10k)"],
         lywRows);
     }
   }
