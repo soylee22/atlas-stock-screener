@@ -201,6 +201,14 @@ def build_site(database, output, seed=None, compress_details=False, compress_dat
         optimal_html = (model.ROOT / 'static' / 'optimal.html').read_text().replace('href="/', 'href="./').replace('src="/', 'src="./')
         optimal_html = optimal_html.replace('./static/', f'./static/{version}/')
         (output / 'optimal.html').write_text(optimal_html)
+    if (model.ROOT / 'static' / 'lodestar.html').is_file():
+        lodestar_html = (model.ROOT / 'static' / 'lodestar.html').read_text().replace('href="/', 'href="./').replace('src="/', 'src="./')
+        lodestar_html = lodestar_html.replace('./static/', f'./static/{version}/')
+        (output / 'lodestar.html').write_text(lodestar_html)
+    if (model.ROOT / 'assets').is_dir():
+        if (output / 'assets').exists():
+            shutil.rmtree(output / 'assets')
+        shutil.copytree(model.ROOT / 'assets', output / 'assets')
     auth_html=(model.ROOT / 'static' / 'auth-callback.html').read_text().replace('./static/',f'./static/{version}/')
     (output / 'auth-callback.html').write_text(auth_html)
     (output / ".nojekyll").write_text("")

@@ -1141,6 +1141,8 @@ async def lifespan(app):
 
 app = FastAPI(title="Atlas stock screener", lifespan=lifespan)
 app.mount("/static", StaticFiles(directory=ROOT / "static"), name="static")
+if (ROOT / "assets").is_dir():
+    app.mount("/assets", StaticFiles(directory=ROOT / "assets"), name="assets")
 app.mount("/etf-data", StaticFiles(directory=ROOT / "data" / "etf-public", check_dir=False), name="etf-data")
 app.mount("/logos", StaticFiles(directory=logos.root), name="logos")
 
@@ -1168,6 +1170,11 @@ def winner_index():
 @app.get("/optimal.html")
 def optimal_index():
     return FileResponse(ROOT / "static" / "optimal.html")
+
+
+@app.get("/lodestar.html")
+def lodestar_index():
+    return FileResponse(ROOT / "static" / "lodestar.html")
 
 
 @app.get("/api/schema")
