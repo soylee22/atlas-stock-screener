@@ -1378,6 +1378,88 @@ html{scroll-behavior:smooth; scroll-padding-top:72px}
   color: var(--s1);
 }
 
+/* ── Contenders YTD Surge Multi-Line Chart ─────────────────────────── */
+.contenders-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.contenders-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--rule);
+  background: var(--surface);
+  color: var(--ink-2);
+  font-size: 11.5px;
+  font-family: var(--sans);
+  cursor: pointer;
+  transition: all .15s ease;
+  user-select: none;
+}
+.contenders-pill:hover {
+  background: var(--surface-sunk);
+  color: var(--ink);
+  border-color: var(--rule-2);
+}
+.contenders-pill.active {
+  background: var(--paper-2);
+  border-color: var(--ink);
+  color: var(--ink);
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+.contenders-pill-logo {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #fff;
+  border: 1px solid rgba(0,0,0,0.1);
+}
+.contenders-tooltip {
+  background: var(--surface);
+  border: 1px solid var(--rule-2);
+  border-radius: 8px;
+  box-shadow: 0 10px 28px rgba(0,0,0,0.14);
+  padding: 12px 16px;
+  font-family: var(--sans);
+  min-width: 250px;
+  transition: opacity .1s ease;
+}
+.contenders-tooltip-hd {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: 6px;
+  margin-bottom: 8px;
+  display: flex;
+  justify-content: space-between;
+}
+.contenders-tooltip-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+  padding-block: 3px;
+}
+.contenders-tooltip-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink);
+  font-weight: 500;
+}
+.contenders-tooltip-val {
+  font-family: var(--mono);
+  font-weight: 700;
+}
+
 
 /* Atlas global universe navigation bar */
 .atlas-topbar{
@@ -2158,6 +2240,21 @@ html{scroll-behavior:smooth; scroll-padding-top:72px}
           <span style="color:var(--muted)">Distance to #1:</span>
           <strong style="font-family:var(--mono);color:var(--muted)">-551.6% Gap</strong>
         </div>
+      </div>
+    </div>
+
+    <!-- 2026 Contenders Performance Surge Multi-Line Chart -->
+    <div class="card rise" style="margin-bottom:24px">
+      <div class="card-hd" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:14px">
+        <div>
+          <div class="ttl">The 2026 Performance Surge · Race for Next Year's Winner</div>
+          <div class="sub">Daily normalized percentage return from 2 January 2026 base. Top 5 contenders with live logo badges vs S&amp;P 500 benchmark.</div>
+        </div>
+        <div id="chartContendersLegend" class="contenders-legend"></div>
+      </div>
+      <div class="card-bd" style="padding-inline:14px;padding-block:16px;position:relative">
+        <div id="contendersChartContainer" style="width:100%;min-height:460px;position:relative"></div>
+        <div id="contendersTooltip" class="contenders-tooltip" style="display:none;position:absolute;pointer-events:none;z-index:50"></div>
       </div>
     </div>
 
@@ -4160,6 +4257,7 @@ function glyph(key){
 
   var tabs = [tabLodestar, tabLyw, tabCombined];
   var views = [viewLodestar, viewLyw, viewCombined];
+  var renderContendersChart = null;
 
   function switchStrategy(targetId){
     views.forEach(function(v){
@@ -4179,6 +4277,7 @@ function glyph(key){
     } else if (targetId === "viewLyw"){
       history.replaceState(null, "", "#lyw");
       document.title = "Last Year's Winner — S&P 500 #1 Momentum & 35% Stop";
+      if (typeof renderContendersChart === "function") setTimeout(renderContendersChart, 20);
     } else if (targetId === "viewCombined"){
       history.replaceState(null, "", "#combined");
       document.title = "50/50 Dual Engine — Lodestar World + Last Year's Winner";
@@ -4221,8 +4320,15 @@ function glyph(key){
     rows.forEach(function(r){
       var x = el("tr");
       r.forEach(function(c, i){
-        var td = el("td", {class: c && c.cls ? c.cls : (i === 1 ? "k" : "")},
-                    c && c.v !== undefined ? c.v : c);
+        var cls = c && c.cls ? c.cls : (i === 1 ? "k" : "");
+        var td = el("td", {class: cls});
+        if (c && c.html !== undefined){
+          td.innerHTML = c.html;
+        } else if (c && c.v !== undefined){
+          td.textContent = c.v;
+        } else {
+          td.textContent = (c != null ? c : "");
+        }
         x.appendChild(td);
       });
       tb.appendChild(x);
@@ -4308,21 +4414,359 @@ function glyph(key){
       if (pBroker) pBroker.textContent = lp.broker;
     }
 
-    // Render Contenders
+    // Render Top 4 Contender Cards Dynamically
+    var cardsBox = $("#cardsLeaderboard2027");
+    if (cardsBox && DATA.lyw.race2027 && DATA.lyw.race2027.length >= 4){
+      cardsBox.innerHTML = "";
+      DATA.lyw.race2027.slice(0, 4).forEach(function(c){
+        var isLeader = (c.rank === 1);
+        var isHolder = (c.ticker === "SNDK");
+        var cardDiv = el("div", {
+          class: "engine-card",
+          style: (isLeader ? "border:2px solid var(--s1);background:var(--surface-sunk);" : "") + "display:flex;flex-direction:column;justify-content:space-between"
+        });
+        var tagBg = isLeader ? "var(--s1)" : (isHolder ? "rgba(42,120,214,0.12)" : "var(--surface-sunk)");
+        var tagColor = isLeader ? "#fff" : (isHolder ? "var(--s1)" : "var(--muted)");
+        var retColor = isLeader ? "var(--s1)" : "var(--pos-ink)";
+        var logoImg = c.logo ? '<img src="' + c.logo + '" class="contenders-pill-logo" style="width:28px;height:28px;margin-right:10px;vertical-align:middle;border-radius:50%;object-fit:cover;border:1px solid var(--rule-2);background:#fff" alt="' + c.ticker + '" onerror="this.hidden=true">' : '';
+
+        cardDiv.innerHTML = '<div>' +
+          '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">' +
+            '<span class="badge-tag proj" style="background:' + tagBg + ';color:' + tagColor + '">' + c.status + '</span>' +
+            '<span style="font-family:var(--mono);font-size:12px;font-weight:700;color:' + retColor + '">+' + c.ytd.toFixed(1) + '% YTD</span>' +
+          '</div>' +
+          '<div style="display:flex;align-items:center;gap:4px">' +
+            logoImg +
+            '<div>' +
+              '<div style="font-size:24px;font-weight:800;color:var(--ink);letter-spacing:-.02em;line-height:1.1">' + c.ticker + '</div>' +
+              '<div style="font-size:12px;color:var(--muted);font-weight:500">' + c.name + '</div>' +
+            '</div>' +
+          '</div>' +
+          '<p style="font-size:12px;color:var(--ink-2);line-height:1.52;margin-top:12px">' + c.desc + '</p>' +
+        '</div>' +
+        '<div style="margin-top:14px;padding-top:10px;border-top:1px solid var(--rule);display:flex;justify-content:space-between;align-items:center;font-size:11.5px">' +
+          '<span style="color:var(--muted)">' + (isLeader ? "Rotation Action:" : (isHolder ? "Current Status:" : "Distance to #1:")) + '</span>' +
+          '<strong style="' + (isLeader ? "color:var(--s1)" : (isHolder ? "color:var(--pos-ink)" : "font-family:var(--mono);color:var(--muted)")) + '">' + c.action + '</strong>' +
+        '</div>';
+        cardsBox.appendChild(cardDiv);
+      });
+    }
+
+    // Render Full Contenders Table with Logos
     if (DATA.lyw.race2027){
       var cRows = DATA.lyw.race2027.map(function(c){
         var isHolder = (c.ticker === "SNDK");
+        var logoImg = c.logo ? '<img src="' + c.logo + '" style="width:20px;height:20px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-right:8px;border:1px solid var(--rule-2);background:#fff" onerror="this.hidden=true">' : '';
         return [
           {v: "#" + c.rank, cls: isHolder ? "k pos-val" : "k"},
-          {v: c.ticker, cls: isHolder ? "k pos-val" : "k"},
+          {html: '<div style="display:flex;align-items:center">' + logoImg + '<strong style="font-size:13px">' + c.ticker + '</strong></div>', cls: isHolder ? "k pos-val" : "k"},
           {v: c.name + (isHolder ? " (Active 2026 Holding)" : ""), cls: isHolder ? "pos-val" : ""},
           {v: sgn(c.ytd, 1), cls: "k"},
           c.rank === 1 ? "Leader" : sgnpp(c.gap, 1),
           {v: c.status, cls: c.rank === 1 ? "pos-val" : (isHolder ? "pos-val" : "")}
         ];
       });
-      buildTable($("#tblContenders"), ["Rank", "Ticker", "Company", "2026 YTD Return", "Gap to Leader", "Status"], cRows);
+      buildTable($("#tblContenders"), ["Rank", "Contender", "Company", "2026 YTD Return", "Gap to Leader", "Status"], cRows);
     }
+
+    // Render 2026 Performance Surge Multi-Line SVG Chart
+    renderContendersChart = function(){
+      var container = $("#contendersChartContainer");
+      var legend = $("#chartContendersLegend");
+      var tooltip = $("#contendersTooltip");
+      if (!container || !DATA.lyw || !DATA.lyw.contendersChart) return;
+
+      var chartData = DATA.lyw.contendersChart;
+      var dates = chartData.dates || [];
+      var seriesList = chartData.series || [];
+      if (!dates.length || !seriesList.length) return;
+
+      var W = 1000, H = 460;
+      var padL = 60, padR = 175, padT = 32, padB = 44;
+      var pw = W - padL - padR;
+      var ph = H - padT - padB;
+      var N = dates.length;
+
+      var yMax = 800;
+      var yMin = -20;
+      function xPos(i){ return padL + pw * (i / (N - 1)); }
+      function yPos(val){ return padT + ph * (1 - (val - yMin) / (yMax - yMin)); }
+
+      var activeTicker = null;
+
+      function updateChart(){
+        var svg = [];
+        svg.push('<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:auto;display:block;overflow:visible;font-family:var(--sans)">');
+
+        // Y-Axis Horizontal Gridlines & Ticks
+        var yTicks = [0, 100, 200, 300, 400, 500, 600, 700, 800];
+        yTicks.forEach(function(yt){
+          var y = yPos(yt);
+          var isZero = (yt === 0);
+          svg.push('<line x1="' + padL + '" y1="' + y.toFixed(1) + '" x2="' + (padL + pw) + '" y2="' + y.toFixed(1) + '" stroke="' + (isZero ? 'var(--rule-2)' : 'var(--rule)') + '" stroke-width="' + (isZero ? '1.5' : '1') + '" stroke-dasharray="' + (isZero ? 'none' : '3,4') + '" />');
+          var lbl = (yt > 0 ? '+' : '') + yt + '%';
+          svg.push('<text x="' + (padL - 10) + '" y="' + (y + 4).toFixed(1) + '" text-anchor="end" font-family="var(--mono)" font-size="11" fill="var(--muted)">' + lbl + '</text>');
+        });
+
+        // X-Axis Vertical Months & Labels
+        var monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        var lastMonth = "";
+        dates.forEach(function(dStr, i){
+          var mStr = dStr.slice(0, 7);
+          if (mStr !== lastMonth){
+            lastMonth = mStr;
+            var x = xPos(i);
+            var mIdx = parseInt(dStr.slice(5, 7), 10) - 1;
+            svg.push('<line x1="' + x.toFixed(1) + '" y1="' + padT + '" x2="' + x.toFixed(1) + '" y2="' + (padT + ph) + '" stroke="var(--rule)" stroke-width="1" stroke-dasharray="2,5" opacity="0.6" />');
+            svg.push('<text x="' + x.toFixed(1) + '" y="' + (H - padB + 18) + '" text-anchor="middle" font-size="11.5" font-weight="600" fill="var(--ink-2)">' + monthNames[mIdx] + '</text>');
+          }
+        });
+
+        // Plot Area Border
+        svg.push('<rect x="' + padL + '" y="' + padT + '" width="' + pw + '" height="' + ph + '" fill="none" stroke="var(--rule)" stroke-width="1" />');
+
+        // Paths for Contender Series
+        seriesList.forEach(function(s){
+          var isDimmed = (activeTicker && activeTicker !== s.ticker);
+          var isHighlighted = (activeTicker === s.ticker);
+          var isBench = (s.ticker === "SPY");
+          var strokeW = isHighlighted ? "3.8" : (isBench ? "1.6" : "2.6");
+          var op = isDimmed ? "0.15" : "1.0";
+
+          var d = s.points.map(function(pt, i){
+            return (i === 0 ? "M " : "L ") + xPos(i).toFixed(1) + " " + yPos(pt).toFixed(1);
+          }).join(" ");
+
+          svg.push('<path id="seriesPath-' + s.ticker + '" d="' + d + '" fill="none" stroke="' + s.color + '" stroke-width="' + strokeW + '" ' + (isBench ? 'stroke-dasharray="4,4"' : '') + ' opacity="' + op + '" style="transition:all .15s ease" />');
+        });
+
+        // Peak Markers for Top Leaders
+        seriesList.forEach(function(s){
+          if (s.rank === 1 || s.ticker === "SNDK"){
+            var isDimmed = (activeTicker && activeTicker !== s.ticker);
+            var op = isDimmed ? "0.15" : "1.0";
+            var peakVal = s.peakYtd;
+            var peakIdx = s.points.indexOf(peakVal);
+            if (peakIdx >= 0){
+              var px = xPos(peakIdx);
+              var py = yPos(peakVal);
+              svg.push('<circle cx="' + px.toFixed(1) + '" cy="' + py.toFixed(1) + '" r="4.5" fill="' + s.color + '" stroke="#fff" stroke-width="1.8" opacity="' + op + '" />');
+              var peakLbl = s.ticker + " Peak: +" + peakVal + "%";
+              svg.push('<rect x="' + (px - 58).toFixed(1) + '" y="' + (py - 24).toFixed(1) + '" width="116" height="18" rx="4" fill="var(--surface)" stroke="' + s.color + '" stroke-width="1" opacity="' + op + '" />');
+              svg.push('<text x="' + px.toFixed(1) + '" y="' + (py - 11).toFixed(1) + '" text-anchor="middle" font-size="10" font-family="var(--mono)" font-weight="700" fill="' + s.color + '" opacity="' + op + '">' + peakLbl + '</text>');
+            }
+          }
+        });
+
+        // Badges on Right Margin (with Logos & Collision Avoidance)
+        var badges = seriesList.map(function(s, idx){
+          var lastVal = s.points[s.points.length - 1];
+          var origY = yPos(lastVal);
+          return {
+            s: s,
+            ticker: s.ticker,
+            name: s.name,
+            color: s.color,
+            logo: s.logo,
+            val: lastVal,
+            origY: origY,
+            y: origY,
+            idx: idx
+          };
+        });
+        badges.sort(function(a, b){ return a.y - b.y; });
+
+        // Relaxation for badges to avoid overlap
+        var minDist = 34;
+        for (var p = 0; p < 8; p++){
+          for (var i = 1; i < badges.length; i++){
+            if (badges[i].y - badges[i-1].y < minDist){
+              var diff = minDist - (badges[i].y - badges[i-1].y);
+              badges[i-1].y -= diff * 0.5;
+              badges[i].y += diff * 0.5;
+            }
+          }
+        }
+        badges.forEach(function(b){
+          if (b.y < padT + 14) b.y = padT + 14;
+          if (b.y > H - padB - 14) b.y = H - padB - 14;
+        });
+
+        // Render Right Margin Badges
+        badges.forEach(function(b){
+          var isDimmed = (activeTicker && activeTicker !== b.ticker);
+          var op = isDimmed ? "0.15" : "1.0";
+          var bx = padL + pw;
+
+          // Connector line if displaced
+          if (Math.abs(b.y - b.origY) > 3){
+            svg.push('<path d="M ' + bx + ' ' + b.origY.toFixed(1) + ' C ' + (bx + 8) + ' ' + b.origY.toFixed(1) + ', ' + (bx + 8) + ' ' + b.y.toFixed(1) + ', ' + (bx + 14) + ' ' + b.y.toFixed(1) + '" fill="none" stroke="' + b.color + '" stroke-width="1.2" opacity="' + op + '" />');
+          } else {
+            svg.push('<line x1="' + bx + '" y1="' + b.origY.toFixed(1) + '" x2="' + (bx + 14) + '" y2="' + b.y.toFixed(1) + '" stroke="' + b.color + '" stroke-width="1.2" opacity="' + op + '" />');
+          }
+
+          // Circular Logo Badge
+          var cx = bx + 28;
+          var cy = b.y;
+          if (b.logo){
+            svg.push('<g opacity="' + op + '">');
+            svg.push('<circle cx="' + cx + '" cy="' + cy.toFixed(1) + '" r="12" fill="#fff" stroke="' + b.color + '" stroke-width="1.8" />');
+            svg.push('<image href="' + b.logo + '" x="' + (cx - 10) + '" y="' + (cy - 10).toFixed(1) + '" width="20" height="20" preserveAspectRatio="xMidYMid slice" />');
+            svg.push('</g>');
+          } else {
+            svg.push('<circle cx="' + cx + '" cy="' + cy.toFixed(1) + '" r="11" fill="var(--surface-sunk)" stroke="' + b.color + '" stroke-width="1.8" opacity="' + op + '" />');
+            svg.push('<text x="' + cx + '" y="' + (cy + 3.5).toFixed(1) + '" text-anchor="middle" font-size="9" font-weight="700" fill="' + b.color + '" opacity="' + op + '">SPY</text>');
+          }
+
+          // Ticker & Percentage Labels
+          svg.push('<g opacity="' + op + '">');
+          svg.push('<text x="' + (cx + 17) + '" y="' + (cy - 1).toFixed(1) + '" font-size="12" font-weight="700" fill="' + b.color + '">' + b.ticker + '</text>');
+          var valSign = b.val >= 0 ? "+" : "";
+          svg.push('<text x="' + (cx + 17) + '" y="' + (cy + 12).toFixed(1) + '" font-family="var(--mono)" font-size="11" font-weight="600" fill="var(--ink)">' + valSign + b.val.toFixed(1) + '%</text>');
+          svg.push('</g>');
+        });
+
+        // Hover Crosshair Elements (hidden by default)
+        svg.push('<g id="hoverGroup" style="display:none">');
+        svg.push('<line id="hoverGuideLine" x1="0" y1="' + padT + '" x2="0" y2="' + (padT + ph) + '" stroke="var(--ink)" stroke-width="1" stroke-dasharray="3,3" opacity="0.75" />');
+        seriesList.forEach(function(s, idx){
+          svg.push('<circle id="hoverDot-' + idx + '" cx="0" cy="0" r="5" fill="' + s.color + '" stroke="#fff" stroke-width="2" />');
+        });
+        svg.push('</g>');
+
+        // Interactive Overlay Rect
+        svg.push('<rect id="chartOverlay" x="' + padL + '" y="' + padT + '" width="' + pw + '" height="' + ph + '" fill="transparent" style="cursor:crosshair" />');
+        svg.push('</svg>');
+
+        container.innerHTML = svg.join("");
+        attachHoverEvents();
+      }
+
+      function attachHoverEvents(){
+        var overlay = $("#chartOverlay");
+        var hoverGroup = $("#hoverGroup");
+        var guideLine = $("#hoverGuideLine");
+        if (!overlay || !hoverGroup || !guideLine) return;
+
+        overlay.addEventListener("mousemove", handlePointer);
+        overlay.addEventListener("touchmove", handlePointer);
+        overlay.addEventListener("mouseleave", hideHover);
+        overlay.addEventListener("touchend", hideHover);
+
+        function handlePointer(e){
+          var rect = overlay.getBoundingClientRect();
+          var clientX = e.touches ? e.touches[0].clientX : e.clientX;
+          var clientY = e.touches ? e.touches[0].clientY : e.clientY;
+          var frac = (clientX - rect.left) / rect.width;
+          if (frac < 0) frac = 0;
+          if (frac > 1) frac = 1;
+          var idx = Math.round(frac * (N - 1));
+          idx = Math.max(0, Math.min(N - 1, idx));
+
+          hoverGroup.style.display = "block";
+          var x = xPos(idx);
+          guideLine.setAttribute("x1", x.toFixed(1));
+          guideLine.setAttribute("x2", x.toFixed(1));
+
+          var dateStr = dates[idx];
+          var sortedDay = seriesList.map(function(s, sIdx){
+            var val = s.points[idx];
+            return { s: s, val: val, sIdx: sIdx, y: yPos(val) };
+          }).sort(function(a, b){ return b.val - a.val; });
+
+          seriesList.forEach(function(s, sIdx){
+            var dot = $("#hoverDot-" + sIdx);
+            if (dot){
+              var y = yPos(s.points[idx]);
+              dot.setAttribute("cx", x.toFixed(1));
+              dot.setAttribute("cy", y.toFixed(1));
+              var isDimmed = (activeTicker && activeTicker !== s.ticker);
+              dot.style.opacity = isDimmed ? "0.15" : "1.0";
+            }
+          });
+
+          // Tooltip HTML
+          var ttHtml = ['<div class="contenders-tooltip-hd"><span>' + dateStr + '</span><span>Day ' + (idx + 1) + '/' + N + '</span></div>'];
+          sortedDay.forEach(function(item){
+            var logoImg = item.s.logo ? '<img src="' + item.s.logo + '" style="width:14px;height:14px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-right:5px;background:#fff">' : '';
+            var valSign = item.val >= 0 ? "+" : "";
+            ttHtml.push('<div class="contenders-tooltip-row">');
+            ttHtml.push('<div class="contenders-tooltip-name">' + logoImg + '<strong style="color:' + item.s.color + '">' + item.s.ticker + '</strong><span style="color:var(--muted);font-size:11px">' + item.s.name.split(" ")[0] + '</span></div>');
+            ttHtml.push('<div class="contenders-tooltip-val" style="color:' + item.s.color + '">' + valSign + item.val.toFixed(1) + '%</div>');
+            ttHtml.push('</div>');
+          });
+
+          tooltip.innerHTML = ttHtml.join("");
+          tooltip.style.display = "block";
+
+          var cRect = container.getBoundingClientRect();
+          var tipX = clientX - cRect.left + 15;
+          var tipY = clientY - cRect.top + 10;
+          if (tipX + 260 > cRect.width) tipX = clientX - cRect.left - 270;
+          if (tipY + 220 > cRect.height) tipY = cRect.height - 230;
+          if (tipY < 0) tipY = 10;
+          tooltip.style.left = tipX + "px";
+          tooltip.style.top = tipY + "px";
+        }
+
+        function hideHover(){
+          hoverGroup.style.display = "none";
+          tooltip.style.display = "none";
+        }
+      }
+
+      function renderLegend(){
+        if (!legend) return;
+        legend.innerHTML = "";
+        var allBtn = el("button", {
+          class: "contenders-pill" + (!activeTicker ? " active" : ""),
+          type: "button"
+        }, "All Contenders");
+        allBtn.addEventListener("click", function(){
+          activeTicker = null;
+          renderLegend();
+          updateChart();
+        });
+        legend.appendChild(allBtn);
+
+        seriesList.forEach(function(s){
+          var isAct = (activeTicker === s.ticker);
+          var btn = el("button", {
+            class: "contenders-pill" + (isAct ? " active" : ""),
+            type: "button"
+          });
+          if (s.logo){
+            var img = el("img", {
+              src: s.logo,
+              class: "contenders-pill-logo",
+              alt: s.ticker
+            });
+            btn.appendChild(img);
+          }
+          var nameSpan = el("span", {}, s.ticker);
+          btn.appendChild(nameSpan);
+          var valSpan = el("strong", {
+            style: "color:" + s.color + ";font-family:var(--mono);font-size:11px"
+          }, (s.currentYtd >= 0 ? "+" : "") + s.currentYtd.toFixed(1) + "%");
+          btn.appendChild(valSpan);
+
+          btn.addEventListener("click", function(){
+            activeTicker = isAct ? null : s.ticker;
+            renderLegend();
+            updateChart();
+          });
+          legend.appendChild(btn);
+        });
+      }
+
+      renderLegend();
+      updateChart();
+    }
+
+    renderContendersChart();
+    window.addEventListener("resize", function(){
+      renderContendersChart();
+    });
 
     // Render LYW 29-Year Archive
     if (DATA.lyw.archive){
