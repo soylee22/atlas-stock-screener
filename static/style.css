@@ -184,7 +184,7 @@ td { height: 56px; padding: 7px 14px; font-size: 16px; line-height: 22px; color:
 .quad-factor-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
 .quad-factor-sr{font-weight:600;color:#f0f6fc}
 .quad-factor-style{color:#7ee787;font-weight:500}
-.quad-factor-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;text-align:center;font-variant-numeric:tabular-nums;color:#c9d1d9;font-size:11px}
+.quad-factor-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;text-align:center;font-variant-numeric:tabular-nums;color:#c9d1d9;font-size:11px}
 .quad-factor-col-label{color:#8b949e;font-size:10px}
 .quad-tooltip>strong{display:block;font-size:17px}.quad-tooltip>span{display:block;color:#b8c7d7;margin-top:5px}.quad-tooltip dl{display:grid;grid-template-columns:1fr auto;gap:8px;margin:15px 0}.quad-tooltip dt{color:var(--muted)}.quad-tooltip dd{margin:0;font-variant-numeric:tabular-nums}.quad-tooltip small{display:block;color:#8fa3b8;margin-top:9px;font-size:11px}
 .quad-axis-caption{display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;color:#a8b5c4;padding:12px 0;font-size:13px}

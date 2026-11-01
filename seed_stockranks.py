@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Seed crawled Stockopedia ranks into Atlas screener.sqlite.
-Updates matching stocks with: stockrank, quality_rank, value_rank, momentum_rank, qm_score, qv_score, stock_style.
+Updates matching stocks with: stockrank, quality_rank, value_rank, momentum_rank, qm_score, qv_score, vm_score, stock_style.
 """
 from __future__ import annotations
 
@@ -85,6 +85,7 @@ def seed_stockranks(database: Path = DB_PATH, ranks_path: Path = RANKS_PATH) -> 
             sr = sp["stockRank"]
             qm = round((q + m) / 2, 1) if m is not None else None
             qv = round((q + v) / 2, 1)
+            vm = round((v + m) / 2, 1) if m is not None else None
 
             d["stockrank"] = sr
             d["quality_rank"] = q
@@ -92,6 +93,7 @@ def seed_stockranks(database: Path = DB_PATH, ranks_path: Path = RANKS_PATH) -> 
             d["momentum_rank"] = m
             d["qm_score"] = qm
             d["qv_score"] = qv
+            d["vm_score"] = vm
             d["stock_style"] = sp.get("style", "Neutral")
 
             updates.append((json.dumps(d, ensure_ascii=False, separators=(",", ":")), sym))

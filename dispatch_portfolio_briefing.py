@@ -213,6 +213,7 @@ def fetch_live_stockopedia_for_holdings(symbols: list[str]) -> dict:
                     style = d.get("style", "Neutral")
                     qv = round((q + v) / 2.0, 1) if q is not None and v is not None else None
                     qm = round((q + m) / 2.0, 1) if q is not None and m is not None else None
+                    vm = round((v + m) / 2.0, 1) if v is not None and m is not None else None
                     results[s] = {
                         "stockrank": sr,
                         "quality": q,
@@ -220,6 +221,7 @@ def fetch_live_stockopedia_for_holdings(symbols: list[str]) -> dict:
                         "momentum": m,
                         "qv_score": qv,
                         "qm_score": qm,
+                        "vm_score": vm,
                         "style": style,
                         "name": d.get("name")
                     }
@@ -239,6 +241,7 @@ def get_cached_factor_ratings(symbol: str, alt_symbol: str) -> dict:
         "momentum": None,
         "qv_score": None,
         "qm_score": None,
+        "vm_score": None,
         "style": None,
         "name": None
     }
@@ -256,6 +259,7 @@ def get_cached_factor_ratings(symbol: str, alt_symbol: str) -> dict:
                 res["momentum"] = d.get("momentum_rank")
                 res["qv_score"] = d.get("qv_score")
                 res["qm_score"] = d.get("qm_score")
+                res["vm_score"] = d.get("vm_score")
                 res["style"] = d.get("stock_style")
                 res["name"] = d.get("name")
             conn.close()
@@ -288,6 +292,9 @@ def get_cached_factor_ratings(symbol: str, alt_symbol: str) -> dict:
                     res["qm_score"] = match.get("qm_score")
                     if res["qm_score"] is None and res["quality"] and res["momentum"]:
                         res["qm_score"] = round((res["quality"] + res["momentum"]) / 2.0, 1)
+                    res["vm_score"] = match.get("vm_score")
+                    if res["vm_score"] is None and res["value"] and res["momentum"]:
+                        res["vm_score"] = round((res["value"] + res["momentum"]) / 2.0, 1)
                     res["style"] = match.get("style") or match.get("stock_style")
                     res["name"] = match.get("name") or res.get("name")
             except Exception:
@@ -452,7 +459,7 @@ def get_t212_holdings() -> dict:
         if is_etf:
             factors = {
                 "stockrank": None, "quality": None, "value": None, "momentum": None,
-                "qv_score": None, "qm_score": None, "style": "Core ETF",
+                "qv_score": None, "qm_score": None, "vm_score": None, "style": "Core ETF",
                 "name": "iShares MSCI Europe UCITS ETF"
             }
         else:
@@ -469,6 +476,7 @@ def get_t212_holdings() -> dict:
                 "momentum": factors.get("momentum"),
                 "qv": factors.get("qv_score"),
                 "qm": factors.get("qm_score"),
+                "vm": factors.get("vm_score"),
                 "style": factors.get("style")
             }
 
@@ -488,6 +496,7 @@ def get_t212_holdings() -> dict:
             "momentum": factors.get("momentum"),
             "qv_score": factors.get("qv_score"),
             "qm_score": factors.get("qm_score"),
+            "vm_score": factors.get("vm_score"),
             "style": factors.get("style") or "Unrated"
         })
 
@@ -567,9 +576,10 @@ def format_telegram_holdings_section(t212: dict) -> str:
             )
         else:
             q, v, m = p["quality"], p["value"], p["momentum"]
-            qv, qm = p["qv_score"], p["qm_score"]
+            qv, qm, vm = p["qv_score"], p["qm_score"], p.get("vm_score")
             qv_str = f"{qv:.0f}" if qv is not None else "—"
             qm_str = f"{qm:.0f}" if qm is not None else "—"
+            vm_str = f"{vm:.0f}" if vm is not None else "—"
 
             sr_delta_str = f" ({'+' if sr_diff > 0 else ''}{sr_diff})" if sr_diff != 0 else ""
             m_delta_str = f" ({'+' if m_diff > 0 else ''}{m_diff})" if m_diff != 0 else ""
@@ -577,7 +587,7 @@ def format_telegram_holdings_section(t212: dict) -> str:
 
             lines.append(
                 f"• <b>{sym}</b> ({short_name}) · £{val:,.0f} ({wt:.1f}% · {p_sign}{pnl:.1f}%) · <b>SR {sr}{sr_delta_str}</b> ({style_str})\n"
-                f"  Q:{q} V:{v} M:{m}{m_delta_str} · QV:{qv_str} QM:{qm_str}"
+                f"  Q:{q} V:{v} M:{m}{m_delta_str} · QV:{qv_str} QM:{qm_str} VM:{vm_str}"
             )
 
     return "\n".join(lines)
@@ -919,7 +929,8 @@ def render_t212_html_card(t212: dict) -> str:
             factors_str = f'<span style="font-size: 11px; color: #1d1d1f; font-weight: 500;">Q:{p["quality"]} V:{p["value"]} M:{p["momentum"]}{m_delta_text}</span>'
             qv_str = f'{p["qv_score"]:.0f}' if p.get("qv_score") is not None else '—'
             qm_str = f'{p["qm_score"]:.0f}' if p.get("qm_score") is not None else '—'
-            combo_str = f'<span style="font-size: 11px; color: #555e6d;">QV:{qv_str} QM:{qm_str}</span>'
+            vm_str = f'{p["vm_score"]:.0f}' if p.get("vm_score") is not None else '—'
+            combo_str = f'<span style="font-size: 11px; color: #555e6d;">QV:{qv_str} QM:{qm_str} VM:{vm_str}</span>'
 
         clean_n = (
             name.split(",")[0]

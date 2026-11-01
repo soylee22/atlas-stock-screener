@@ -141,6 +141,7 @@ COLUMNS = [
     col("stockrank", "StockRank", "integer", group="Stockopedia", description="Overall composite factor rank combining Quality, Value and Momentum, scored 0 to 100 percentile."),
     col("qm_score", "QM score", "number", group="Stockopedia", description="Quality-Momentum crossover score (Quality + Momentum) / 2, scored 0 to 100 percentile."),
     col("qv_score", "QV score", "number", group="Stockopedia", description="Quality-Value crossover score (Quality + Value) / 2, scored 0 to 100 percentile, isolating Greenblatt Magic Formula compounders."),
+    col("vm_score", "VM score", "number", group="Stockopedia", description="Value-Momentum crossover score (Value + Momentum) / 2, scored 0 to 100 percentile, isolating contrarian momentum and value recovery plays."),
     col("quality_rank", "Quality rank", "integer", group="Stockopedia", description="Piotroski F-score, Altman Z-score, Beneish M-score, ROCE, gross profitability and cash conversion, scored 0 to 100 percentile."),
     col("value_rank", "Value rank", "integer", group="Stockopedia", description="P/E, P/B, P/FCF, P/S, dividend yield and earnings yield composite, scored 0 to 100 percentile."),
     col("momentum_rank", "Momentum rank", "integer", group="Stockopedia", description="6M and 12M price relative strength, 52W high proximity and broker revision momentum, scored 0 to 100 percentile."),
@@ -1234,7 +1235,7 @@ def chart(x: str = "net_income", y: str = "div_years", search: str = "", regions
         raise HTTPException(400, str(exc)) from exc
     keys = sorted({"symbol", "name", "region", "region_code", "sector", "industry", "exchange",
                    "income_period", "cf_period", "fcf_growth_period", "financial_fetched", "quote_time", x, y,
-                   "stockrank", "quality_rank", "value_rank", "momentum_rank", "qm_score", "qv_score", "stock_style",
+                   "stockrank", "quality_rank", "value_rank", "momentum_rank", "qm_score", "qv_score", "vm_score", "stock_style",
                    "williams_monthly_version", "williams_monthly_reason", "williams_monthly_asof", "williams_monthly_zone", "williams_monthly_provisional", "williams_monthly_source_note", "technical_asof", "technical_calendar", "williams_source_note", "williams_provisional", "williams_asof", "williams_zone", "williams_version", "eps_version", "eps_fetched", "eps_currency", "dividend_quality_fetched", "fcf_payout_basis", *[key.removesuffix("_distance") + "_period" for key in (x, y) if key in GROWTH_KEYS or key in CAPITAL_KEYS or key in DIVIDEND_QUALITY_KEYS or key in {"eps_diluted", "williams_r", "williams_monthly_r"} or key.startswith("sma_")]})
     # Project only plot fields and paired values. Do not load every dividend event or description.
     projection = "json_object(" + ",".join(f"'{key}',json_extract(data,'$.{key}')" for key in keys) + ")"
