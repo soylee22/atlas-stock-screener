@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Atlas | Lodestar World — Global Factor and Dividend Rotation</title>
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
 <meta name="description" content="Lodestar: a systematic factor and sector ETF rotation strategy. Backtested record, London-listed lines, sterling total return, with monthly updates.">
 <meta name="color-scheme" content="light dark">
-<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
 <style>
 /* ─────────────────────────────────────────────────────────────────────────
    Tokens. Light is the default; dark is a selected set, not an inversion.
@@ -755,6 +755,286 @@ html{scroll-behavior:smooth; scroll-padding-top:72px}
 .hm .pending{display:grid;place-items:center;font:8px var(--mono);color:var(--ink-2);cursor:help}
 .ribbon .pending-tail{position:absolute;top:5px;height:14px;background:repeating-linear-gradient(45deg,transparent,transparent 3px,var(--axis) 3px,var(--axis) 4px);pointer-events:none;z-index:1}
 
+/* ── Leaderboard Component ─────────────────────────────────────────────── */
+.lb-cards{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(320px,1fr));
+  gap:18px;
+  margin-bottom:24px;
+}
+.lb-card{
+  background:var(--surface);
+  border:1px solid var(--rule);
+  border-radius:14px;
+  padding:22px 24px;
+  box-shadow:var(--shadow);
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+}
+.lb-card-hd{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:14px;
+}
+.lb-badge{
+  font-family:var(--mono);
+  font-size:10.5px;
+  font-weight:600;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  padding:4px 9px;
+  border-radius:6px;
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+}
+.lb-badge.green{
+  background:rgba(0,99,0,.08);
+  color:var(--pos-ink);
+  border:1px solid rgba(0,99,0,.22);
+}
+.lb-badge.blue{
+  background:rgba(42,120,214,.08);
+  color:var(--s1);
+  border:1px solid rgba(42,120,214,.22);
+}
+.lb-badge.orange{
+  background:rgba(235,104,52,.1);
+  color:var(--s2);
+  border:1px solid rgba(235,104,52,.25);
+}
+.lb-date{
+  font-family:var(--mono);
+  font-size:11px;
+  color:var(--muted);
+  letter-spacing:.04em;
+}
+.lb-action-title{
+  font-size:18px;
+  font-weight:600;
+  margin:0 0 8px;
+  color:var(--ink);
+  line-height:1.28;
+}
+.lb-action-desc{
+  font-size:13.5px;
+  color:var(--ink-2);
+  line-height:1.52;
+  margin:0 0 16px;
+}
+.lb-action-meta{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:12px;
+  padding-top:14px;
+  border-top:1px solid var(--rule);
+}
+@media(max-width:540px){
+  .lb-action-meta{grid-template-columns:1fr; gap:8px}
+}
+.lb-meta-k{
+  display:block;
+  font-family:var(--mono);
+  font-size:9.5px;
+  color:var(--muted);
+  text-transform:uppercase;
+  letter-spacing:.07em;
+}
+.lb-meta-v{
+  display:block;
+  font-size:14px;
+  font-weight:600;
+  color:var(--ink);
+  font-variant-numeric:tabular-nums;
+  margin-top:3px;
+}
+.lb-meta-v.pos{color:var(--pos-ink)}
+.lb-meta-v.neg{color:var(--neg-ink)}
+.lb-tabs{
+  display:inline-flex;
+  background:var(--paper-2);
+  padding:3px;
+  border-radius:8px;
+  border:1px solid var(--rule);
+  gap:2px;
+}
+.lb-tab{
+  border:0;
+  background:transparent;
+  padding:6px 14px;
+  border-radius:6px;
+  font-size:12px;
+  font-weight:600;
+  color:var(--ink-2);
+  cursor:pointer;
+  transition:all .15s ease;
+  font-family:var(--sans);
+}
+.lb-tab:hover{color:var(--ink)}
+.lb-tab.active{
+  background:var(--surface);
+  color:var(--ink);
+  box-shadow:0 1px 3px rgba(11,11,11,.08);
+}
+.lb-table{
+  width:100%;
+  border-collapse:collapse;
+  font-size:13px;
+  text-align:left;
+  min-width:720px;
+}
+.lb-table th{
+  padding:11px 16px;
+  font-family:var(--mono);
+  font-size:10px;
+  color:var(--muted);
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  border-bottom:1px solid var(--rule);
+  background:var(--surface-sunk);
+  font-weight:500;
+}
+.lb-table td{
+  padding:13px 16px;
+  border-bottom:1px solid var(--rule);
+  vertical-align:middle;
+}
+.lb-table tr:hover td{
+  background:color-mix(in srgb,var(--s1) 4%,transparent);
+}
+.lb-table tr.leader-row td{
+  background:color-mix(in srgb,var(--s1) 7%,transparent);
+}
+.lb-table tr:last-child td{
+  border-bottom:0;
+}
+.lb-rank-badge{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:26px;
+  height:26px;
+  border-radius:50%;
+  font-family:var(--mono);
+  font-size:11px;
+  font-weight:700;
+}
+.lb-rank-badge.rank-1{
+  background:var(--s1);
+  color:#fff;
+  box-shadow:0 2px 6px rgba(42,120,214,.35);
+}
+.lb-rank-badge.rank-other{
+  background:var(--paper-2);
+  color:var(--ink-2);
+}
+.lb-asset-name{
+  font-weight:600;
+  color:var(--ink);
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+.lb-asset-sub{
+  font-size:11px;
+  color:var(--muted);
+  font-family:var(--mono);
+  margin-top:2px;
+}
+.lb-style-tag{
+  font-family:var(--mono);
+  font-size:10px;
+  color:var(--ink-2);
+  background:var(--paper-2);
+  padding:3px 7px;
+  border-radius:4px;
+  display:inline-block;
+}
+.lb-mom-val{
+  font-size:15px;
+  font-weight:600;
+  font-variant-numeric:tabular-nums;
+  color:var(--ink);
+}
+.lb-mom-val.pos{color:var(--pos-ink)}
+.lb-bar-outer{
+  width:100%;
+  max-width:160px;
+  height:7px;
+  background:var(--paper-2);
+  border-radius:4px;
+  overflow:hidden;
+}
+.lb-bar-inner{
+  height:100%;
+  border-radius:4px;
+  background:var(--s1);
+  transition:width .3s ease;
+}
+.lb-table tr.leader-row .lb-bar-inner{
+  background:var(--pos-ink);
+}
+.lb-gap{
+  font-variant-numeric:tabular-nums;
+  font-family:var(--mono);
+  font-size:12px;
+  color:var(--muted);
+}
+.lb-gap.leader{
+  font-weight:700;
+  color:var(--pos-ink);
+}
+.lb-alloc-tag{
+  display:inline-block;
+  font-family:var(--mono);
+  font-size:11px;
+  font-weight:700;
+  padding:3px 8px;
+  border-radius:4px;
+}
+.lb-alloc-tag.full{
+  background:rgba(0,99,0,.12);
+  color:var(--pos-ink);
+}
+.lb-alloc-tag.zero{
+  color:var(--muted);
+  font-weight:400;
+}
+.lb-act-tag{
+  display:inline-block;
+  font-size:11.5px;
+  font-weight:600;
+  padding:3px 8px;
+  border-radius:4px;
+}
+.lb-act-tag.hold{
+  background:var(--surface-sunk);
+  border:1px solid var(--rule);
+  color:var(--ink);
+}
+.lb-act-tag.rotate{
+  background:var(--s1);
+  color:#fff;
+}
+.lb-act-tag.wait{
+  color:var(--muted);
+  font-weight:400;
+}
+.lb-table-ft{
+  padding:12px 20px 14px;
+  font-size:12px;
+  color:var(--muted);
+  border-top:1px solid var(--rule);
+  display:flex;
+  justify-content:space-between;
+  flex-wrap:wrap;
+  gap:10px;
+}
+
+
 /* Atlas global universe navigation bar */
 .atlas-topbar{
   background:var(--surface);
@@ -826,6 +1106,7 @@ html{scroll-behavior:smooth; scroll-padding-top:72px}
   <div class="wrap">
     <div class="mark"><b>Lodestar</b> <span style="font-weight:300;opacity:0.85">World</span></div>
     <nav class="railnav" aria-label="Sections">
+      <a href="#leaderboard">Leaderboard</a>
       <a href="#inside" id="navInside">Holdings</a>
       <a href="#record">Record</a>
       <a href="#growth">Growth</a>
@@ -893,6 +1174,111 @@ html{scroll-behavior:smooth; scroll-padding-top:72px}
       </div>
     </div>
     <div class="bandfacts" id="bandFacts"></div>
+  </div>
+</section>
+
+<!-- ── LEADERBOARD: NEXT MONTH PROJECTION ────────────────────────────── -->
+<section class="sec wrap rise" id="leaderboard">
+  <div class="sechd">
+    <div>
+      <div class="eyebrow">Next Month Projection</div>
+      <h2>Momentum Leaderboard</h2>
+    </div>
+    <p class="lede" id="leaderboardLede">
+      Every month-end, Lodestar scores each global ETF by its trailing eight-month total return in sterling. The top-ranking fund is held at 100% target allocation for the upcoming month. If the leader remains unchanged, the position is held with zero turnover.
+    </p>
+  </div>
+
+  <div class="lb-cards">
+    <div class="lb-card">
+      <div>
+        <div class="lb-card-hd">
+          <span class="lb-badge green" id="lbActionBadge">HOLD · ZERO TURNOVER</span>
+          <span class="lb-date" id="lbHoldingPeriod">November 2026 Target</span>
+        </div>
+        <h3 class="lb-action-title" id="lbActionTitle">Maintain 100% in World Value (IWVL.L)</h3>
+        <p class="lb-action-desc" id="lbActionDesc">
+          World Value leads World Quality by +9.59 percentage points. Target allocation for November 2026 is 100% IWVL.L with zero dealing transactions.
+        </p>
+      </div>
+      <div class="lb-action-meta">
+        <div>
+          <span class="lb-meta-k">Projected Holding</span>
+          <span class="lb-meta-v" id="lbMetaHolding">IWVL.L (100%)</span>
+        </div>
+        <div>
+          <span class="lb-meta-k">Lead Margin</span>
+          <span class="lb-meta-v pos" id="lbMetaMargin">+9.59 pp</span>
+        </div>
+        <div>
+          <span class="lb-meta-k">Turnover Impact</span>
+          <span class="lb-meta-v">0% (Zero dealing fees)</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="lb-card">
+      <div>
+        <div class="lb-card-hd">
+          <span class="lb-badge blue" id="lbGateBadge">CASH GATE INACTIVE</span>
+          <span class="lb-date">19-Month Trend</span>
+        </div>
+        <h3 class="lb-action-title" id="lbGateTitle">Equity Regime Active (All Clear)</h3>
+        <p class="lb-action-desc" id="lbGateDesc">
+          S&P 500 stands at +35.07% over 19 months (Safety threshold: -25.00%). Capital remains 100% committed to top-performing equities.
+        </p>
+      </div>
+      <div class="lb-action-meta">
+        <div>
+          <span class="lb-meta-k">S&P 500 vs 19m Ago</span>
+          <span class="lb-meta-v pos" id="lbGateSpx">+35.07%</span>
+        </div>
+        <div>
+          <span class="lb-meta-k">Safety Threshold</span>
+          <span class="lb-meta-v neg">-25.00%</span>
+        </div>
+        <div>
+          <span class="lb-meta-k">Safety Buffer</span>
+          <span class="lb-meta-v pos" id="lbGateBuffer">+60.07 pp buffer</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card rise">
+    <div class="card-hd" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px">
+      <div>
+        <div class="ttl">5-ETF Momentum Rankings</div>
+        <div class="sub" id="lbTableSubtitle">Official month-end signal determining November 2026 holding</div>
+      </div>
+      <div class="lb-tabs" role="tablist" aria-label="Signal View Toggle">
+        <button type="button" class="lb-tab active" id="tabOfficial" role="tab" aria-selected="true">Official Month-End Signal</button>
+        <button type="button" class="lb-tab" id="tabLive" role="tab" aria-selected="false">Live Intra-Month Drumbeat</button>
+      </div>
+    </div>
+    <div class="card-bd" style="padding:0">
+      <div class="scroll">
+        <table class="lb-table" id="lbTable" aria-label="Momentum Leaderboard Rankings">
+          <thead>
+            <tr>
+              <th style="width:58px">Rank</th>
+              <th>ETF / Factor</th>
+              <th style="width:110px">Style</th>
+              <th style="width:140px;text-align:right">8-Mo Return</th>
+              <th style="width:180px">Relative Strength</th>
+              <th style="width:120px;text-align:right">Lead / Gap</th>
+              <th style="width:130px;text-align:center">Next Allocation</th>
+              <th style="width:140px;text-align:right">Projected Action</th>
+            </tr>
+          </thead>
+          <tbody id="lbTableBody"></tbody>
+        </table>
+      </div>
+      <div class="lb-table-ft">
+        <span>Signal basis: Sterling total return, net of fund fees. Computed on month-end close.</span>
+        <span>Rebalance rule: Monthly execution on 1st trading day if leader changes.</span>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -1559,6 +1945,148 @@ function glyph(key){
   }
   tick();
   setInterval(tick, 1000);
+})();
+
+/* ══════════════════════════════════════════════════════════════════════
+   LEADERBOARD & NEXT MONTH PROJECTION
+   Renders the 5-ETF momentum ranking table, lead margin, projected action,
+   and defensive cash gate status. Supports switching between official
+   month-end signal and intra-month live drumbeat.
+   ══════════════════════════════════════════════════════════════════════ */
+(function leaderboard(){
+  var LB = DATA.leaderboard;
+  if (!LB) return;
+
+  function renderView(view){
+    var isLive = (view === "live" && LB.live);
+    var data = isLive ? LB.live : LB;
+    var standings = isLive ? LB.live.standings : LB.standings;
+
+    // Update tab states
+    var tabOff = $("#tabOfficial");
+    var tabLv = $("#tabLive");
+    if (tabOff) {
+      tabOff.classList.toggle("active", !isLive);
+      tabOff.setAttribute("aria-selected", !isLive ? "true" : "false");
+    }
+    if (tabLv) {
+      tabLv.classList.toggle("active", isLive);
+      tabLv.setAttribute("aria-selected", isLive ? "true" : "false");
+    }
+
+    if (isLive){
+      $("#lbTableSubtitle").textContent = "Live drumbeat as of " + LB.live.asof + " (" + LB.live.daysLeft + " calendar days remaining until month-end close)";
+      $("#lbActionBadge").textContent = "PROVISIONAL · LIVE DRUMBEAT";
+      $("#lbActionBadge").className = "lb-badge blue";
+      $("#lbHoldingPeriod").textContent = "Upcoming Rebalance Projection";
+      $("#lbActionTitle").textContent = "Projected Leader: " + LB.live.projectedPick + " (" + LB.live.projectedTicker + ")";
+      $("#lbActionDesc").textContent = LB.live.projectedPick + " currently leads the momentum rankings with live market quotes. Official rebalance occurs on the first trading day of next month only if this lead is held at month-end.";
+      $("#lbMetaHolding").textContent = LB.live.projectedTicker + " (100%)";
+      var margin = standings.length > 1 ? (standings[0].momentum - standings[1].momentum) : 0;
+      $("#lbMetaMargin").textContent = "+" + margin.toFixed(2) + " pp over #2";
+      $("#lbGateSpx").textContent = "+" + LB.live.spxChange.toFixed(2) + "%";
+      var liveBuf = LB.live.spxChange - (-25.0);
+      $("#lbGateBuffer").textContent = "+" + liveBuf.toFixed(2) + " pp buffer";
+    } else {
+      $("#lbTableSubtitle").textContent = "Official month-end signal determining " + LB.holdingMonthPretty + " holding";
+      $("#lbActionBadge").textContent = (LB.action === "HOLD" ? "HOLD · ZERO TURNOVER" : "ROTATE · REBALANCE DUE");
+      $("#lbActionBadge").className = "lb-badge " + (LB.action === "HOLD" ? "green" : "orange");
+      $("#lbHoldingPeriod").textContent = LB.holdingMonthPretty + " Target";
+      $("#lbActionTitle").textContent = LB.actionTitle;
+      $("#lbActionDesc").textContent = LB.actionSummary;
+      $("#lbMetaHolding").textContent = (DATA.current.cash ? "Cash (100%)" : DATA.current.legs[0].lse + " (100%)");
+      $("#lbMetaMargin").textContent = "+" + LB.leadMargin.toFixed(2) + " pp over " + (LB.runnerUp || "#2");
+      $("#lbGateSpx").textContent = "+" + LB.cashGate.spxChange.toFixed(2) + "%";
+      var buf = LB.cashGate.spxChange - LB.cashGate.threshold;
+      $("#lbGateBuffer").textContent = "+" + buf.toFixed(2) + " pp buffer";
+    }
+
+    // Render table rows
+    var tbody = $("#lbTableBody");
+    if (!tbody) return;
+    tbody.innerHTML = "";
+    var topMom = (standings && standings[0]) ? standings[0].momentum : 1.0;
+
+    (standings || []).forEach(function(row){
+      var tr = el("tr", {class: row.isLeader ? "leader-row" : ""});
+
+      // Rank
+      var tdRank = el("td");
+      var badge = el("span", {class: "lb-rank-badge " + (row.isLeader ? "rank-1" : "rank-other")}, String(row.rank));
+      tdRank.appendChild(badge);
+      tr.appendChild(tdRank);
+
+      // ETF / Factor
+      var tdName = el("td");
+      var nameDiv = el("div", {class: "lb-asset-name"});
+      nameDiv.textContent = row.name;
+      if (row.isHeld){
+        var heldTag = el("span", {class: "lb-badge green", style: "font-size:9px;padding:2px 5px;margin-left:6px"}, "CURRENT HOLDING");
+        nameDiv.appendChild(heldTag);
+      }
+      var subDiv = el("div", {class: "lb-asset-sub"}, row.ticker + " · " + (row.isin || ""));
+      tdName.appendChild(nameDiv);
+      tdName.appendChild(subDiv);
+      tr.appendChild(tdName);
+
+      // Style
+      var tdStyle = el("td");
+      tdStyle.appendChild(el("span", {class: "lb-style-tag"}, row.style));
+      tr.appendChild(tdStyle);
+
+      // 8-Month Return
+      var tdMom = el("td", {style: "text-align:right"});
+      var momSpan = el("span", {class: "lb-mom-val " + (row.momentum >= 0 ? "pos" : "neg")}, (row.momentum >= 0 ? "+" : "") + row.momentum.toFixed(2) + "%");
+      tdMom.appendChild(momSpan);
+      tr.appendChild(tdMom);
+
+      // Relative Strength bar
+      var tdBar = el("td");
+      var barOuter = el("div", {class: "lb-bar-outer"});
+      var barPct = Math.max(8, Math.min(100, (row.momentum / Math.max(topMom, 1)) * 100));
+      var barInner = el("div", {class: "lb-bar-inner", style: "width:" + barPct.toFixed(1) + "%"});
+      barOuter.appendChild(barInner);
+      tdBar.appendChild(barOuter);
+      tr.appendChild(tdBar);
+
+      // Lead / Gap
+      var tdGap = el("td", {style: "text-align:right"});
+      var gapSpan = el("span", {class: "lb-gap " + (row.isLeader ? "leader" : "")}, row.isLeader ? "Leader" : (row.gap.toFixed(2) + " pp"));
+      tdGap.appendChild(gapSpan);
+      tr.appendChild(tdGap);
+
+      // Target Allocation
+      var tdAlloc = el("td", {style: "text-align:center"});
+      var allocTag = el("span", {class: "lb-alloc-tag " + (row.targetWeight > 0 ? "full" : "zero")}, row.targetWeight > 0 ? "100%" : "0%");
+      tdAlloc.appendChild(allocTag);
+      tr.appendChild(tdAlloc);
+
+      // Projected Action
+      var tdAct = el("td", {style: "text-align:right"});
+      var actTag;
+      if (row.isLeader){
+        if (row.isHeld){
+          actTag = el("span", {class: "lb-act-tag hold"}, "Hold (No Change)");
+        } else {
+          actTag = el("span", {class: "lb-act-tag rotate"}, "Buy New Leader");
+        }
+      } else {
+        actTag = el("span", {class: "lb-act-tag wait"}, "Stand By (0%)");
+      }
+      tdAct.appendChild(actTag);
+      tr.appendChild(tdAct);
+
+      tbody.appendChild(tr);
+    });
+  }
+
+  var btnOff = $("#tabOfficial");
+  var btnLive = $("#tabLive");
+  if (btnOff) btnOff.addEventListener("click", function(){ renderView("official"); });
+  if (btnLive) btnLive.addEventListener("click", function(){ renderView("live"); });
+
+  // Initial render
+  renderView("official");
 })();
 
 /* ══════════════════════════════════════════════════════════════════════
