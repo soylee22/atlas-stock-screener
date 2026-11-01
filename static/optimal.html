@@ -1,0 +1,1252 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Atlas | Optimal Dividend Growth Engine</title>
+  <meta name="description" content="Empirically optimal dividend growth stock screener: 5 point-in-time gates, 100-point composite compounder score, interactive pullback map, and portfolio audit.">
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Google+Sans+Text:wght@400;500;700&family=Roboto+Mono:wght@400;500;600&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            google: ['"Google Sans"', 'sans-serif'],
+            text: ['"Google Sans Text"', 'Roboto', 'sans-serif'],
+            mono: ['"Roboto Mono"', 'monospace'],
+          },
+          colors: {
+            gBlue: { 50: '#e8f0fe', 100: '#d2e3fc', 500: '#1a73e8', 600: '#1557b0', 700: '#174ea6' },
+            gGreen: { 50: '#e6f4ea', 100: '#ceead6', 600: '#137333', 700: '#0d652d' },
+            gAmber: { 50: '#fef7e0', 100: '#feefc3', 600: '#b06000', 700: '#8f4d00' },
+            gRed: { 50: '#fce8e6', 100: '#fad2cf', 600: '#c5221f', 700: '#a50e0e' },
+            gGrey: { 50: '#f8f9fa', 100: '#f1f3f4', 200: '#e8eaed', 300: '#dadce0', 500: '#70757a', 700: '#5f6368', 900: '#202124' }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { background-color: #ffffff; color: #202124; font-family: "Google Sans Text", Roboto, sans-serif; scroll-behavior: smooth; }
+    .google-card {
+      background: #ffffff;
+      border: 1px solid #dadce0;
+      border-radius: 12px;
+      box-shadow: none;
+    }
+    .google-chip {
+      display: inline-flex;
+      align-items: center;
+      padding: 6px 13px;
+      border-radius: 18px;
+      font-size: 12px;
+      font-weight: 500;
+      color: #3c4043;
+      background: #ffffff;
+      border: 1px solid #dadce0;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      user-select: none;
+      white-space: nowrap;
+    }
+    .google-chip:hover {
+      background: #f1f3f4;
+      border-color: #bdc1c6;
+    }
+    .google-chip.active {
+      background: #e8f0fe;
+      color: #1a73e8;
+      border-color: #d2e3fc;
+      font-weight: 600;
+    }
+    .gate-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      font-family: "Roboto Mono", monospace;
+      white-space: nowrap;
+    }
+    .gate-pass {
+      background: #e6f4ea;
+      color: #137333;
+      border: 1px solid #ceead6;
+    }
+    .gate-fail {
+      background: #fce8e6;
+      color: #c5221f;
+      border: 1px solid #fad2cf;
+    }
+    .gate-warn {
+      background: #fef7e0;
+      color: #b06000;
+      border: 1px solid #feefc3;
+    }
+    .score-bar-bg {
+      height: 7px;
+      border-radius: 999px;
+      background: #f1f3f4;
+      overflow: hidden;
+      display: flex;
+    }
+    th.sortable {
+      cursor: pointer;
+      user-select: none;
+    }
+    th.sortable:hover {
+      color: #1a73e8;
+      background: #f1f3f4;
+    }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #f1f3f4; }
+    ::-webkit-scrollbar-thumb { background: #dadce0; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #bdc1c6; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col bg-[#ffffff]">
+
+  <!-- Top Navigation Bar -->
+  <header class="border-b border-[#dadce0] bg-[#ffffff] sticky top-0 z-40">
+    <div class="max-w-[1440px] mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-4">
+        <a href="/" class="flex items-center space-x-2.5">
+          <div class="w-8 h-8 rounded-lg bg-[#202124] text-white flex items-center justify-center font-bold text-sm tracking-tighter">A</div>
+          <span class="text-xl font-normal font-google text-[#202124] tracking-tight">ATLAS<span class="text-[#1a73e8]">.</span></span>
+        </a>
+        <nav class="hidden md:flex items-center space-x-1 text-xs font-semibold">
+          <a href="/" class="px-3 py-1.5 rounded-md text-[#5f6368] hover:text-[#202124] hover:bg-[#f1f3f4] transition">Stocks</a>
+          <a href="/etfs.html" class="px-3 py-1.5 rounded-md text-[#5f6368] hover:text-[#202124] hover:bg-[#f1f3f4] transition">ETFs, ETPs & Investment Trusts</a>
+          <a href="/transatlantic.html" class="px-3 py-1.5 rounded-md text-[#5f6368] hover:text-[#202124] hover:bg-[#f1f3f4] transition">Transatlantic 50</a>
+          <a href="/winner.html" class="px-3 py-1.5 rounded-md text-[#5f6368] hover:text-[#202124] hover:bg-[#f1f3f4] transition">Last Year's Winner</a>
+          <a href="/optimal.html" class="px-3 py-1.5 rounded-md bg-[#e8f0fe] text-[#1a73e8]" aria-current="page">Optimal Div Growth</a>
+        </nav>
+      </div>
+
+      <div class="flex items-center space-x-3">
+        <div class="hidden sm:flex items-center space-x-2 bg-[#e6f4ea] text-[#137333] px-3 py-1.5 rounded-full text-xs font-medium border border-[#ceead6]">
+          <span class="w-2 h-2 rounded-full bg-[#137333]"></span>
+          <span id="status-pill-text">Loading live snapshot…</span>
+        </div>
+        <button onclick="exportCurrentCSV()" class="bg-[#1a73e8] hover:bg-[#1557b0] text-white text-xs font-medium px-4 py-2 rounded-full transition shadow-sm flex items-center space-x-1.5">
+          <span>↓ Export Ranked CSV</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Workspace -->
+  <main class="max-w-[1440px] mx-auto px-4 sm:px-6 py-6 w-full space-y-6">
+
+    <!-- Page Heading & Empirical Summary -->
+    <div class="flex flex-col lg:flex-row lg:items-end justify-between border-b border-[#dadce0] pb-5 gap-4">
+      <div>
+        <div class="flex flex-wrap items-center gap-2 text-xs font-medium text-[#5f6368] mb-1">
+          <span class="text-[#1a73e8] font-bold uppercase tracking-wider">EMPIRICAL DIVIDEND GROWTH ENGINE</span>
+          <span>•</span>
+          <span>5 POINT-IN-TIME GATES</span>
+          <span>•</span>
+          <span>100-POINT COMPOSITE SCORE</span>
+          <span>•</span>
+          <span class="text-[#137333] font-semibold">ALL SECTORS INCLUDED (NO FINANCIAL CAP)</span>
+        </div>
+        <h1 class="text-3xl font-normal font-google text-[#202124] tracking-tight">Optimal Dividend Growth Screen<span class="text-[#1a73e8]">.</span></h1>
+        <p class="text-xs text-[#5f6368] mt-1 max-w-4xl leading-relaxed">
+          Built from Fama-French 5-Factor regressions (2014–2026) and point-in-time survivorship-free cohort testing (2011–2026). Ranks every stock by four empirical pillars: <strong>Dividend Growth & Streak (35 pts)</strong>, <strong>Capital Quality ROE/ROIC (25 pts)</strong>, <strong>Oversold Pullback Timing (25 pts)</strong>, and <strong>Safe Yield Sweet-Spot (15 pts)</strong>.
+        </p>
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        <button onclick="resetToOptimalDefaults()" class="text-xs font-medium text-[#1a73e8] hover:bg-[#e8f0fe] px-3 py-1.5 rounded-lg border border-[#d2e3fc] transition">
+          ↺ Reset Optimal Defaults
+        </button>
+        <button onclick="document.getElementById('methodology-modal').showModal()" class="text-xs font-medium text-[#5f6368] hover:text-[#202124] hover:bg-[#f1f3f4] px-3 py-1.5 rounded-lg border border-[#dadce0] transition">
+          ⓘ Score & Gate Formula
+        </button>
+      </div>
+    </div>
+
+    <!-- Top KPI Strip -->
+    <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="google-card p-4 bg-gradient-to-br from-white to-[#f8fafd] border-l-4 border-l-[#137333]">
+        <div class="flex items-center justify-between">
+          <span class="text-[11px] font-bold uppercase tracking-wider text-[#137333]">All 5/5 Gates Passed</span>
+          <span class="text-[11px] font-mono text-[#5f6368]" id="kpi-universe-scope">Large Cap ≥ $10B</span>
+        </div>
+        <div class="text-3xl font-bold font-google text-[#202124] mt-1" id="kpi-pass5-count">—</div>
+        <div class="text-xs text-[#5f6368] mt-1" id="kpi-pass5-sub">Actionable buy candidates today</div>
+      </div>
+
+      <div class="google-card p-4 border-l-4 border-l-[#1a73e8]">
+        <div class="flex items-center justify-between">
+          <span class="text-[11px] font-bold uppercase tracking-wider text-[#1a73e8]">#1 Ranked Next Buy</span>
+          <span class="text-[11px] font-mono font-bold text-[#1a73e8]" id="kpi-top1-score">— / 100</span>
+        </div>
+        <div class="text-2xl font-bold font-google text-[#202124] mt-1 truncate" id="kpi-top1-name">—</div>
+        <div class="text-xs text-[#5f6368] mt-1 font-mono" id="kpi-top1-metrics">—</div>
+      </div>
+
+      <div class="google-card p-4 border-l-4 border-l-[#b06000]">
+        <div class="flex items-center justify-between">
+          <span class="text-[11px] font-bold uppercase tracking-wider text-[#b06000]">4/5 Gate Near-Misses</span>
+          <span class="text-[11px] font-mono text-[#5f6368]">Watchlist Queue</span>
+        </div>
+        <div class="text-3xl font-bold font-google text-[#202124] mt-1" id="kpi-pass4-count">—</div>
+        <div class="text-xs text-[#5f6368] mt-1" id="kpi-pass4-sub">1 gate away (typically awaiting pullback)</div>
+      </div>
+
+      <div class="google-card p-4 border-l-4 border-l-[#202124]">
+        <div class="flex items-center justify-between">
+          <span class="text-[11px] font-bold uppercase tracking-wider text-[#202124]">Your Atlas Portfolio (8 Stocks)</span>
+          <span class="text-[11px] font-mono font-semibold text-[#137333]" id="kpi-port-pass">— pass 5/5</span>
+        </div>
+        <div class="text-2xl font-bold font-google text-[#202124] mt-1" id="kpi-port-avg">Avg Score: —</div>
+        <div class="text-xs text-[#5f6368] mt-1 truncate" id="kpi-port-leaders">AVGO · CAT · GS · JPM · BAC · TMUS · GSK · BARC</div>
+      </div>
+    </section>
+
+    <!-- The 5 Empirical Gates Interactive Control Bar -->
+    <section class="google-card p-5 bg-[#f8f9fa]">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+        <div>
+          <span class="text-[11px] font-bold uppercase tracking-wider text-[#1a73e8]">Interactive Gate Controls</span>
+          <h2 class="text-lg font-medium font-google text-[#202124]">The 5 Point-in-Time Compounding Gates</h2>
+        </div>
+        <div class="flex items-center gap-3 text-xs text-[#5f6368]">
+          <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-[#1a73e8]"></span> Growth (35 pts)</span>
+          <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-[#137333]"></span> Quality (25 pts)</span>
+          <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-[#9334e6]"></span> Pullback (25 pts)</span>
+          <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-[#e37400]"></span> Safe Yield (15 pts)</span>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+        <!-- Gate 1 -->
+        <div class="bg-white border border-[#dadce0] rounded-xl p-3.5 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-[11px] font-bold uppercase tracking-wider text-[#1a73e8]">Gate 1 · Streak</span>
+              <span class="text-[11px] font-mono text-[#137333] font-semibold" id="g1-pass-rate">— pass</span>
+            </div>
+            <div class="text-xs font-semibold text-[#202124] mb-2">Consecutive Dividend Years</div>
+            <select id="gate-streak" onchange="applyAllFilters()" class="w-full text-xs border border-[#dadce0] rounded-lg px-2.5 py-1.5 bg-[#f8f9fa] font-medium text-[#202124] focus:outline-none focus:border-[#1a73e8]">
+              <option value="2">≥ 2 Years (Old Atlas rule)</option>
+              <option value="5" selected>≥ 5 Years (Optimal floor)</option>
+              <option value="10">≥ 10 Years (Established)</option>
+              <option value="15">≥ 15 Years (Aristocrat tier)</option>
+              <option value="0">Any Streak (≥ 0Y)</option>
+            </select>
+          </div>
+          <p class="text-[11px] text-[#70757a] mt-2 leading-snug">Filters out 2-year post-cut dividend resets (such as GSK and NatWest).</p>
+        </div>
+
+        <!-- Gate 2 -->
+        <div class="bg-white border border-[#dadce0] rounded-xl p-3.5 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-[11px] font-bold uppercase tracking-wider text-[#1a73e8]">Gate 2 · Div Growth</span>
+              <span class="text-[11px] font-mono text-[#137333] font-semibold" id="g2-pass-rate">— pass</span>
+            </div>
+            <div class="text-xs font-semibold text-[#202124] mb-2">5Y Dividend CAGR Floor</div>
+            <select id="gate-dgrowth" onchange="applyAllFilters()" class="w-full text-xs border border-[#dadce0] rounded-lg px-2.5 py-1.5 bg-[#f8f9fa] font-medium text-[#202124] focus:outline-none focus:border-[#1a73e8]">
+              <option value="-999">No Floor (Old Atlas rule)</option>
+              <option value="3">≥ 3.0% CAGR (Inflation floor)</option>
+              <option value="5">≥ 5.0% CAGR (Moderate)</option>
+              <option value="7" selected>≥ 7.0% CAGR (Optimal hurdle)</option>
+              <option value="10">≥ 10.0% CAGR (High speed)</option>
+              <option value="15">≥ 15.0% CAGR (Hyper growth)</option>
+            </select>
+          </div>
+          <p class="text-[11px] text-[#70757a] mt-2 leading-snug">Point-in-time test: ≥7% CAGR cuts 2-year dividend cut risk from 43.1% to 5.9%.</p>
+        </div>
+
+        <!-- Gate 3 -->
+        <div class="bg-white border border-[#dadce0] rounded-xl p-3.5 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-[11px] font-bold uppercase tracking-wider text-[#137333]">Gate 3 · Quality</span>
+              <span class="text-[11px] font-mono text-[#137333] font-semibold" id="g3-pass-rate">— pass</span>
+            </div>
+            <div class="text-xs font-semibold text-[#202124] mb-2">Capital Return (ROE / ROIC)</div>
+            <select id="gate-quality" onchange="applyAllFilters()" class="w-full text-xs border border-[#dadce0] rounded-lg px-2.5 py-1.5 bg-[#f8f9fa] font-medium text-[#202124] focus:outline-none focus:border-[#1a73e8]">
+              <option value="10">ROE ≥ 10% (Old Atlas rule)</option>
+              <option value="14" selected>ROE ≥ 14% or ROIC ≥ 10% (Optimal)</option>
+              <option value="18">ROE ≥ 18% or ROIC ≥ 13% (Elite)</option>
+              <option value="22">ROE ≥ 22% or ROIC ≥ 16% (Ultra)</option>
+            </select>
+          </div>
+          <p class="text-[11px] text-[#70757a] mt-2 leading-snug">Uses ROE for financials and best of ROE or ROIC proxy for operating companies.</p>
+        </div>
+
+        <!-- Gate 4 -->
+        <div class="bg-white border border-[#dadce0] rounded-xl p-3.5 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-[11px] font-bold uppercase tracking-wider text-[#e37400]">Gate 4 · Safe Yield</span>
+              <span class="text-[11px] font-mono text-[#137333] font-semibold" id="g4-pass-rate">— pass</span>
+            </div>
+            <div class="text-xs font-semibold text-[#202124] mb-2">Yield Band & Trap Cap</div>
+            <select id="gate-yield" onchange="applyAllFilters()" class="w-full text-xs border border-[#dadce0] rounded-lg px-2.5 py-1.5 bg-[#f8f9fa] font-medium text-[#202124] focus:outline-none focus:border-[#1a73e8]">
+              <option value="0.01-99">Any Yield > 0% (Old Atlas)</option>
+              <option value="0.8-5.0" selected>0.8% to 5.0% (Optimal + Compounders)</option>
+              <option value="1.3-4.5">1.3% to 4.5% (Core Sweet-Spot)</option>
+              <option value="2.0-5.0">2.0% to 5.0% (Higher Income)</option>
+            </select>
+          </div>
+          <p class="text-[11px] text-[#70757a] mt-2 leading-snug">Retains sub-1% right-tail winners (AVGO, CAT) while blocking >5% yield traps.</p>
+        </div>
+
+        <!-- Gate 5 -->
+        <div class="bg-white border border-[#dadce0] rounded-xl p-3.5 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-[11px] font-bold uppercase tracking-wider text-[#9334e6]">Gate 5 · Pullback</span>
+              <span class="text-[11px] font-mono text-[#137333] font-semibold" id="g5-pass-rate">— pass</span>
+            </div>
+            <div class="text-xs font-semibold text-[#202124] mb-2">14-Week Williams %R</div>
+            <select id="gate-williams" onchange="applyAllFilters()" class="w-full text-xs border border-[#dadce0] rounded-lg px-2.5 py-1.5 bg-[#f8f9fa] font-medium text-[#202124] focus:outline-none focus:border-[#1a73e8]">
+              <option value="-90">≤ -90 (Extreme Oversold)</option>
+              <option value="-80" selected>≤ -80 (Oversold Buy Zone)</option>
+              <option value="-70">≤ -70 (Early Pullback Zone)</option>
+              <option value="-50">≤ -50 (Below Midpoint)</option>
+              <option value="0">Any Williams %R (No timing gate)</option>
+            </select>
+          </div>
+          <p class="text-[11px] text-[#70757a] mt-2 leading-snug">Buying ≥7% dividend growers at ≤-80 lifts 1Y median return from 11.9% to 15.0%.</p>
+        </div>
+      </div>
+
+      <!-- Filter Chips Row: Mode, Market Cap, Region, Sector, Search -->
+      <div class="mt-4 pt-4 border-t border-[#dadce0] flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+        <div class="flex flex-wrap items-center gap-1.5" id="mode-chips">
+          <button class="google-chip active" data-mode="pass5" onclick="setMode('pass5')">★ 5/5 Gates Passed (Buy List)</button>
+          <button class="google-chip" data-mode="pass4" onclick="setMode('pass4')">4+/5 Gates (Include Near-Misses)</button>
+          <button class="google-chip" data-mode="portfolio" onclick="setMode('portfolio')">Your Atlas Portfolio (8 Stocks)</button>
+          <button class="google-chip" data-mode="old_atlas" onclick="setMode('old_atlas')">Old Atlas Rules (ROE≥10, Yrs≥2, W%R≤-80)</button>
+          <button class="google-chip" data-mode="all_div" onclick="setMode('all_div')">All Dividend Payers</button>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <select id="filter-mcap" onchange="applyAllFilters()" class="text-xs border border-[#dadce0] rounded-lg px-2.5 py-1.5 bg-white font-medium text-[#202124]">
+            <option value="10000000000" selected>Market Cap: ≥ $10B (Large Cap)</option>
+            <option value="2000000000">Market Cap: ≥ $2B (Mid + Large)</option>
+            <option value="500000000">Market Cap: ≥ $500M (All Atlas)</option>
+            <option value="0">Market Cap: All</option>
+          </select>
+
+          <select id="filter-region" onchange="applyAllFilters()" class="text-xs border border-[#dadce0] rounded-lg px-2.5 py-1.5 bg-white font-medium text-[#202124]">
+            <option value="all" selected>All 12 Markets</option>
+            <option value="us">United States (US)</option>
+            <option value="gb">United Kingdom (UK)</option>
+            <option value="eu">Europe (DE, FR, CH, ES, IT, NL, SE, DK)</option>
+            <option value="ca">Canada (CA)</option>
+          </select>
+
+          <select id="filter-sector" onchange="applyAllFilters()" class="text-xs border border-[#dadce0] rounded-lg px-2.5 py-1.5 bg-white font-medium text-[#202124]">
+            <option value="all" selected>All Sectors (No Cap)</option>
+          </select>
+
+          <input id="search-input" type="search" oninput="applyAllFilters()" placeholder="Search ticker or name…" class="text-xs border border-[#dadce0] rounded-lg px-3 py-1.5 bg-white text-[#202124] w-44 focus:outline-none focus:border-[#1a73e8]">
+        </div>
+      </div>
+    </section>
+
+    <!-- Top 4 Next-Buy Actionable Recommendation Cards -->
+    <section class="space-y-3">
+      <div class="flex items-center justify-between">
+        <div>
+          <span class="text-[11px] font-bold uppercase tracking-wider text-[#137333]">Monthly Capital Allocation Queue</span>
+          <h2 class="text-xl font-normal font-google text-[#202124]" id="top-cards-heading">Top 4 Optimal Buy Candidates Right Now</h2>
+        </div>
+        <span class="text-xs text-[#5f6368]">Click any card or table row for full Gate & Score diagnostic</span>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" id="top4-cards-container">
+        <!-- Populated by JS -->
+      </div>
+    </section>
+
+    <!-- Visualisations: Scatter Map + Stacked Score Pillar Chart -->
+    <section class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+      <!-- Left: Optimal Compounder Scatter Map (7 cols) -->
+      <div class="google-card p-5 lg:col-span-7 flex flex-col justify-between">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#dadce0] pb-3 mb-3">
+          <div>
+            <span class="text-[11px] font-bold uppercase tracking-wider text-[#1a73e8]">Interactive Opportunity Map</span>
+            <h3 class="text-base font-medium font-google text-[#202124]">Dividend Growth vs Weekly Williams %R Pullback</h3>
+            <p class="text-[11px] text-[#5f6368]">Bubble size = Dividend Yield (%). Green zone = Oversold Buy Zone (≤ -80). Click any bubble to inspect.</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <label class="text-[11px] text-[#5f6368] font-medium">X-Axis:</label>
+            <select id="scatter-x-axis" onchange="renderCharts()" class="text-xs border border-[#dadce0] rounded-lg px-2 py-1 bg-[#f8f9fa] font-medium">
+              <option value="dgrowth" selected>5Y Dividend CAGR (%)</option>
+              <option value="score">Optimal Score (0–100)</option>
+              <option value="roe">Return on Equity (%)</option>
+            </select>
+          </div>
+        </div>
+        <div class="relative w-full h-[360px]">
+          <canvas id="scatterMapCanvas"></canvas>
+        </div>
+        <div class="flex flex-wrap items-center justify-between text-[11px] text-[#5f6368] pt-3 border-t border-[#f1f3f4] mt-2 gap-2">
+          <div class="flex items-center gap-3">
+            <span class="inline-flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-[#137333] inline-block"></span> 5/5 Gates Passed</span>
+            <span class="inline-flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-[#1a73e8] border-2 border-[#202124] inline-block"></span> Your Portfolio Holding</span>
+            <span class="inline-flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-[#e37400] inline-block"></span> 4/5 Gates Passed</span>
+            <span class="inline-flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-[#9aa0a6] inline-block"></span> ≤3/5 Gates</span>
+          </div>
+          <span id="scatter-count-note" class="font-mono">— plotted</span>
+        </div>
+      </div>
+
+      <!-- Right: Top 12 Score Pillar Decomposition (5 cols) -->
+      <div class="google-card p-5 lg:col-span-5 flex flex-col justify-between">
+        <div class="border-b border-[#dadce0] pb-3 mb-3">
+          <span class="text-[11px] font-bold uppercase tracking-wider text-[#137333]">Score Decomposition (0–100)</span>
+          <h3 class="text-base font-medium font-google text-[#202124]">Top 12 Candidates by 4-Pillar Score</h3>
+          <p class="text-[11px] text-[#5f6368]">Stacked points: Growth & Streak (35) + Quality (25) + Pullback (25) + Safe Yield (15).</p>
+        </div>
+        <div class="relative w-full h-[360px]">
+          <canvas id="pillarBarCanvas"></canvas>
+        </div>
+        <div class="text-[11px] text-[#5f6368] pt-3 border-t border-[#f1f3f4] mt-2 flex justify-between">
+          <span>Sorted by Composite Optimal Score</span>
+          <span class="font-mono text-[#202124]">Max Possible: 100.0 pts</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Full Gate & Score Matrix Table -->
+    <section class="google-card overflow-hidden">
+      <div class="p-4 sm:px-6 border-b border-[#dadce0] flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-[#f8f9fa]">
+        <div>
+          <h2 class="text-base font-medium font-google text-[#202124]">
+            Gate & Score Matrix <span class="text-[#1a73e8] font-mono text-sm ml-1" id="table-result-count">(0 companies)</span>
+          </h2>
+          <p class="text-xs text-[#5f6368]" id="table-subtitle">Showing companies matching active gate and universe filters. Click any column header to sort.</p>
+        </div>
+        <div class="flex items-center gap-2 text-xs">
+          <label class="text-[#5f6368]">Show rows:</label>
+          <select id="table-limit" onchange="renderTable()" class="border border-[#dadce0] rounded px-2 py-1 bg-white font-medium">
+            <option value="50" selected>50</option>
+            <option value="100">100</option>
+            <option value="250">250</option>
+            <option value="1000">All</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+          <thead class="bg-[#f8f9fa] border-b border-[#dadce0] text-[11px] text-[#5f6368] font-semibold uppercase tracking-wider">
+            <tr>
+              <th class="py-3 px-3 w-10">#</th>
+              <th class="py-3 px-3 sortable" onclick="sortBy('symbol')">Company</th>
+              <th class="py-3 px-3 sortable text-right" onclick="sortBy('score')">Optimal Score ▾</th>
+              <th class="py-3 px-3 sortable text-center" onclick="sortBy('gates')">Gates Passed</th>
+              <th class="py-3 px-3">Gate 1: Streak</th>
+              <th class="py-3 px-3">Gate 2: 5Y Div CAGR</th>
+              <th class="py-3 px-3">Gate 3: ROE / ROIC</th>
+              <th class="py-3 px-3">Gate 4: Div Yield</th>
+              <th class="py-3 px-3">Gate 5: Weekly W%R</th>
+              <th class="py-3 px-3 sortable text-right" onclick="sortBy('qrank')">Qual Rank</th>
+              <th class="py-3 px-3 sortable text-right" onclick="sortBy('mcap')">Market Cap</th>
+              <th class="py-3 px-3 text-right">Action</th>
+            </tr>
+          </thead>
+          <tbody id="matrix-tbody" class="divide-y divide-[#dadce0] text-xs text-[#202124]">
+            <!-- Populated by JS -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Stock Gate & Score Diagnostic Modal -->
+  <dialog id="stock-modal" class="rounded-2xl border border-[#dadce0] p-0 w-full max-w-2xl shadow-xl backdrop:bg-black/40">
+    <div id="stock-modal-content" class="p-6"></div>
+  </dialog>
+
+  <!-- Methodology Modal -->
+  <dialog id="methodology-modal" class="rounded-2xl border border-[#dadce0] p-0 w-full max-w-2xl shadow-xl backdrop:bg-black/40">
+    <div class="p-6 space-y-4">
+      <div class="flex items-start justify-between border-b border-[#dadce0] pb-3">
+        <div>
+          <span class="text-[11px] font-bold uppercase tracking-wider text-[#1a73e8]">EMPIRICAL SPECIFICATION</span>
+          <h2 class="text-xl font-normal font-google text-[#202124]">How the Optimal Dividend Growth Gates & Score Work</h2>
+        </div>
+        <button onclick="document.getElementById('methodology-modal').close()" class="text-[#5f6368] hover:text-[#202124] text-xl font-bold px-2">×</button>
+      </div>
+      <div class="space-y-3 text-xs text-[#3c4043] leading-relaxed">
+        <p><strong>Why the Old Atlas Screen Needed Upgrading:</strong> The original Atlas preset (<code class="bg-[#f1f3f4] px-1.5 py-0.5 rounded">ROE ≥ 10%</code>, <code class="bg-[#f1f3f4] px-1.5 py-0.5 rounded">Div Years ≥ 2</code>, <code class="bg-[#f1f3f4] px-1.5 py-0.5 rounded">Williams %R ≤ -80</code>, sorted by dollar <code class="bg-[#f1f3f4] px-1.5 py-0.5 rounded">Net Income</code>) had no dividend growth rate floor, no upper yield-trap cap, and used raw dollar profit as its primary ranking axis. In point-in-time testing across 53,124 stock-weeks (2011–2026), buying oversold stocks with sub-3% dividend growth produced a <strong>43.1% two-year dividend cut rate</strong>, whereas requiring <strong>≥7% dividend CAGR</strong> reduced the cut rate to <strong>5.9%</strong> and lifted 3-year median returns from 9.72% to 11.99% per year.</p>
+        <div class="bg-[#f8f9fa] p-3.5 rounded-xl border border-[#dadce0] space-y-1.5">
+          <div class="font-bold text-[#202124]">The 100-Point Optimal Score Formula:</div>
+          <div>• <strong>Pillar 1: Dividend Growth & Streak (0–35 pts):</strong> Up to 23 pts for 5Y Dividend CAGR (scaling linearly up to 22%+ CAGR) + up to 12 pts for consecutive dividend growth streak (scaling up to 25+ years).</div>
+          <div>• <strong>Pillar 2: Capital Quality (0–25 pts):</strong> Up to 17 pts for Capital Return (best of ROE or 1.4 × ROIC proxy, capped at 35%) + up to 8 pts for Stockopedia Quality Rank (with ROE adjustment for financials where industrial ROCE is not applicable).</div>
+          <div>• <strong>Pillar 3: Pullback Entry Timing (0–25 pts):</strong> Up to 20 pts for 14-week Williams %R depth (scaling from -40 down to -100) + up to 5 pts for drawdown below 52-week high (up to 35% off high).</div>
+          <div>• <strong>Pillar 4: Safe Yield Sweet-Spot (0–15 pts):</strong> Full 15 pts for yields in the 1.8% to 3.8% sweet spot; scales smoothly for lower-yield right-tail compounders (0.8%–1.8%) and tapers down above 3.8% to penalise >5.5% yield traps.</div>
+        </div>
+        <p><strong>No Arbitrary Sector Caps:</strong> Financials, industrials, technology, healthcare, and consumer compounders compete on the exact same meritocratic scale.</p>
+      </div>
+      <div class="pt-3 border-t border-[#dadce0] flex justify-end">
+        <button onclick="document.getElementById('methodology-modal').close()" class="bg-[#1a73e8] text-white text-xs font-medium px-4 py-2 rounded-lg">Done</button>
+      </div>
+    </div>
+  </dialog>
+
+  <script>
+    const PORTFOLIO_SYMBOLS = new Set(['AVGO', 'CAT', 'JPM', 'GS', 'BAC', 'BARC.L', 'TMUS', 'GSK.L']);
+    const EUROPE_CODES = new Set(['de', 'fr', 'ch', 'es', 'it', 'nl', 'se', 'dk']);
+
+    let rawStocks = [];
+    let evaluatedStocks = [];
+    let filteredStocks = [];
+    let currentMode = 'pass5';
+    let currentSort = { key: 'score', dir: 'desc' };
+    let scatterChart = null;
+    let pillarChart = null;
+
+    async function decodeSnapshotResponse(response, compressed = false) {
+      if (!response.ok) throw new Error('Snapshot fetch failed');
+      if (!compressed) return response.json();
+      const bytes = new Uint8Array(await response.arrayBuffer());
+      if (bytes[0] === 0x1f && bytes[1] === 0x8b) {
+        const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
+        return new Response(stream).json();
+      }
+      return JSON.parse(new TextDecoder().decode(bytes));
+    }
+
+    async function loadUniverse() {
+      const statusPill = document.getElementById('status-pill-text');
+      try {
+        // Try published snapshot data first (works on GitHub Pages and when public/data exists)
+        let dataPayload = null;
+        let builtTime = null;
+        try {
+          const statusRes = await fetch('./data/status.json', { cache: 'no-cache' });
+          if (statusRes.ok) {
+            const status = await statusRes.json();
+            builtTime = status?.snapshot?.built;
+            const compressed = status?.snapshot?.index_compression === 'gzip';
+            const stocksRes = await fetch(`./data/stocks.json${compressed ? '.gz' : ''}`, { cache: 'no-cache' });
+            dataPayload = await decodeSnapshotResponse(stocksRes, compressed);
+          }
+        } catch (_) {}
+
+        // Fallback to local FastAPI endpoint
+        if (!dataPayload) {
+          const apiRes = await fetch('/api/technical-screen?include_history=false');
+          if (!apiRes.ok) throw new Error('Could not load stock universe from snapshot or local API');
+          dataPayload = await apiRes.json();
+        }
+
+        const fields = dataPayload.fields;
+        const rows = dataPayload.rows.map(vals => Object.fromEntries(fields.map((k, i) => [k, vals[i]])));
+        rawStocks = rows.filter(r => r.active && r.instrument === 'stock' && r.main_listing);
+
+        // Populate sector dropdown dynamically
+        const sectors = Array.from(new Set(rawStocks.map(r => r.sector).filter(Boolean))).sort();
+        const secSelect = document.getElementById('filter-sector');
+        sectors.forEach(sec => {
+          const opt = document.createElement('option');
+          opt.value = sec;
+          opt.textContent = sec;
+          secSelect.appendChild(opt);
+        });
+
+        const dateLabel = builtTime ? builtTime.slice(0, 16).replace('T', ' ') + ' UTC' : 'Live Local DB';
+        statusPill.textContent = `${rawStocks.length.toLocaleString()} Primary Stocks · ${dateLabel}`;
+
+        applyAllFilters();
+      } catch (err) {
+        statusPill.textContent = 'Data load error: ' + err.message;
+        console.error(err);
+      }
+    }
+
+    function getGateSettings() {
+      const minStreak = Number(document.getElementById('gate-streak').value);
+      const minDgrowth = Number(document.getElementById('gate-dgrowth').value);
+      const minQual = Number(document.getElementById('gate-quality').value);
+      const [minYield, maxYield] = document.getElementById('gate-yield').value.split('-').map(Number);
+      const maxWilliams = Number(document.getElementById('gate-williams').value);
+      return { minStreak, minDgrowth, minQual, minYield, maxYield, maxWilliams };
+    }
+
+    function evaluateStock(r, gates) {
+      const dy = Number.isFinite(r.div_yield) ? r.div_yield : 0;
+      const streak = Number.isFinite(r.div_years) ? r.div_years : 0;
+      const dgrowth = Number.isFinite(r.div_growth) ? r.div_growth : (Number.isFinite(r.div_fiscal_growth_3y) ? r.div_fiscal_growth_3y : null);
+      const roe = Number.isFinite(r.roe) ? r.roe : null;
+      const roic = Number.isFinite(r.roic_proxy) ? r.roic_proxy : null;
+      const wr = Number.isFinite(r.williams_r) ? r.williams_r : null;
+      const wrm = Number.isFinite(r.williams_monthly_r) ? r.williams_monthly_r : null;
+      const qrank = Number.isFinite(r.quality_rank) ? r.quality_rank : null;
+      const srank = Number.isFinite(r.stockrank) ? r.stockrank : null;
+      const b52 = Number.isFinite(r.below_52w_high) ? r.below_52w_high : null;
+      const mcap = Number.isFinite(r.market_cap) ? r.market_cap : 0;
+
+      const roicThreshold = Math.round(gates.minQual * 0.72 * 10) / 10;
+
+      // 5 Gates
+      const g1 = streak >= gates.minStreak;
+      const g2 = gates.minDgrowth <= -900 ? true : (dgrowth !== null && dgrowth >= gates.minDgrowth);
+      const g3 = (roe !== null && roe >= gates.minQual) || (roic !== null && roic >= roicThreshold);
+      const g4 = dy >= gates.minYield && dy <= gates.maxYield;
+      const g5 = gates.maxWilliams >= 0 ? true : (wr !== null && wr <= gates.maxWilliams);
+
+      const gatesPassed = (g1 ? 1 : 0) + (g2 ? 1 : 0) + (g3 ? 1 : 0) + (g4 ? 1 : 0) + (g5 ? 1 : 0);
+
+      // Old Atlas rule check: ROE >= 10, Streak >= 2, Williams <= -80
+      const oldAtlasPass = (roe !== null && roe >= 10) && streak >= 2 && (wr !== null && wr <= -80);
+
+      // 4-Pillar Optimal Score (0 - 100)
+      // Pillar 1: Dividend Growth & Streak (35 pts max: 23 pts CAGR + 12 pts Streak)
+      const cagrClamped = Math.min(Math.max(dgrowth ?? 0, 0), 22.0);
+      const streakClamped = Math.min(Math.max(streak, 0), 25.0);
+      const pGrowth = (cagrClamped / 22.0) * 23.0 + (streakClamped / 25.0) * 12.0;
+
+      // Pillar 2: Capital Quality (25 pts max: 17 pts ROE/ROIC + 8 pts Quality Rank)
+      const capReturn = Math.max(roe ?? 0, (roic ?? 0) * 1.4);
+      const isFinance = (r.sector || '').toLowerCase().includes('financ');
+      const effectiveQrank = (qrank !== null && !isFinance)
+        ? qrank
+        : Math.min(100, Math.max(qrank ?? 0, (roe ?? 0) * 4.5));
+      const pQual = (Math.min(Math.max(capReturn, 0), 35.0) / 35.0) * 17.0 + (effectiveQrank / 100.0) * 8.0;
+
+      // Pillar 3: Pullback Timing (25 pts max: 20 pts Weekly W%R + 5 pts Below 52W High)
+      let wrPts = 0;
+      if (wr !== null && wr < -40) {
+        wrPts = (Math.min(Math.max(Math.abs(wr) - 40.0, 0), 60.0) / 60.0) * 20.0;
+      }
+      const b52Pts = (Math.min(Math.max(b52 ?? 0, 0), 35.0) / 35.0) * 5.0;
+      const pPullback = wrPts + b52Pts;
+
+      // Pillar 4: Safe Yield Sweet-Spot (15 pts max: 1.8% - 3.8% = 15 pts)
+      let pYield = 0;
+      if (dy <= 0) {
+        pYield = 0;
+      } else if (dy >= 1.8 && dy <= 3.8) {
+        pYield = 15.0;
+      } else if (dy < 1.8) {
+        pYield = (dy / 1.8) * 15.0;
+      } else if (dy <= 6.0) {
+        pYield = Math.max(0, (1.0 - (dy - 3.8) / 2.2) * 15.0);
+      }
+
+      const totalScore = Math.round((pGrowth + pQual + pPullback + pYield) * 10) / 10;
+
+      return {
+        raw: r,
+        symbol: r.symbol,
+        name: r.name || r.symbol,
+        region_code: r.region_code || '',
+        region: r.region || '',
+        sector: r.sector || 'Unclassified',
+        logo_url: r.logo_url ? (r.logo_url.startsWith('http') || r.logo_url.startsWith('/') ? r.logo_url : './' + r.logo_url) : null,
+        price: r.price,
+        mcap,
+        net_income: r.net_income,
+        dy,
+        streak,
+        dgrowth,
+        roe,
+        roic,
+        wr,
+        wrm,
+        qrank,
+        srank,
+        qv_score: r.qv_score,
+        qm_score: r.qm_score,
+        vm_score: r.vm_score,
+        stock_style: r.stock_style,
+        b52,
+        g1, g2, g3, g4, g5,
+        gates: gatesPassed,
+        oldAtlasPass,
+        inPortfolio: PORTFOLIO_SYMBOLS.has(r.symbol),
+        pGrowth: Math.round(pGrowth * 10) / 10,
+        pQual: Math.round(pQual * 10) / 10,
+        pPullback: Math.round(pPullback * 10) / 10,
+        pYield: Math.round(pYield * 10) / 10,
+        score: totalScore
+      };
+    }
+
+    function applyAllFilters() {
+      const gates = getGateSettings();
+      const minMcap = Number(document.getElementById('filter-mcap').value);
+      const regionFilter = document.getElementById('filter-region').value;
+      const sectorFilter = document.getElementById('filter-sector').value;
+      const search = document.getElementById('search-input').value.trim().toLowerCase();
+
+      // Scope universe by Market Cap, Region, Sector
+      const scopedRaw = rawStocks.filter(r => {
+        if (currentMode === 'portfolio') return PORTFOLIO_SYMBOLS.has(r.symbol);
+        if ((r.market_cap || 0) < minMcap) return false;
+        if (regionFilter === 'us' && r.region_code !== 'us') return false;
+        if (regionFilter === 'gb' && r.region_code !== 'gb') return false;
+        if (regionFilter === 'ca' && r.region_code !== 'ca') return false;
+        if (regionFilter === 'eu' && !EUROPE_CODES.has(r.region_code)) return false;
+        if (sectorFilter !== 'all' && r.sector !== sectorFilter) return false;
+        if (search && !(r.symbol.toLowerCase().includes(search) || (r.name || '').toLowerCase().includes(search))) return false;
+        return true;
+      });
+
+      evaluatedStocks = scopedRaw.map(r => evaluateStock(r, gates));
+
+      // Compute gate pass rates across dividend payers in the scoped universe
+      const divPayers = evaluatedStocks.filter(e => e.dy > 0);
+      const denom = Math.max(divPayers.length, 1);
+      document.getElementById('g1-pass-rate').textContent = `${divPayers.filter(e => e.g1).length} / ${divPayers.length}`;
+      document.getElementById('g2-pass-rate').textContent = `${divPayers.filter(e => e.g2).length} / ${divPayers.length}`;
+      document.getElementById('g3-pass-rate').textContent = `${divPayers.filter(e => e.g3).length} / ${divPayers.length}`;
+      document.getElementById('g4-pass-rate').textContent = `${divPayers.filter(e => e.g4).length} / ${divPayers.length}`;
+      document.getElementById('g5-pass-rate').textContent = `${divPayers.filter(e => e.g5).length} / ${divPayers.length}`;
+
+      // Update KPI cards from the full scoped universe
+      const allPass5 = evaluatedStocks.filter(e => e.gates === 5).sort((a, b) => b.score - a.score);
+      const allPass4 = evaluatedStocks.filter(e => e.gates === 4).sort((a, b) => b.score - a.score);
+      const mcapSelect = document.getElementById('filter-mcap');
+      document.getElementById('kpi-universe-scope').textContent = mcapSelect.options[mcapSelect.selectedIndex].text.replace('Market Cap: ', '');
+      document.getElementById('kpi-pass5-count').textContent = `${allPass5.length} Stocks`;
+      document.getElementById('kpi-pass5-sub').textContent = `Out of ${divPayers.length.toLocaleString()} dividend payers in scope`;
+
+      if (allPass5.length > 0) {
+        const top = allPass5[0];
+        document.getElementById('kpi-top1-score').textContent = `${top.score.toFixed(1)} / 100`;
+        document.getElementById('kpi-top1-name').textContent = `${top.symbol} · ${top.name}`;
+        document.getElementById('kpi-top1-metrics').textContent = `Yld ${top.dy.toFixed(2)}% · ${top.streak}Y Strk · +${(top.dgrowth ?? 0).toFixed(1)}% CAGR · W%R ${top.wr?.toFixed(0)}`;
+      } else {
+        document.getElementById('kpi-top1-score').textContent = '— / 100';
+        document.getElementById('kpi-top1-name').textContent = 'No 5/5 matches';
+        document.getElementById('kpi-top1-metrics').textContent = 'Loosen a gate threshold above';
+      }
+
+      document.getElementById('kpi-pass4-count').textContent = `${allPass4.length} Stocks`;
+      if (allPass4.length > 0) {
+        document.getElementById('kpi-pass4-sub').textContent = `Led by ${allPass4.slice(0, 3).map(x => x.symbol).join(', ')}`;
+      }
+
+      // Portfolio KPI
+      const portEval = rawStocks.filter(r => PORTFOLIO_SYMBOLS.has(r.symbol)).map(r => evaluateStock(r, gates));
+      const portPass5 = portEval.filter(e => e.gates === 5);
+      const portAvg = portEval.length ? (portEval.reduce((s, e) => s + e.score, 0) / portEval.length) : 0;
+      document.getElementById('kpi-port-pass').textContent = `${portPass5.length} / ${portEval.length} pass 5/5`;
+      document.getElementById('kpi-port-avg').textContent = `Avg Score: ${portAvg.toFixed(1)}`;
+      document.getElementById('kpi-port-leaders').textContent = portPass5.length
+        ? `Passing 5/5: ${portPass5.map(e => e.symbol).join(', ')}`
+        : 'Click "Your Atlas Portfolio" chip below to inspect';
+
+      // Filter by active mode
+      if (currentMode === 'pass5') {
+        filteredStocks = evaluatedStocks.filter(e => e.gates === 5);
+      } else if (currentMode === 'pass4') {
+        filteredStocks = evaluatedStocks.filter(e => e.gates >= 4);
+      } else if (currentMode === 'portfolio') {
+        filteredStocks = portEval;
+      } else if (currentMode === 'old_atlas') {
+        filteredStocks = evaluatedStocks.filter(e => e.oldAtlasPass);
+      } else {
+        filteredStocks = evaluatedStocks.filter(e => e.dy > 0);
+      }
+
+      sortFiltered();
+      renderTop4Cards();
+      renderCharts();
+      renderTable();
+    }
+
+    function setMode(mode) {
+      currentMode = mode;
+      document.querySelectorAll('#mode-chips .google-chip').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.mode === mode);
+      });
+      if (mode === 'old_atlas') {
+        currentSort = { key: 'net_income', dir: 'desc' };
+      } else {
+        currentSort = { key: 'score', dir: 'desc' };
+      }
+      applyAllFilters();
+    }
+
+    function resetToOptimalDefaults() {
+      document.getElementById('gate-streak').value = '5';
+      document.getElementById('gate-dgrowth').value = '7';
+      document.getElementById('gate-quality').value = '14';
+      document.getElementById('gate-yield').value = '0.8-5.0';
+      document.getElementById('gate-williams').value = '-80';
+      document.getElementById('filter-mcap').value = '10000000000';
+      document.getElementById('filter-region').value = 'all';
+      document.getElementById('filter-sector').value = 'all';
+      document.getElementById('search-input').value = '';
+      setMode('pass5');
+    }
+
+    function sortBy(key) {
+      if (currentSort.key === key) {
+        currentSort.dir = currentSort.dir === 'desc' ? 'asc' : 'desc';
+      } else {
+        currentSort.key = key;
+        currentSort.dir = key === 'symbol' || key === 'wr' ? 'asc' : 'desc';
+      }
+      sortFiltered();
+      renderTable();
+    }
+
+    function sortFiltered() {
+      const { key, dir } = currentSort;
+      const sign = dir === 'desc' ? -1 : 1;
+      filteredStocks.sort((a, b) => {
+        if (key === 'symbol') return a.symbol.localeCompare(b.symbol) * sign;
+        const va = a[key] ?? -Infinity;
+        const vb = b[key] ?? -Infinity;
+        if (va !== vb) return (va - vb) * sign;
+        return b.score - a.score;
+      });
+    }
+
+    function formatUSD(val) {
+      if (!Number.isFinite(val)) return '—';
+      const abs = Math.abs(val);
+      if (abs >= 1e12) return '$' + (val / 1e12).toFixed(2) + 'T';
+      if (abs >= 1e9) return '$' + (val / 1e9).toFixed(1) + 'B';
+      if (abs >= 1e6) return '$' + (val / 1e6).toFixed(0) + 'M';
+      return '$' + val.toFixed(0);
+    }
+
+    function gatePillHTML(passed, label) {
+      return `<span class="gate-pill ${passed ? 'gate-pass' : 'gate-fail'}">${passed ? '✓' : '✗'} ${label}</span>`;
+    }
+
+    function renderTop4Cards() {
+      const container = document.getElementById('top4-cards-container');
+      const top4 = filteredStocks.slice(0, 4);
+      if (!top4.length) {
+        container.innerHTML = `<div class="col-span-4 google-card p-6 text-center text-xs text-[#5f6368]">No companies match all active filters. Try switching to <strong>4+/5 Gates</strong> or lowering Market Cap to <strong>≥ $2B</strong>.</div>`;
+        return;
+      }
+
+      container.innerHTML = top4.map((s, idx) => {
+        const badgeColor = s.gates === 5 ? 'bg-[#137333] text-white' : (s.gates === 4 ? 'bg-[#b06000] text-white' : 'bg-[#5f6368] text-white');
+        const cardBorder = idx === 0 && s.gates === 5 ? 'border-2 border-[#137333] bg-[#f8fdf9]' : 'border border-[#dadce0] bg-white';
+        const capRetText = s.roe !== null ? `ROE ${s.roe.toFixed(1)}%` : (s.roic !== null ? `ROIC ${s.roic.toFixed(1)}%` : 'ROE —');
+        return `
+          <div onclick="openStockModal('${s.symbol}')" class="google-card p-4 ${cardBorder} cursor-pointer hover:shadow-md transition flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between gap-2 mb-2">
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${badgeColor}">
+                  Rank #${idx + 1} · ${s.gates}/5 Gates
+                </span>
+                <span class="font-mono text-sm font-bold text-[#1a73e8]">${s.score.toFixed(1)} <span class="text-[10px] text-[#5f6368] font-normal">/100</span></span>
+              </div>
+
+              <div class="flex items-center justify-between gap-2">
+                <div class="truncate">
+                  <div class="flex items-center gap-1.5">
+                    <span class="text-xl font-bold font-google text-[#202124]">${s.symbol}</span>
+                    <span class="text-[10px] font-mono uppercase px-1.5 py-0.5 rounded bg-[#f1f3f4] text-[#5f6368]">${s.region_code.toUpperCase()}</span>
+                    ${s.inPortfolio ? '<span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-[#e8f0fe] text-[#1a73e8]">HELD</span>' : ''}
+                  </div>
+                  <div class="text-xs text-[#5f6368] truncate">${s.name}</div>
+                </div>
+                <div class="text-right font-mono">
+                  <div class="text-xs font-semibold text-[#202124]">${formatUSD(s.mcap)}</div>
+                  <div class="text-[10px] text-[#70757a] truncate max-w-[110px]">${s.sector}</div>
+                </div>
+              </div>
+
+              <!-- 4-Pillar Score Bar -->
+              <div class="mt-3">
+                <div class="flex justify-between text-[10px] text-[#5f6368] font-mono mb-1">
+                  <span>G:${s.pGrowth.toFixed(0)}</span>
+                  <span>Q:${s.pQual.toFixed(0)}</span>
+                  <span>P:${s.pPullback.toFixed(0)}</span>
+                  <span>Y:${s.pYield.toFixed(0)}</span>
+                </div>
+                <div class="score-bar-bg">
+                  <div style="width:${s.pGrowth}%; background:#1a73e8" title="Growth & Streak: ${s.pGrowth}/35"></div>
+                  <div style="width:${s.pQual}%; background:#137333" title="Capital Quality: ${s.pQual}/25"></div>
+                  <div style="width:${s.pPullback}%; background:#9334e6" title="Pullback Timing: ${s.pPullback}/25"></div>
+                  <div style="width:${s.pYield}%; background:#e37400" title="Safe Yield: ${s.pYield}/15"></div>
+                </div>
+              </div>
+
+              <!-- 5 Gate Pills -->
+              <div class="mt-3 flex flex-wrap gap-1">
+                ${gatePillHTML(s.g1, `${s.streak}Y Strk`)}
+                ${gatePillHTML(s.g2, s.dgrowth !== null ? `${s.dgrowth >= 0 ? '+' : ''}${s.dgrowth.toFixed(1)}% CAGR` : 'No 5Y')}
+                ${gatePillHTML(s.g3, capRetText)}
+                ${gatePillHTML(s.g4, `${s.dy.toFixed(2)}% Yld`)}
+                ${gatePillHTML(s.g5, `W%R ${s.wr !== null ? s.wr.toFixed(0) : '—'}`)}
+              </div>
+            </div>
+
+            <div class="mt-3 pt-2.5 border-t border-[#f1f3f4] flex items-center justify-between text-[11px]">
+              <span class="text-[#5f6368]">Quality Rank: <strong class="text-[#202124]">${s.qrank ?? '—'}</strong></span>
+              <span class="text-[#1a73e8] font-medium">Inspect Gates →</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderCharts() {
+      const xKey = document.getElementById('scatter-x-axis').value;
+      const plotCandidates = evaluatedStocks.filter(e => e.dy > 0 && e.wr !== null && e[xKey] !== null);
+      document.getElementById('scatter-count-note').textContent = `${plotCandidates.length} dividend stocks plotted`;
+
+      const pass5Pts = [];
+      const portPts = [];
+      const pass4Pts = [];
+      const otherPts = [];
+
+      plotCandidates.forEach(s => {
+        const xVal = xKey === 'dgrowth' ? Math.min(Math.max(s.dgrowth, -15), 45) : (xKey === 'roe' ? Math.min(Math.max(s.roe, 0), 70) : s.score);
+        const pt = {
+          x: xVal,
+          y: s.wr,
+          r: Math.min(Math.max(s.dy * 2.2, 4), 13),
+          stock: s
+        };
+        if (s.inPortfolio) portPts.push(pt);
+        else if (s.gates === 5) pass5Pts.push(pt);
+        else if (s.gates === 4) pass4Pts.push(pt);
+        else otherPts.push(pt);
+      });
+
+      const ctxScatter = document.getElementById('scatterMapCanvas').getContext('2d');
+      if (scatterChart) scatterChart.destroy();
+
+      const xLabel = xKey === 'dgrowth' ? '5Y Dividend Growth CAGR (%, capped at 45%)' : (xKey === 'roe' ? 'Return on Equity (%, capped at 70%)' : 'Optimal Composite Score (0–100)');
+
+      const oversoldZonePlugin = {
+        id: 'oversoldZone',
+        beforeDraw(chart) {
+          const { ctx, chartArea, scales } = chart;
+          if (!chartArea || !scales.y) return;
+          const y80 = scales.y.getPixelForValue(-80);
+          const y100 = scales.y.getPixelForValue(-100);
+          ctx.save();
+          ctx.fillStyle = 'rgba(19, 115, 51, 0.07)';
+          ctx.fillRect(chartArea.left, y80, chartArea.right - chartArea.left, y100 - y80);
+          ctx.strokeStyle = 'rgba(19, 115, 51, 0.4)';
+          ctx.setLineDash([4, 4]);
+          ctx.beginPath();
+          ctx.moveTo(chartArea.left, y80);
+          ctx.lineTo(chartArea.right, y80);
+          ctx.stroke();
+          ctx.restore();
+        }
+      };
+
+      scatterChart = new Chart(ctxScatter, {
+        type: 'bubble',
+        data: {
+          datasets: [
+            {
+              label: 'Your Portfolio',
+              data: portPts,
+              backgroundColor: 'rgba(26, 115, 232, 0.85)',
+              borderColor: '#202124',
+              borderWidth: 2
+            },
+            {
+              label: '5/5 Gates Passed',
+              data: pass5Pts,
+              backgroundColor: 'rgba(19, 115, 51, 0.82)',
+              borderColor: '#0d652d',
+              borderWidth: 1.5
+            },
+            {
+              label: '4/5 Gates Passed',
+              data: pass4Pts,
+              backgroundColor: 'rgba(227, 116, 0, 0.65)',
+              borderColor: '#b06000',
+              borderWidth: 1
+            },
+            {
+              label: '≤3/5 Gates',
+              data: otherPts,
+              backgroundColor: 'rgba(154, 160, 166, 0.25)',
+              borderColor: 'rgba(154, 160, 166, 0.45)',
+              borderWidth: 1
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          onClick: (_, elements) => {
+            if (!elements.length) return;
+            const { datasetIndex, index } = elements[0];
+            const st = scatterChart.data.datasets[datasetIndex].data[index].stock;
+            if (st) openStockModal(st.symbol);
+          },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label(ctx) {
+                  const s = ctx.raw.stock;
+                  return [
+                    `${s.symbol} (${s.name}) — Score: ${s.score.toFixed(1)}/100 [${s.gates}/5 Gates]`,
+                    `Yield: ${s.dy.toFixed(2)}% | Streak: ${s.streak}Y | 5Y Div CAGR: ${s.dgrowth !== null ? s.dgrowth.toFixed(1) + '%' : '—'}`,
+                    `ROE: ${s.roe !== null ? s.roe.toFixed(1) + '%' : '—'} | Weekly W%R: ${s.wr !== null ? s.wr.toFixed(1) : '—'}`
+                  ];
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              title: { display: true, text: xLabel, font: { size: 11, weight: '600' }, color: '#5f6368' },
+              grid: { color: '#f1f3f4' }
+            },
+            y: {
+              min: -102,
+              max: 0,
+              title: { display: true, text: 'Weekly Williams %R (≤ -80 Oversold)', font: { size: 11, weight: '600' }, color: '#5f6368' },
+              grid: { color: '#f1f3f4' }
+            }
+          }
+        },
+        plugins: [oversoldZonePlugin]
+      });
+
+      // Right Chart: Top 12 Stacked Horizontal Bar Chart
+      const top12 = [...filteredStocks].sort((a, b) => b.score - a.score).slice(0, 12);
+      const ctxBar = document.getElementById('pillarBarCanvas').getContext('2d');
+      if (pillarChart) pillarChart.destroy();
+
+      pillarChart = new Chart(ctxBar, {
+        type: 'bar',
+        data: {
+          labels: top12.map(s => `${s.symbol} (${s.gates}/5)`),
+          datasets: [
+            { label: 'Growth & Streak (/35)', data: top12.map(s => s.pGrowth), backgroundColor: '#1a73e8' },
+            { label: 'Quality ROE/ROIC (/25)', data: top12.map(s => s.pQual), backgroundColor: '#137333' },
+            { label: 'Pullback W%R (/25)', data: top12.map(s => s.pPullback), backgroundColor: '#9334e6' },
+            { label: 'Safe Yield (/15)', data: top12.map(s => s.pYield), backgroundColor: '#e37400' }
+          ]
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          maintainAspectRatio: false,
+          onClick: (_, elements) => {
+            if (!elements.length) return;
+            const st = top12[elements[0].index];
+            if (st) openStockModal(st.symbol);
+          },
+          plugins: {
+            legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } },
+            tooltip: {
+              callbacks: {
+                afterBody(items) {
+                  const st = top12[items[0].dataIndex];
+                  return `Total Optimal Score: ${st.score.toFixed(1)} / 100`;
+                }
+              }
+            }
+          },
+          scales: {
+            x: { stacked: true, max: 100, grid: { color: '#f1f3f4' } },
+            y: { stacked: true, ticks: { font: { family: '"Roboto Mono", monospace', size: 11, weight: '600' } }, grid: { display: false } }
+          }
+        }
+      });
+    }
+
+    function renderTable() {
+      const limit = Number(document.getElementById('table-limit').value);
+      const rows = filteredStocks.slice(0, limit);
+      document.getElementById('table-result-count').textContent = `(${filteredStocks.length.toLocaleString()} matching companies)`;
+
+      const tbody = document.getElementById('matrix-tbody');
+      if (!rows.length) {
+        tbody.innerHTML = `<tr><td colspan="12" class="py-8 text-center text-[#5f6368]">No stocks match current gate filters.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = rows.map((s, idx) => {
+        const gatesBadge = s.gates === 5
+          ? `<span class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-[#e6f4ea] text-[#137333] border border-[#ceead6]">5 / 5 PASS</span>`
+          : (s.gates === 4
+            ? `<span class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-[#fef7e0] text-[#b06000] border border-[#feefc3]">4 / 5</span>`
+            : `<span class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#f1f3f4] text-[#5f6368]">${s.gates} / 5</span>`);
+
+        const capRetLabel = s.roe !== null
+          ? `${s.roe.toFixed(1)}% ROE${s.roic !== null ? ' / ' + s.roic.toFixed(0) + '% ROIC' : ''}`
+          : (s.roic !== null ? `${s.roic.toFixed(1)}% ROIC` : '—');
+
+        return `
+          <tr onclick="openStockModal('${s.symbol}')" class="hover:bg-[#f8fafd] cursor-pointer transition ${s.inPortfolio ? 'bg-[#f8fafd]' : ''}">
+            <td class="py-3 px-3 font-mono text-[#70757a]">${idx + 1}</td>
+            <td class="py-3 px-3">
+              <div class="flex items-center gap-2.5">
+                <div class="w-7 h-7 rounded-md bg-[#f1f3f4] flex items-center justify-center font-bold text-xs text-[#202124] overflow-hidden shrink-0">
+                  ${s.logo_url ? `<img src="${s.logo_url}" alt="" class="w-full h-full object-contain" onerror="this.remove()">` : s.symbol.slice(0, 2)}
+                </div>
+                <div class="min-w-0">
+                  <div class="flex items-center gap-1.5">
+                    <span class="font-bold font-mono text-[#202124]">${s.symbol}</span>
+                    <span class="text-[10px] font-mono uppercase px-1 rounded bg-[#f1f3f4] text-[#5f6368]">${s.region_code}</span>
+                    ${s.inPortfolio ? '<span class="text-[10px] font-bold px-1.5 py-0.2 rounded bg-[#e8f0fe] text-[#1a73e8]">PORTFOLIO</span>' : ''}
+                  </div>
+                  <div class="text-[11px] text-[#5f6368] truncate max-w-[210px]">${s.name} · <span class="text-[#70757a]">${s.sector}</span></div>
+                </div>
+              </div>
+            </td>
+            <td class="py-3 px-3 text-right">
+              <div class="font-mono font-bold text-sm text-[#202124]">${s.score.toFixed(1)}</div>
+              <div class="score-bar-bg w-24 ml-auto mt-1">
+                <div style="width:${s.pGrowth}%; background:#1a73e8"></div>
+                <div style="width:${s.pQual}%; background:#137333"></div>
+                <div style="width:${s.pPullback}%; background:#9334e6"></div>
+                <div style="width:${s.pYield}%; background:#e37400"></div>
+              </div>
+            </td>
+            <td class="py-3 px-3 text-center">${gatesBadge}</td>
+            <td class="py-3 px-3">${gatePillHTML(s.g1, `${s.streak}Y`)}</td>
+            <td class="py-3 px-3">${gatePillHTML(s.g2, s.dgrowth !== null ? `${s.dgrowth >= 0 ? '+' : ''}${s.dgrowth.toFixed(1)}%` : '—')}</td>
+            <td class="py-3 px-3">${gatePillHTML(s.g3, capRetLabel)}</td>
+            <td class="py-3 px-3">${gatePillHTML(s.g4, `${s.dy.toFixed(2)}%`)}</td>
+            <td class="py-3 px-3">${gatePillHTML(s.g5, s.wr !== null ? s.wr.toFixed(1) : '—')}</td>
+            <td class="py-3 px-3 text-right font-mono font-semibold">${s.qrank ?? '—'}</td>
+            <td class="py-3 px-3 text-right font-mono text-[#5f6368]">${formatUSD(s.mcap)}</td>
+            <td class="py-3 px-3 text-right" onclick="event.stopPropagation()">
+              <a href="./?search=${encodeURIComponent(s.symbol)}" class="text-[#1a73e8] hover:underline font-medium text-[11px]">Deep dive ↗</a>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function openStockModal(symbol) {
+      const s = evaluatedStocks.find(x => x.symbol === symbol) || rawStocks.filter(r => r.symbol === symbol).map(r => evaluateStock(r, getGateSettings()))[0];
+      if (!s) return;
+      const modal = document.getElementById('stock-modal');
+      const content = document.getElementById('stock-modal-content');
+
+      const gatesList = [
+        { name: 'Gate 1 · Dividend Streak', pass: s.g1, actual: `${s.streak} consecutive years`, target: `≥ ${document.getElementById('gate-streak').value} years`, note: 'Filters out post-cut resets and unproven initiators.' },
+        { name: 'Gate 2 · 5Y Dividend CAGR', pass: s.g2, actual: s.dgrowth !== null ? `${s.dgrowth.toFixed(2)}% per year` : 'Unavailable', target: `≥ ${document.getElementById('gate-dgrowth').value}% CAGR`, note: 'Primary compounding driver; cuts 2Y dividend cut rate from 43.1% to 5.9%.' },
+        { name: 'Gate 3 · Capital Quality (ROE / ROIC)', pass: s.g3, actual: `ROE ${s.roe !== null ? s.roe.toFixed(1) + '%' : '—'} | ROIC ${s.roic !== null ? s.roic.toFixed(1) + '%' : '—'}`, target: `ROE ≥ ${document.getElementById('gate-quality').value}% or ROIC ≥ ${(Number(document.getElementById('gate-quality').value)*0.72).toFixed(0)}%`, note: 'Ensures dividend increases are funded by internal returns on capital.' },
+        { name: 'Gate 4 · Safe Yield Corridor', pass: s.g4, actual: `${s.dy.toFixed(2)}% indicated yield`, target: `${document.getElementById('gate-yield').value.replace('-', '% to ')}%`, note: 'Avoids distressed >5% yield traps while keeping right-tail compounders.' },
+        { name: 'Gate 5 · Weekly Williams %R Pullback', pass: s.g5, actual: `Weekly W%R ${s.wr !== null ? s.wr.toFixed(1) : '—'} (${s.b52 !== null ? s.b52.toFixed(1) + '% below 52W high' : ''})`, target: `≤ ${document.getElementById('gate-williams').value}`, note: 'Captures temporary mean-reverting pullbacks in high-grade compounders.' }
+      ];
+
+      content.innerHTML = `
+        <div class="flex items-start justify-between border-b border-[#dadce0] pb-4">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="text-2xl font-bold font-google text-[#202124]">${s.symbol}</span>
+              <span class="text-sm text-[#5f6368]">${s.name}</span>
+              <span class="px-2 py-0.5 rounded text-xs font-bold ${s.gates === 5 ? 'bg-[#e6f4ea] text-[#137333]' : 'bg-[#fef7e0] text-[#b06000]'}">${s.gates} / 5 Gates Passed</span>
+            </div>
+            <div class="text-xs text-[#5f6368] mt-1">
+              ${s.region} · ${s.sector} · Market Cap: <strong>${formatUSD(s.mcap)}</strong> · Net Income: <strong>${formatUSD(s.net_income)}</strong> · Style: <strong>${s.stock_style || '—'}</strong>
+            </div>
+          </div>
+          <button onclick="document.getElementById('stock-modal').close()" class="text-[#5f6368] hover:text-[#202124] text-xl font-bold px-2">×</button>
+        </div>
+
+        <!-- 4-Pillar Score Summary -->
+        <div class="my-4 p-4 rounded-xl bg-[#f8f9fa] border border-[#dadce0]">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-bold uppercase tracking-wider text-[#202124]">Optimal Dividend Growth Score</span>
+            <span class="text-2xl font-bold font-mono text-[#1a73e8]">${s.score.toFixed(1)} <span class="text-xs text-[#5f6368] font-normal">/ 100.0</span></span>
+          </div>
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs font-mono">
+            <div class="p-2 rounded bg-white border border-[#dadce0]">
+              <div class="text-[10px] text-[#1a73e8] font-bold">1. GROWTH & STREAK</div>
+              <div class="text-sm font-bold mt-0.5">${s.pGrowth.toFixed(1)} <span class="text-[10px] text-[#70757a]">/ 35</span></div>
+            </div>
+            <div class="p-2 rounded bg-white border border-[#dadce0]">
+              <div class="text-[10px] text-[#137333] font-bold">2. CAPITAL QUALITY</div>
+              <div class="text-sm font-bold mt-0.5">${s.pQual.toFixed(1)} <span class="text-[10px] text-[#70757a]">/ 25</span></div>
+            </div>
+            <div class="p-2 rounded bg-white border border-[#dadce0]">
+              <div class="text-[10px] text-[#9334e6] font-bold">3. PULLBACK TIMING</div>
+              <div class="text-sm font-bold mt-0.5">${s.pPullback.toFixed(1)} <span class="text-[10px] text-[#70757a]">/ 25</span></div>
+            </div>
+            <div class="p-2 rounded bg-white border border-[#dadce0]">
+              <div class="text-[10px] text-[#e37400] font-bold">4. SAFE YIELD</div>
+              <div class="text-sm font-bold mt-0.5">${s.pYield.toFixed(1)} <span class="text-[10px] text-[#70757a]">/ 15</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 5 Gate Breakdown -->
+        <div class="space-y-2">
+          <div class="text-xs font-bold uppercase tracking-wider text-[#5f6368]">Gate-by-Gate Audit</div>
+          ${gatesList.map(g => `
+            <div class="p-3 rounded-lg border ${g.pass ? 'bg-[#f8fdf9] border-[#ceead6]' : 'bg-[#fff8f7] border-[#fad2cf]'} flex items-start justify-between gap-3 text-xs">
+              <div>
+                <div class="font-bold ${g.pass ? 'text-[#137333]' : 'text-[#c5221f]'}">${g.pass ? '✓ PASS' : '✗ FAIL'} · ${g.name}</div>
+                <div class="text-[11px] text-[#5f6368] mt-0.5">${g.note}</div>
+              </div>
+              <div class="text-right font-mono shrink-0">
+                <div class="font-bold text-[#202124]">${g.actual}</div>
+                <div class="text-[10px] text-[#70757a]">Target: ${g.target}</div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+
+        <div class="mt-5 pt-3 border-t border-[#dadce0] flex items-center justify-between">
+          <a href="./?search=${encodeURIComponent(s.symbol)}" class="text-xs font-semibold text-[#1a73e8] hover:underline">Open Full Statement & Dividend History on Atlas ↗</a>
+          <button onclick="document.getElementById('stock-modal').close()" class="bg-[#202124] text-white text-xs font-medium px-4 py-2 rounded-lg">Close</button>
+        </div>
+      `;
+      modal.showModal();
+    }
+
+    function exportCurrentCSV() {
+      const headers = ['rank', 'symbol', 'name', 'region_code', 'sector', 'optimal_score', 'gates_passed', 'g1_streak', 'g2_dgrowth', 'g3_quality', 'g4_yield', 'g5_pullback', 'div_yield', 'div_years', 'div_growth_5y', 'roe', 'roic_proxy', 'quality_rank', 'williams_r', 'below_52w_high', 'market_cap_usd'];
+      const lines = [headers.join(',')];
+      filteredStocks.forEach((s, idx) => {
+        const row = [
+          idx + 1,
+          s.symbol,
+          `"${(s.name || '').replace(/"/g, '""')}"`,
+          s.region_code,
+          `"${(s.sector || '').replace(/"/g, '""')}"`,
+          s.score,
+          s.gates,
+          s.g1 ? 'PASS' : 'FAIL',
+          s.g2 ? 'PASS' : 'FAIL',
+          s.g3 ? 'PASS' : 'FAIL',
+          s.g4 ? 'PASS' : 'FAIL',
+          s.g5 ? 'PASS' : 'FAIL',
+          s.dy ?? '',
+          s.streak ?? '',
+          s.dgrowth ?? '',
+          s.roe ?? '',
+          s.roic ?? '',
+          s.qrank ?? '',
+          s.wr ?? '',
+          s.b52 ?? '',
+          s.mcap ?? ''
+        ];
+        lines.push(row.join(','));
+      });
+      const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `atlas-optimal-dividend-growth-${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+    }
+
+    loadUniverse();
+  </script>
+</body>
+</html>

@@ -1165,6 +1165,11 @@ def winner_index():
     return FileResponse(ROOT / "static" / "winner.html")
 
 
+@app.get("/optimal.html")
+def optimal_index():
+    return FileResponse(ROOT / "static" / "optimal.html")
+
+
 @app.get("/api/schema")
 def schema():
     return dict(columns=COLUMNS, regions=REGIONS)

@@ -197,6 +197,10 @@ def build_site(database, output, seed=None, compress_details=False, compress_dat
     winner_html = (model.ROOT / 'static' / 'winner.html').read_text().replace('href="/', 'href="./').replace('src="/', 'src="./')
     winner_html = winner_html.replace('./static/', f'./static/{version}/')
     (output / 'winner.html').write_text(winner_html)
+    if (model.ROOT / 'static' / 'optimal.html').is_file():
+        optimal_html = (model.ROOT / 'static' / 'optimal.html').read_text().replace('href="/', 'href="./').replace('src="/', 'src="./')
+        optimal_html = optimal_html.replace('./static/', f'./static/{version}/')
+        (output / 'optimal.html').write_text(optimal_html)
     auth_html=(model.ROOT / 'static' / 'auth-callback.html').read_text().replace('./static/',f'./static/{version}/')
     (output / 'auth-callback.html').write_text(auth_html)
     (output / ".nojekyll").write_text("")
