@@ -152,6 +152,13 @@ def build_site(database, output, seed=None, compress_details=False, compress_dat
             raise ValueError("Output is not an Atlas generated directory")
     output.mkdir(parents=True, exist_ok=True)
     (output / ".atlas-generated").write_text("Atlas generated site\n")
+    # Refresh Lodestar World live quotes and intra-month drumbeat before bundling static assets
+    try:
+        from refresh_lodestar import refresh_lodestar
+        refresh_lodestar()
+    except Exception as e:
+        print(f"Lodestar live drumbeat update skipped ({e})")
+
     # Only clear this builder's generated directories, leaving unrelated files alone.
     for name in ["static", "data", "logos"]:
         target = output / name
