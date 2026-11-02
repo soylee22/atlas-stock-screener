@@ -1566,7 +1566,7 @@ html{scroll-behavior:smooth; scroll-padding-top:72px}
         <span class="strat-icon">🏆</span>
         <span class="strat-meta">
           <span class="strat-title">Last Year's Winner</span>
-          <span class="strat-sub">S&amp;P 500 #1 + 35% Trailing Stop</span>
+          <span class="strat-sub">S&amp;P 500 #1 + 35% Fixed Entry Stop</span>
         </span>
       </button>
       <button class="strat-tab" id="tabCombined" role="tab" aria-selected="false" data-target="viewCombined">
@@ -2049,18 +2049,18 @@ html{scroll-behavior:smooth; scroll-padding-top:72px}
   <!-- ── LYW HERO ──────────────────────────────────────────────────────── -->
   <section class="sec wrap" style="padding-top:clamp(20px, 3.5vw, 40px)">
     <div class="lyw-hero rise">
-      <div class="eyebrow" style="color:var(--band-ink-2)">S&amp;P 500 #1 Momentum Rotation · 35% Trailing Stop-Loss</div>
+      <div class="eyebrow" style="color:var(--band-ink-2)">S&amp;P 500 #1 Momentum Rotation · Fixed 35% Entry Stop-Loss</div>
       <div class="wordmark">
         <h1 class="title" style="color:var(--band-ink)"><span style="color:#fab219">Last Year's</span> Winner</h1>
         <div class="strap"><i style="background:#fab219"></i><span style="color:var(--band-ink-2)">Full 29-year historical compounding through dot-com bubble, GFC, and tech regimes</span></div>
       </div>
       <p class="deck" style="color:var(--band-ink);max-width:760px;margin-top:14px;line-height:1.55">
-        Hold the single top-performing stock in the S&amp;P 500 from the prior calendar year, protected by an automatic 35% trailing stop-loss from highest intra-year close. If stopped out, hold cash until January.
+        Hold the single top-performing stock in the S&amp;P 500 from the prior calendar year, protected by an automatic fixed 35% entry stop-loss from purchase price. If stopped out, hold cash until January.
       </p>
 
       <div class="lyw-hero-grid">
         <div class="lyw-kpi">
-          <span class="k">29-Year CAGR (1997–2025)</span>
+          <span class="k">29-Year CAGR (1997-2025)</span>
           <span class="v" style="color:#2ed573">27.19%</span>
           <span class="sub">vs SPY 9.84% Benchmark</span>
         </div>
@@ -2070,7 +2070,7 @@ html{scroll-behavior:smooth; scroll-padding-top:72px}
           <span class="sub">1,070× Multiple vs SPY £1,522</span>
         </div>
         <div class="lyw-kpi">
-          <span class="k">Trailing Stops Triggered</span>
+          <span class="k">Entry Stops Triggered</span>
           <span class="v">6 in 29 Years</span>
           <span class="sub">Shielded in 2000, 2001, 2002, 2008, 2011</span>
         </div>
@@ -2090,7 +2090,7 @@ html{scroll-behavior:smooth; scroll-padding-top:72px}
         <div class="eyebrow">Active 2026 Position · Trading 212 Execution</div>
         <h2>Live Stop-Loss Monitor</h2>
       </div>
-      <p class="lede">Real-time surveillance of the 2026 held stock, highest intra-year peak price, 35% trailing stop threshold, and current dollar/percentage safety buffer.</p>
+      <p class="lede">Real-time surveillance of the 2026 held stock, entry cost basis, fixed 35% entry stop threshold, and current dollar/percentage safety buffer.</p>
     </div>
 
     <div class="lyw-live-card rise">
@@ -2105,15 +2105,15 @@ html{scroll-behavior:smooth; scroll-padding-top:72px}
 
           <div class="lyw-gauge-box">
             <div style="display:flex;justify-content:space-between;align-items:baseline">
-              <span style="font-size:12px;font-weight:600;color:var(--ink)">Trailing Stop Buffer</span>
+              <span style="font-size:12px;font-weight:600;color:var(--ink)">Fixed Entry Stop Buffer</span>
               <span style="font-family:var(--mono);font-size:13px;font-weight:700;color:var(--s3)" id="lywBufferText">+$138.38 (+13.7%)</span>
             </div>
             <div class="lyw-gauge-track">
               <div class="lyw-gauge-fill" id="lywGaugeFill" style="width: 72%;"></div>
             </div>
             <div class="lyw-gauge-labels">
-              <span id="lywStopPriceLbl">Stop: $1,012.51 (-35%)</span>
-              <span id="lywPeakPriceLbl">Peak: $1,557.71</span>
+              <span id="lywStopPriceLbl">Stop: $1,012.51 (-35% from entry)</span>
+              <span id="lywPeakPriceLbl">Cost basis: $1,557.71</span>
             </div>
           </div>
         </div>
@@ -2147,7 +2147,7 @@ html{scroll-behavior:smooth; scroll-padding-top:72px}
           </div>
 
           <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--rule);font-size:12.5px;color:var(--muted);line-height:1.5">
-            <b>Execution rule:</b> If SNDK closes at or below <b>$1,012.51</b> on any trading day, sell 100% of the position on the next market open and hold cash until 31 December 2026. If SNDK rallies above <b>$1,557.71</b>, the 35% trailing stop ratchets upward automatically.
+            <b>Execution rule:</b> If SNDK closes at or below <b>$1,012.51</b> on any trading day, sell 100% of the position on the next market open and hold cash until 31 December 2026. This threshold is fixed at 35% below the purchase fill and does not trail upward. This allows the runner maximum room to compound through normal intra-year pullbacks.
           </div>
         </div>
       </div>
@@ -2275,16 +2275,16 @@ html{scroll-behavior:smooth; scroll-padding-top:72px}
   <section class="sec wrap" style="padding-top:0">
     <div class="sechd">
       <div>
-        <div class="eyebrow">Complete 29-Year Record (1997–2025)</div>
-        <h2>The Dot-Com &amp; Tech Regime Archive</h2>
+        <div class="eyebrow">Complete 29-Year Record (1997-2025)</div>
+        <h2>The Dot-Com and Tech Regime Archive</h2>
       </div>
-      <p class="lede">Every holding, qualifying prior-year winner return, full-year strategy performance, S&amp;P 500 benchmark return, and trailing stop-loss execution across 29 years.</p>
+      <p class="lede">Every holding, qualifying prior-year winner return, full-year strategy performance, S&amp;P 500 benchmark return, and fixed entry stop-loss execution across 29 years.</p>
     </div>
 
     <div class="card rise">
       <div class="card-hd">
-        <div class="ttl">Annual Holdings &amp; Stop-Loss Execution History</div>
-        <div class="sub" style="margin-left:auto">35% trailing stop triggered only 6 times in 29 years</div>
+        <div class="ttl">Annual Holdings and Stop-Loss Execution History</div>
+        <div class="sub" style="margin-left:auto">Fixed 35% entry stop triggered only 6 times in 29 years</div>
       </div>
       <div class="card-bd">
         <div class="tblwrap">
@@ -2298,7 +2298,7 @@ html{scroll-behavior:smooth; scroll-padding-top:72px}
   <section class="sec wrap" style="padding-top:0">
     <div class="sechd">
       <div>
-        <div class="eyebrow">Method &amp; Execution Discipline</div>
+        <div class="eyebrow">Method and Execution Discipline</div>
         <h2>Four Rules, Zero Discretion</h2>
       </div>
       <p class="lede">A systematic mechanical framework designed to capture extraordinary right-tail winners while eliminating catastrophic drawdowns.</p>
@@ -2307,13 +2307,13 @@ html{scroll-behavior:smooth; scroll-padding-top:72px}
     <div class="method rise">
       <ol class="steps">
         <li><b>Identify the #1 S&amp;P 500 Winner.</b> At the final market close of December, score every S&amp;P 500 constituent by full calendar-year total return. Select the single top performer.</li>
-        <li><b>Hold 100% on the First Trading Day of January.</b> Allocate 100% of the strategy capital into that single stock. Do not diversify; ride the proven institutional momentum current.</li>
-        <li><b>Strict 35% Trailing Stop-Loss.</b> Establish a mechanical stop-loss exactly 35% below the highest daily closing price achieved during the holding year. Ratchet upward whenever a new high is formed; never lower the stop.</li>
-        <li><b>Exit to Cash on Stop Trigger.</b> If the stock closes at or below the 35% trailing stop level, exit 100% to cash on the next market session. Remain in cash for the remainder of the calendar year.</li>
+        <li><b>Hold 100% on the First Trading Day of January.</b> Allocate 100% of the strategy capital into that single stock. Do not diversify: ride the proven institutional momentum current.</li>
+        <li><b>Strict 35% Fixed Entry Stop-Loss.</b> Establish a mechanical stop-loss exactly 35% below the purchase fill price. This threshold is fixed and does not trail upward, preventing premature shakeouts during normal volatility.</li>
+        <li><b>Exit to Cash on Stop Trigger.</b> If the stock closes at or below the 35% entry stop level, exit 100% to cash on the next market session. Remain in cash for the remainder of the calendar year.</li>
       </ol>
       <div class="prose">
-        <p><b>Why single-stock momentum works.</b> Extreme market winners exhibit intense price persistence driven by structural institutional inflows, index-weight expansion, and earnings acceleration. In 1997–1998, holding Dell produced back-to-back gains of +219% and +253%. In 2019, AMD delivered +160%. In 2020, Tesla delivered +96%.</p>
-        <p><b>Why the 35% trailing stop is critical.</b> Momentum winners eventually crash violently. Without a stop-loss, holding Qualcomm through 2000 would have inflicted an -80% wipeout. With the 35% trailing stop, capital was extracted at -35%, preserving cash through the rest of the dot-com bust.</p>
+        <p><b>Why single-stock momentum works.</b> Extreme market winners exhibit intense price persistence driven by structural institutional inflows, index-weight expansion, and earnings acceleration. In 1997-1998, holding Dell produced back-to-back gains of +219% and +253%. In 2019, AMD delivered +160%. In 2020, Tesla delivered +96%.</p>
+        <p><b>Why the fixed 35% entry stop is critical.</b> Momentum winners eventually crash violently. Without a stop-loss, holding Qualcomm through 2000 would have inflicted an -80% wipeout. With the 35% entry stop, capital was extracted at -35%, preserving cash through the rest of the dot-com bust while allowing runners like NVDA (+176%) and AMD (+160%) to endure temporary consolidations without premature exit.</p>
         <p><b>Low trading friction.</b> Exactly one trade per year in normal runner years, and at most two trades in stopped years. Dealing commissions, bid-ask drag, and tax friction are virtually negligible.</p>
       </div>
     </div>
@@ -2396,12 +2396,12 @@ html{scroll-behavior:smooth; scroll-padding-top:72px}
           <h3 style="margin:0;font-size:17px;font-weight:700;color:#fab219">Last Year's Winner</h3>
         </div>
         <p style="font-size:13.5px;color:var(--ink-2);line-height:1.52;margin-bottom:14px">
-          Concentrated single-stock momentum in the #1 top-performing S&amp;P 500 company from the prior calendar year, protected by an automatic 35% trailing stop-loss.
+          Concentrated single-stock momentum in the #1 top-performing S&amp;P 500 company from the prior calendar year, protected by an automatic 35% fixed entry stop-loss.
         </p>
         <ul style="font-size:12.5px;color:var(--muted);line-height:1.6;padding-left:18px;margin:0">
           <li><b>Current Position:</b> SanDisk Corp. (SNDK) on Trading 212</li>
           <li><b>Role:</b> Injects extraordinary right-tail compound gains during bull market extensions.</li>
-          <li><b>Execution:</b> Annual rebalance in January. 35% trailing stop to cash.</li>
+          <li><b>Execution:</b> Annual rebalance in January. Fixed 35% entry stop to cash.</li>
         </ul>
       </div>
     </div>
