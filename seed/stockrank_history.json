@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-11-03T03:05:48.108141+00:00",
+  "last_updated": "2026-11-04T01:41:19.713594+00:00",
   "history": [
     {
       "date": "2026-10-30",
@@ -178,6 +178,32 @@
     {
       "date": "2026-11-03",
       "timestamp": "2026-11-03T03:05:48.108141+00:00",
+      "scores": {
+        "IWFV.L": {
+          "stockrank": null,
+          "quality": null,
+          "value": null,
+          "momentum": null,
+          "qv": null,
+          "qm": null,
+          "vm": null,
+          "style": null
+        },
+        "SNDK": {
+          "stockrank": 87,
+          "quality": 84,
+          "value": 42,
+          "momentum": 98,
+          "qv": 63.0,
+          "qm": 91.0,
+          "vm": 70.0,
+          "style": "High Flyer"
+        }
+      }
+    },
+    {
+      "date": "2026-11-04",
+      "timestamp": "2026-11-04T01:41:19.713594+00:00",
       "scores": {
         "IWFV.L": {
           "stockrank": null,
