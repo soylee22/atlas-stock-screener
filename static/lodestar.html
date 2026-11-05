@@ -1738,6 +1738,78 @@ html{scroll-behavior:smooth; scroll-padding-top:72px}
   </div>
 </section>
 
+
+<!-- ── LODESTAR WORLD LIVE FORWARD TESTING & BENCHMARK COMPARISONS ───────── -->
+<section class="sec wrap rise" id="lodestarForwardTesting" style="padding-top:20px">
+  <div class="card" style="background:var(--surface);border:1px solid var(--rule);border-radius:12px;padding:20px 22px;margin-bottom:24px;box-shadow:0 4px 18px rgba(0,0,0,0.04)">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:12px;margin-bottom:16px">
+      <div>
+        <div class="eyebrow" style="color:var(--s1);font-weight:700">Forward Testing Verification · Started 2 November 2026</div>
+        <h2 style="margin:2px 0 4px;font-size:24px;font-weight:800;color:var(--ink);letter-spacing:-.02em">Lodestar World Live vs Passive Benchmarks</h2>
+        <p style="font-size:13px;color:var(--muted);margin:0">Forward testing real live portfolio performance against passive Vanguard index ETFs (VUAG, VUKG, VALL) and SPY.</p>
+      </div>
+      <div class="seg" role="group" aria-label="Lodestar Benchmark Display Mode">
+        <button type="button" id="btnLodestarBenchReal" class="btn-era active" aria-pressed="true">Real (£3,804.53 Capital)</button>
+        <button type="button" id="btnLodestarBenchPct" class="btn-era" aria-pressed="false">Normalised (% Return)</button>
+      </div>
+    </div>
+
+    <!-- 4 Orders Audited Card -->
+    <div id="lodestarOrdersBanner" style="background:var(--surface-sunk);border:1px solid var(--rule);border-radius:8px;padding:14px 16px;margin-bottom:18px">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:12px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--s1)"></span>
+          <strong style="font-size:13px;color:var(--ink)">Trading 212 Audited Account Orders · Pie 10205730 ("Lodestar World")</strong>
+        </div>
+        <span style="font-family:var(--mono);font-size:11.5px;font-weight:700;color:var(--s1)">Current Holding: 100% World Value (IWFV.L) · 64.8911 shares</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;font-size:12px">
+        <div style="background:var(--surface);padding:10px 12px;border-radius:6px;border:1px solid var(--rule)">
+          <div style="font-weight:700;color:var(--s1);margin-bottom:3px">Order 1 · AutoInvest Fill</div>
+          <div style="color:var(--muted)">2 Nov 2026, 08:23 UTC</div>
+          <div style="font-family:var(--mono);font-size:13px;font-weight:700;color:var(--ink);margin-top:4px">£1,765.18 <span style="font-size:11px;font-weight:500;color:var(--muted)">(30.1071 shs @ 5,863.0p)</span></div>
+        </div>
+        <div style="background:var(--surface);padding:10px 12px;border-radius:6px;border:1px solid var(--rule)">
+          <div style="font-weight:700;color:var(--s1);margin-bottom:3px">Order 2 · AutoInvest Fill</div>
+          <div style="color:var(--muted)">2 Nov 2026, 08:25 UTC</div>
+          <div style="font-family:var(--mono);font-size:13px;font-weight:700;color:var(--ink);margin-top:4px">£1,126.74 <span style="font-size:11px;font-weight:500;color:var(--muted)">(19.2211 shs @ 5,862.0p)</span></div>
+        </div>
+        <div style="background:var(--surface);padding:10px 12px;border-radius:6px;border:1px solid var(--rule)">
+          <div style="font-weight:700;color:var(--s1);margin-bottom:3px">Order 3 · AutoInvest Fill</div>
+          <div style="color:var(--muted)">2 Nov 2026, 08:25 UTC</div>
+          <div style="font-family:var(--mono);font-size:13px;font-weight:700;color:var(--ink);margin-top:4px">£445.45 <span style="font-size:11px;font-weight:500;color:var(--muted)">(7.5976 shs @ 5,863.0p)</span></div>
+        </div>
+        <div style="background:var(--surface);padding:10px 12px;border-radius:6px;border:1px solid var(--rule)">
+          <div style="font-weight:700;color:var(--s1);margin-bottom:3px">Order 4 · AutoInvest Fill</div>
+          <div style="color:var(--muted)">2 Nov 2026, 08:31 UTC</div>
+          <div style="font-family:var(--mono);font-size:13px;font-weight:700;color:var(--ink);margin-top:4px">£467.16 <span style="font-size:11px;font-weight:500;color:var(--muted)">(7.9652 shs @ 5,865.0p)</span></div>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-top:12px;padding-top:10px;border-top:1px solid var(--rule)">
+        <div style="font-size:12px;color:var(--muted)">Total Invested Capital: <strong style="color:var(--ink);font-family:var(--mono)">£3,804.53</strong> · Blended Basis: <strong style="color:var(--ink);font-family:var(--mono)">5,862.95p</strong> (£58.63)</div>
+        <div style="font-size:12px;color:var(--muted)">Current Value: <strong id="lodestarLiveVal" style="color:var(--ink);font-family:var(--mono)">£3,687.11</strong> · P&amp;L: <strong id="lodestarLivePnl" style="color:var(--neg-ink);font-family:var(--mono)">-£117.42 (-3.09%)</strong></div>
+      </div>
+    </div>
+
+    <!-- Lodestar Benchmark SVG Line Chart Shell -->
+    <div class="card rise" style="background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:16px 18px;margin-bottom:20px;box-shadow:0 4px 16px rgba(0,0,0,0.04)">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:14px">
+        <div style="font-size:12px;font-weight:600;color:var(--muted)" id="lodestarBenchChartSubtitle">Plotting Actual Real Portfolio Value (£GBP) vs Vanguard Passive ETFs</div>
+        <div id="chartLodestarBenchmarkLegend" class="contenders-legend"></div>
+      </div>
+      <div style="position:relative;width:100%;min-height:380px">
+        <div id="lodestarBenchmarkChartContainer" style="width:100%;min-height:380px;position:relative"></div>
+        <div id="lodestarBenchmarkTooltip" class="contenders-tooltip" style="display:none;position:absolute;pointer-events:none;z-index:50"></div>
+      </div>
+    </div>
+
+    <!-- Benchmark Cards Grid -->
+    <div class="engine-cards-grid" id="lodestarBenchmarkCards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:16px">
+      <!-- Injected dynamically via JS from DATA.lodestarForwardTest.benchmarks -->
+    </div>
+  </div>
+</section>
+
 <!-- ── 01 INSIDE THE BOOK ────────────────────────────────────────────── -->
 <section class="sec wrap" id="inside" hidden>
   <div class="sechd">
@@ -4326,6 +4398,7 @@ function glyph(key){
   var tabs = [tabLodestar, tabLyw, tabCombined];
   var views = [viewLodestar, viewLyw, viewCombined];
   var renderContendersChart = null;
+  var renderLodestarBenchmarkLineChart = null;
 
   function switchStrategy(targetId){
     views.forEach(function(v){
@@ -4342,6 +4415,7 @@ function glyph(key){
     if (targetId === "viewLodestar"){
       history.replaceState(null, "", "#lodestar");
       document.title = "Lodestar World — Global Factor and Dividend Rotation";
+      if (typeof renderLodestarBenchmarkLineChart === "function") setTimeout(renderLodestarBenchmarkLineChart, 20);
     } else if (targetId === "viewLyw"){
       history.replaceState(null, "", "#lyw");
       document.title = "Last Year's Winner — S&P 500 #1 Momentum & 35% Stop";
@@ -4441,6 +4515,314 @@ function glyph(key){
       ];
     });
     buildTable($("#tblDotcom"), ["Year", "Lodestar World", "MSCI World Core", "Excess Alpha", "Lodestar Balance (£10k)", "MSCI World Balance (£10k)"], dcRows);
+  }
+
+  // ── Lodestar World Forward Testing & Benchmark Line Chart ──
+  if (DATA.lodestarForwardTest){
+    var lodestarBenchMode = "real";
+
+    var renderLodestarBenchmarkCards = function(){
+      var bCardsBox = $("#lodestarBenchmarkCards");
+      if (!bCardsBox || !DATA.lodestarForwardTest || !DATA.lodestarForwardTest.benchmarks) return;
+
+      var ft = DATA.lodestarForwardTest;
+      var ra = ft.realAccount;
+      var isReal = (lodestarBenchMode === "real");
+      var stratVal = isReal ? ra.currentValueGbp : (1000.0 * (1.0 + ra.netReturnPct / 100.0));
+      var stratRet = ra.netReturnPct;
+
+      var liveValEl = $("#lodestarLiveVal");
+      var livePnlEl = $("#lodestarLivePnl");
+      if (liveValEl) liveValEl.textContent = "£" + ra.currentValueGbp.toFixed(2);
+      if (livePnlEl) {
+        livePnlEl.textContent = (ra.netPnlGbp >= 0 ? "+" : "") + "£" + ra.netPnlGbp.toFixed(2) + " (" + (ra.netReturnPct >= 0 ? "+" : "") + ra.netReturnPct.toFixed(2) + "%)";
+        livePnlEl.style.color = (ra.netPnlGbp >= 0 ? "var(--pos-ink)" : "var(--neg-ink)");
+      }
+
+      bCardsBox.innerHTML = "";
+
+      // Strategy Card
+      var sCard = el("div", {
+        class: "engine-card",
+        style: "border:2px solid var(--s1);background:var(--surface-sunk);padding:14px;border-radius:10px"
+      });
+      sCard.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">' +
+        '<span style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--s1)">' + (isReal ? "LODESTAR (REAL VALUE)" : "LODESTAR (NORM £1K)") + '</span>' +
+        '<span style="font-family:var(--mono);font-size:10px;padding:2px 6px;border-radius:4px;background:rgba(16,185,129,0.12);color:var(--s1)">WORLD VALUE</span>' +
+        '</div>' +
+        '<div style="font-size:20px;font-weight:800;color:var(--ink);letter-spacing:-0.02em">£' + stratVal.toFixed(2) + '</div>' +
+        '<div style="font-size:12px;font-weight:700;color:' + (stratRet >= 0 ? "var(--pos-ink)" : "var(--neg-ink)") + ';margin-top:2px">' + sgnpp(stratRet) + ' · 100% IWFV.L</div>' +
+        '<div style="font-size:11px;color:var(--muted);margin-top:8px;padding-top:6px;border-top:1px solid var(--rule)">Cost £' + ra.totalCapitalGbp.toFixed(2) + ' · P&L ' + (ra.netPnlGbp >= 0 ? '+' : '') + '£' + ra.netPnlGbp.toFixed(2) + '</div>';
+      bCardsBox.appendChild(sCard);
+
+      // Benchmarks (VUAG, VUKG, VALL, SPY)
+      ft.benchmarks.forEach(function(b){
+        if (b.isStrategy) return;
+        var val = isReal ? b.realValue : b.normValue;
+        var ret = isReal ? b.realReturn : b.normReturn;
+        var isPos = (ret >= 0);
+        var diff = isReal ? b.diffReal : b.diffNorm;
+        var bCard = el("div", {
+          class: "engine-card",
+          style: "padding:14px;border-radius:10px;display:flex;flex-direction:column;justify-content:space-between"
+        });
+        bCard.innerHTML = '<div>' +
+          '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">' +
+            '<span style="font-size:11px;font-weight:700;text-transform:uppercase;color:' + b.colour + '">' + b.ticker + '</span>' +
+            '<span style="font-family:var(--mono);font-size:10.5px;color:var(--muted)">' + b.benchmarkTicker + '</span>' +
+          '</div>' +
+          '<div style="font-size:20px;font-weight:800;color:var(--ink);letter-spacing:-0.02em">£' + val.toFixed(2) + '</div>' +
+          '<div style="font-size:12px;font-weight:700;color:' + (isPos ? 'var(--pos-ink)' : 'var(--neg-ink)') + ';margin-top:2px">' +
+            sgnpp(ret) + ' · ' + b.name.split(' (')[0] +
+          '</div>' +
+          '</div>' +
+          '<div style="font-size:11px;color:var(--muted);margin-top:8px;padding-top:6px;border-top:1px solid var(--rule)">' +
+            'vs Lodestar: <b style="color:' + (diff >= 0 ? 'var(--pos-ink)' : 'var(--neg-ink)') + '">' + (diff >= 0 ? '+' : '') + '£' + diff.toFixed(2) + ' (' + (b.diffPct >= 0 ? '+' : '') + b.diffPct.toFixed(2) + 'pp)</b>' +
+          '</div>';
+        bCardsBox.appendChild(bCard);
+      });
+    };
+
+    renderLodestarBenchmarkLineChart = function(){
+      var container = $("#lodestarBenchmarkChartContainer");
+      var legend = $("#chartLodestarBenchmarkLegend");
+      var tooltip = $("#lodestarBenchmarkTooltip");
+      if (!container || !DATA.lodestarForwardTest || !DATA.lodestarForwardTest.benchmarkChart) return;
+
+      var chartData = DATA.lodestarForwardTest.benchmarkChart;
+      var dates = chartData.dates || [];
+      var seriesList = chartData.series || [];
+      if (!dates.length || !seriesList.length) return;
+
+      var W = 1000, H = 380;
+      var padL = 65, padR = 175, padT = 28, padB = 40;
+      var pw = W - padL - padR;
+      var ph = H - padT - padB;
+      var N = dates.length;
+
+      var isReal = (lodestarBenchMode === "real");
+      var yMin = isReal ? 3620 : -4.0;
+      var yMax = isReal ? 3900 : 2.5;
+
+      function xPos(i){ return padL + pw * (i / (N - 1)); }
+      function yPos(val){ return padT + ph * (1 - (val - yMin) / (yMax - yMin)); }
+
+      var activeTicker = null;
+
+      function updateChart(){
+        var svg = [];
+        svg.push('<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:auto;display:block;overflow:visible;font-family:var(--sans)">');
+
+        // Y-Axis Horizontal Gridlines & Ticks
+        var yTicks = isReal ? [3650, 3700, 3750, 3800, 3850, 3900] : [-4, -3, -2, -1, 0, 1, 2];
+        yTicks.forEach(function(yt){
+          var y = yPos(yt);
+          var isZero = (yt === 0 || (isReal && yt === 3800));
+          svg.push('<line x1="' + padL + '" y1="' + y.toFixed(1) + '" x2="' + (padL + pw) + '" y2="' + y.toFixed(1) + '" stroke="' + (isZero ? 'var(--rule-2)' : 'var(--rule)') + '" stroke-width="' + (isZero ? '1.5' : '1') + '" stroke-dasharray="' + (isZero ? 'none' : '3,4') + '" />');
+          var lbl = isReal ? ('£' + yt.toLocaleString()) : ((yt > 0 ? '+' : '') + yt + '%');
+          svg.push('<text x="' + (padL - 10) + '" y="' + (y + 4).toFixed(1) + '" text-anchor="end" font-family="var(--mono)" font-size="11" fill="var(--muted)">' + lbl + '</text>');
+        });
+
+        // If real mode, draw cost baseline at £3,804.53
+        if (isReal){
+          var cy = yPos(3804.53);
+          svg.push('<line x1="' + padL + '" y1="' + cy.toFixed(1) + '" x2="' + (padL + pw) + '" y2="' + cy.toFixed(1) + '" stroke="var(--s1)" stroke-width="1.2" stroke-dasharray="4,4" opacity="0.8" />');
+          svg.push('<text x="' + (padL + 10) + '" y="' + (cy - 5).toFixed(1) + '" font-size="10" font-family="var(--mono)" font-weight="700" fill="var(--s1)">Invested Capital £3,804.53</text>');
+        }
+
+        // X-Axis Labels
+        dates.forEach(function(dStr, i){
+          var x = xPos(i);
+          svg.push('<line x1="' + x.toFixed(1) + '" y1="' + padT + '" x2="' + x.toFixed(1) + '" y2="' + (padT + ph) + '" stroke="var(--rule)" stroke-width="1" stroke-dasharray="2,5" opacity="0.6" />');
+          var dLabel = dStr.slice(8, 10) + ' ' + (dStr.slice(5, 7) === '10' ? 'Oct' : 'Nov');
+          svg.push('<text x="' + x.toFixed(1) + '" y="' + (H - padB + 18) + '" text-anchor="middle" font-size="11" font-weight="600" fill="var(--ink-2)">' + dLabel + '</text>');
+        });
+
+        // Plot Border
+        svg.push('<rect x="' + padL + '" y="' + padT + '" width="' + pw + '" height="' + ph + '" fill="none" stroke="var(--rule)" stroke-width="1" />');
+
+        // Draw Line Series
+        seriesList.forEach(function(s){
+          var vals = isReal ? s.realValues : s.pctValues;
+          var isDimmed = (activeTicker && activeTicker !== s.id);
+          var isHighlighted = (activeTicker === s.id);
+          var isStrategy = (s.id === "LODESTAR");
+          var isBench = (s.id === "SPY");
+          var strokeW = isHighlighted ? "3.6" : (isStrategy ? "3.2" : (isBench ? "1.8" : "2.4"));
+          var op = isDimmed ? "0.15" : "1.0";
+
+          var d = vals.map(function(pt, i){
+            return (i === 0 ? "M " : "L ") + xPos(i).toFixed(1) + " " + yPos(pt).toFixed(1);
+          }).join(" ");
+
+          svg.push('<path id="lodeBenchPath-' + s.id + '" d="' + d + '" fill="none" stroke="' + s.color + '" stroke-width="' + strokeW + '" ' + (isBench ? 'stroke-dasharray="4,4"' : '') + ' opacity="' + op + '" style="transition:all .15s ease" />');
+        });
+
+        // Right Edge Badges
+        var badgeData = seriesList.map(function(s){
+          var vals = isReal ? s.realValues : s.pctValues;
+          var lastVal = vals[vals.length - 1];
+          var y = yPos(lastVal);
+          return { s: s, val: lastVal, origY: y, y: y };
+        });
+        badgeData.sort(function(a, b){ return a.y - b.y; });
+
+        var minGap = 24;
+        for (var k = 0; k < 5; k++){
+          for (var bIdx = 0; bIdx < badgeData.length - 1; bIdx++){
+            var cur = badgeData[bIdx];
+            var nxt = badgeData[bIdx + 1];
+            if (nxt.y - cur.y < minGap){
+              var overlap = minGap - (nxt.y - cur.y);
+              cur.y -= overlap / 2;
+              nxt.y += overlap / 2;
+            }
+          }
+        }
+
+        badgeData.forEach(function(b){
+          var isDimmed = (activeTicker && activeTicker !== b.s.id);
+          var op = isDimmed ? "0.15" : "1.0";
+          var bx = padL + pw;
+          var by = b.y;
+          svg.push('<line x1="' + bx + '" y1="' + b.origY.toFixed(1) + '" x2="' + (bx + 14) + '" y2="' + by.toFixed(1) + '" stroke="' + b.s.color + '" stroke-width="1.2" opacity="' + op + '" />');
+          var valText = isReal ? ('£' + b.val.toFixed(2)) : ((b.val >= 0 ? '+' : '') + b.val.toFixed(2) + '%');
+          svg.push('<rect x="' + (bx + 16) + '" y="' + (by - 10).toFixed(1) + '" width="150" height="20" rx="4" fill="var(--surface)" stroke="' + b.s.color + '" stroke-width="1.2" opacity="' + op + '" />');
+          svg.push('<text x="' + (bx + 22) + '" y="' + (by + 4).toFixed(1) + '" font-size="10.5" font-weight="700" fill="' + b.s.color + '" opacity="' + op + '">' + b.s.id + ' <tspan font-family="var(--mono)" font-weight="600" fill="var(--ink)">' + valText + '</tspan></text>');
+        });
+
+        // Tracking Vertical Line & Interactive Overlay
+        svg.push('<line id="lodeTrackLine" x1="0" y1="' + padT + '" x2="0" y2="' + (padT + ph) + '" stroke="var(--ink)" stroke-width="1" stroke-dasharray="3,3" opacity="0" pointer-events="none" />');
+        seriesList.forEach(function(s){
+          svg.push('<circle id="lodeDot-' + s.id + '" cx="0" cy="0" r="4.5" fill="' + s.color + '" stroke="#fff" stroke-width="2" opacity="0" pointer-events="none" />');
+        });
+
+        svg.push('<rect id="lodeOverlay" x="' + padL + '" y="' + padT + '" width="' + pw + '" height="' + ph + '" fill="transparent" style="cursor:crosshair" />');
+        svg.push('</svg>');
+
+        container.innerHTML = svg.join("");
+
+        // Hover events
+        var overlay = $("#lodeOverlay");
+        var trackLine = $("#lodeTrackLine");
+        if (overlay && trackLine){
+          function onMove(clientX, clientY){
+            var rect = overlay.getBoundingClientRect();
+            var relX = clientX - rect.left;
+            var pctX = Math.max(0, Math.min(1, relX / rect.width));
+            var idx = Math.round(pctX * (N - 1));
+            var cx = xPos(idx);
+
+            trackLine.setAttribute("x1", cx.toFixed(1));
+            trackLine.setAttribute("x2", cx.toFixed(1));
+            trackLine.setAttribute("opacity", "0.7");
+
+            seriesList.forEach(function(s){
+              var vals = isReal ? s.realValues : s.pctValues;
+              var cy = yPos(vals[idx]);
+              var dot = $("#lodeDot-" + s.id);
+              if (dot){
+                dot.setAttribute("cx", cx.toFixed(1));
+                dot.setAttribute("cy", cy.toFixed(1));
+                dot.setAttribute("opacity", (activeTicker && activeTicker !== s.id) ? "0.15" : "1.0");
+              }
+            });
+
+            var curDate = dates[idx];
+            var tt = ['<div class="contenders-tooltip-hd"><span>' + curDate + '</span><span>' + (isReal ? 'Real Portfolio Value' : 'Return vs Entry') + '</span></div>'];
+            seriesList.forEach(function(s){
+              var vals = isReal ? s.realValues : s.pctValues;
+              var v = vals[idx];
+              var vStr = isReal ? ('£' + v.toFixed(2)) : ((v >= 0 ? '+' : '') + v.toFixed(2) + '%');
+              tt.push('<div class="contenders-tooltip-row">');
+              tt.push('<div class="contenders-tooltip-name"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:' + s.color + ';margin-right:6px"></span><strong style="color:' + s.color + '">' + s.id + '</strong> <span style="font-size:11px;color:var(--muted)">' + s.name.split(" (")[0] + '</span></div>');
+              tt.push('<div class="contenders-tooltip-val" style="color:var(--ink)">' + vStr + '</div>');
+              tt.push('</div>');
+            });
+            tooltip.innerHTML = tt.join("");
+            tooltip.style.display = "block";
+
+            var cRect = container.getBoundingClientRect();
+            var tipX = (clientX - cRect.left) + 15;
+            var tipY = (clientY - cRect.top) - 20;
+            if (tipX + 280 > cRect.width) tipX = (clientX - cRect.left) - 290;
+            tooltip.style.left = tipX + "px";
+            tooltip.style.top = Math.max(10, tipY) + "px";
+          }
+
+          overlay.addEventListener("mousemove", function(e){ onMove(e.clientX, e.clientY); });
+          overlay.addEventListener("mouseleave", function(){
+            trackLine.setAttribute("opacity", "0");
+            seriesList.forEach(function(s){
+              var dot = $("#lodeDot-" + s.id);
+              if (dot) dot.setAttribute("opacity", "0");
+            });
+            tooltip.style.display = "none";
+          });
+        }
+      }
+
+      // Legend
+      if (legend){
+        legend.innerHTML = "";
+        seriesList.forEach(function(s){
+          var btn = el("button", {
+            class: "contenders-pill" + (activeTicker === s.id ? " active" : ""),
+            style: "cursor:pointer;border-left:3px solid " + s.color + ";margin-right:4px;margin-bottom:4px"
+          });
+          btn.innerHTML = '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:' + s.color + ';margin-right:6px"></span>' +
+            '<strong>' + s.id + '</strong> <span style="color:var(--muted);font-size:11px">' + s.name.split(" (")[0] + '</span>';
+          btn.onclick = function(){
+            activeTicker = (activeTicker === s.id) ? null : s.id;
+            updateChart();
+            legend.querySelectorAll(".contenders-pill").forEach(function(p){ p.classList.remove("active"); });
+            if (activeTicker) btn.classList.add("active");
+          };
+          legend.appendChild(btn);
+        });
+      }
+
+      updateChart();
+    };
+
+    // Wire Lodestar Benchmark Mode Toggles
+    var lRealBtn = $("#btnLodestarBenchReal");
+    var lPctBtn = $("#btnLodestarBenchPct");
+    var lSubTitle = $("#lodestarBenchChartSubtitle");
+
+    if (lRealBtn && lPctBtn){
+      lRealBtn.onclick = function(){
+        lodestarBenchMode = "real";
+        lRealBtn.classList.add("active");
+        lRealBtn.style.background = "var(--surface)";
+        lRealBtn.style.color = "var(--ink)";
+        lRealBtn.style.boxShadow = "0 1px 3px rgba(0,0,0,0.08)";
+        lPctBtn.classList.remove("active");
+        lPctBtn.style.background = "transparent";
+        lPctBtn.style.color = "var(--muted)";
+        lPctBtn.style.boxShadow = "none";
+        if (lSubTitle) lSubTitle.textContent = "Plotting Actual Real Portfolio Value (£GBP) vs Vanguard Passive ETFs";
+        renderLodestarBenchmarkLineChart();
+        renderLodestarBenchmarkCards();
+      };
+      lPctBtn.onclick = function(){
+        lodestarBenchMode = "pct";
+        lPctBtn.classList.add("active");
+        lPctBtn.style.background = "var(--surface)";
+        lPctBtn.style.color = "var(--ink)";
+        lPctBtn.style.boxShadow = "0 1px 3px rgba(0,0,0,0.08)";
+        lRealBtn.classList.remove("active");
+        lRealBtn.style.background = "transparent";
+        lRealBtn.style.color = "var(--muted)";
+        lRealBtn.style.boxShadow = "none";
+        if (lSubTitle) lSubTitle.textContent = "Plotting Cumulative Percentage Return (%) from 2 November 2026 Entry";
+        renderLodestarBenchmarkLineChart();
+        renderLodestarBenchmarkCards();
+      };
+    }
+
+    renderLodestarBenchmarkCards();
+    renderLodestarBenchmarkLineChart();
   }
 
   // ── 2. LYW Live Position & Contenders ──
