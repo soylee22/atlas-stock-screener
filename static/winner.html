@@ -150,11 +150,11 @@
         </p>
       </div>
       <div class="flex items-center gap-2">
-        <span class="metric-pill bg-[#e6f4ea] text-[#137333] border border-[#ceead6]">
-          <span class="w-1.5 h-1.5 rounded-full bg-[#137333] mr-1.5"></span> Stop Loss Intact (+13.7% Buffer)
+        <span class="metric-pill bg-[#fce8e6] text-[#c5221f] border border-[#f5c2c7]">
+          <span class="w-1.5 h-1.5 rounded-full bg-[#c5221f] mr-1.5"></span> 35% Stop Loss Breached · 100% in Cash
         </span>
         <span class="metric-pill bg-[#f1f3f4] text-[#5f6368] border border-[#dadce0]">
-          2026 Holding: SNDK
+          2026 Status: 100% Cash (£1,323.36)
         </span>
       </div>
     </div>
@@ -164,39 +164,39 @@
       <div class="flex flex-col lg:flex-row justify-between lg:items-start gap-6 border-b border-[#dadce0] pb-6">
         <div>
           <div class="flex items-center space-x-3 mb-2">
-            <span class="text-xs font-bold uppercase tracking-wider text-[#1a73e8] bg-[#e8f0fe] px-2.5 py-0.5 rounded">Current Holding</span>
-            <span class="text-xs text-[#5f6368] font-medium">Selected 31 Dec 2025 · Purchased 12 Oct 2026</span>
+            <span class="text-xs font-bold uppercase tracking-wider text-[#c5221f] bg-[#fce8e6] px-2.5 py-0.5 rounded">Stopped Out</span>
+            <span class="text-xs text-[#5f6368] font-medium">Purchased 12 Oct 2026 · Liquidated 5 Nov 2026</span>
           </div>
           <div class="flex items-baseline space-x-4">
-            <h2 class="text-4xl font-extrabold font-google text-[#202124] tracking-tight">SNDK</h2>
-            <span class="text-xl font-normal text-[#5f6368]">SanDisk Corporation</span>
-            <span class="text-xs px-2.5 py-1 rounded bg-[#e8f0fe] text-[#1a73e8] font-mono font-bold">+156.4% in 2025</span>
+            <h2 class="text-4xl font-extrabold font-google text-[#202124] tracking-tight">100% CASH</h2>
+            <span class="text-xl font-normal text-[#5f6368]">SanDisk Liquidated</span>
+            <span class="text-xs px-2.5 py-1 rounded bg-[#fce8e6] text-[#c5221f] font-mono font-bold">-35.9% exit at $998.05</span>
           </div>
           <p class="text-xs text-[#5f6368] mt-2">
-            Executed on Trading 212 at $1,557.71 (£998.50 invested + £1.50 FX fee). Target liquidation or renewal on 31 December 2026.
+            Liquidated on Trading 212 at $998.05 on 5 Nov 2026 after breaching the $1,012.51 fixed stop. Realised £1,323.36 net cash in pie cash until the 31 December 2026 rebalance.
           </p>
         </div>
 
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 w-full lg:w-auto">
           <div class="p-4 rounded-xl bg-white border border-[#dadce0]">
-            <div class="text-[11px] font-semibold uppercase tracking-wider text-[#70757a]">Current Value</div>
-            <div class="text-2xl font-bold font-google text-[#202124] mt-1" id="current-val-gbp">£737.73</div>
-            <div class="text-xs font-semibold text-[#c5221f] mt-0.5">-26.1% vs entry</div>
+            <div class="text-[11px] font-semibold uppercase tracking-wider text-[#70757a]">Realised Cash</div>
+            <div class="text-2xl font-bold font-google text-[#202124] mt-1" id="current-val-gbp">£1,323.36</div>
+            <div class="text-xs font-semibold text-[#c5221f] mt-0.5">-£503.68 loss on T212</div>
           </div>
           <div class="p-4 rounded-xl bg-white border border-[#dadce0]">
-            <div class="text-[11px] font-semibold uppercase tracking-wider text-[#70757a]">Broker Price</div>
-            <div class="text-2xl font-bold font-google text-[#202124] mt-1" id="current-price-usd">$1,150.89</div>
+            <div class="text-[11px] font-semibold uppercase tracking-wider text-[#70757a]">Exit Price</div>
+            <div class="text-2xl font-bold font-google text-[#202124] mt-1" id="current-price-usd">$998.05</div>
             <div class="text-xs text-[#5f6368] mt-0.5">Entry: $1,557.71</div>
           </div>
           <div class="p-4 rounded-xl bg-white border border-[#dadce0]">
             <div class="text-[11px] font-semibold uppercase tracking-wider text-[#70757a]">35% Stop Loss</div>
-            <div class="text-2xl font-bold font-google text-[#137333] mt-1">$1,012.51</div>
-            <div class="text-xs font-semibold text-[#137333] mt-0.5">+13.7% cushion</div>
+            <div class="text-2xl font-bold font-google text-[#c5221f] mt-1">$1,012.51</div>
+            <div class="text-xs font-semibold text-[#c5221f] mt-0.5">Breached by -$14.46</div>
           </div>
           <div class="p-4 rounded-xl bg-white border border-[#dadce0]">
             <div class="text-[11px] font-semibold uppercase tracking-wider text-[#70757a]">Countdown</div>
-            <div class="text-2xl font-bold font-google text-[#1a73e8] mt-1">62 Days</div>
-            <div class="text-xs text-[#5f6368] mt-0.5">45 trading sessions</div>
+            <div class="text-2xl font-bold font-google text-[#1a73e8] mt-1">56 Days</div>
+            <div class="text-xs text-[#5f6368] mt-0.5">Until 2027 rebalance</div>
           </div>
         </div>
       </div>
@@ -204,24 +204,114 @@
       <!-- Stop Loss Progress Visualiser -->
       <div class="mt-6 pt-2">
         <div class="flex justify-between items-center text-xs font-semibold mb-2">
-          <span class="text-[#137333] flex items-center gap-1.5">
-            <span class="w-2 h-2 rounded-full bg-[#137333]"></span> Stop Level: $1,012.51 (Untouched)
+          <span class="text-[#c5221f] flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-[#c5221f]"></span> Stop Level: $1,012.51 (Breached)
           </span>
-          <span class="text-[#202124]">Current: $1,150.89 (+13.7% safety margin)</span>
+          <span class="text-[#c5221f]">Exit Fill: $998.05 (-35.9% vs entry)</span>
           <span class="text-[#5f6368]">Entry: $1,557.71</span>
         </div>
         <div class="w-full bg-[#e8eaed] h-3.5 rounded-full overflow-hidden relative flex">
-          <div class="bg-[#c5221f] h-full" style="width: 25%" title="Stop loss liquidation zone"></div>
-          <div class="bg-[#e6f4ea] h-full flex-1 relative flex items-center">
-            <div class="h-full bg-[#137333] opacity-30" style="width: 35%"></div>
-            <div class="absolute left-[35%] w-1 h-5 bg-[#202124] -top-0.5 rounded" title="Current Price ($1,150.89)"></div>
-          </div>
+          <div class="bg-[#c5221f] h-full" style="width: 100%" title="Stop loss executed - 100% cash"></div>
         </div>
         <div class="flex justify-between text-[11px] text-[#70757a] mt-1.5">
-          <span>0 (Breached)</span>
+          <span>0 (Liquidated)</span>
           <span>$1,012.51 Threshold</span>
-          <span>Current Price: $1,150.89</span>
+          <span>Exit Price: $998.05</span>
           <span>$1,557.71 Purchase</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Live Benchmark Comparison: Strategy vs Vanguard ETFs -->
+    <section class="space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-2 border-b border-[#dadce0] pb-3">
+        <div>
+          <span class="text-[11px] font-bold uppercase tracking-wider text-[#1a73e8]">Live Benchmark Comparison</span>
+          <h2 class="text-2xl font-normal font-google text-[#202124] tracking-tight">Strategy vs Passive Vanguard ETFs</h2>
+          <p class="text-xs text-[#5f6368] mt-0.5">
+            Tracking £1,000 invested on 12 October 2026 across the active strategy against S&P 500, FTSE 100, and Global All-Cap index trackers.
+          </p>
+        </div>
+        <div class="text-xs text-[#5f6368] font-mono">
+          Prices updated from London Stock Exchange
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <!-- Strategy Card -->
+        <div class="google-card p-5 border-2 border-[#c5221f] bg-[#fef7f7] flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <span class="px-2 py-0.5 rounded text-[11px] font-bold bg-[#fce8e6] text-[#c5221f] uppercase tracking-wider">LYW Strategy</span>
+              <span class="text-xs font-mono font-bold text-[#c5221f]">-37.30%</span>
+            </div>
+            <div class="text-2xl font-bold font-google text-[#202124]">£626.97</div>
+            <div class="text-xs text-[#5f6368] font-medium mt-0.5">100% Cash (Stopped Out)</div>
+            <p class="text-xs text-[#5f6368] mt-3 leading-relaxed">
+              Exit executed at $998.05 on 5 Nov 2026. £1,323.36 in pie cash sits uninvested until January 2027.
+            </p>
+          </div>
+          <div class="mt-4 pt-3 border-t border-[#f5c2c7] flex items-center justify-between text-xs">
+            <span class="text-[#70757a]">Status:</span>
+            <strong class="text-[#c5221f]">Stopped Out to Cash</strong>
+          </div>
+        </div>
+
+        <!-- VUAG Card -->
+        <div class="google-card p-5 border border-[#dadce0] bg-white flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <span class="px-2 py-0.5 rounded text-[11px] font-bold bg-[#e8f0fe] text-[#1a73e8] uppercase tracking-wider">VUAG · S&P 500</span>
+              <span class="text-xs font-mono font-bold text-[#c5221f]">-3.48%</span>
+            </div>
+            <div class="text-2xl font-bold font-google text-[#202124]">£965.20</div>
+            <div class="text-xs text-[#5f6368] font-medium mt-0.5">VUAG.L (Vanguard S&P 500 Acc)</div>
+            <p class="text-xs text-[#5f6368] mt-3 leading-relaxed">
+              Bought at £114.36 (8.744 shares). Current price £110.38 on LSE.
+            </p>
+          </div>
+          <div class="mt-4 pt-3 border-t border-[#dadce0] flex items-center justify-between text-xs">
+            <span class="text-[#70757a]">vs LYW Strategy:</span>
+            <strong class="text-[#137333]">+£338.23 (+33.8%)</strong>
+          </div>
+        </div>
+
+        <!-- VUKG Card -->
+        <div class="google-card p-5 border border-[#dadce0] bg-white flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <span class="px-2 py-0.5 rounded text-[11px] font-bold bg-[#e6f4ea] text-[#137333] uppercase tracking-wider">VUKG · FTSE 100</span>
+              <span class="text-xs font-mono font-bold text-[#137333]">+2.63%</span>
+            </div>
+            <div class="text-2xl font-bold font-google text-[#202124]">£1,026.31</div>
+            <div class="text-xs text-[#5f6368] font-medium mt-0.5">VUKG.L (Vanguard FTSE 100 Acc)</div>
+            <p class="text-xs text-[#5f6368] mt-3 leading-relaxed">
+              Bought at £57.39 (17.425 shares). Current price £58.90 on LSE.
+            </p>
+          </div>
+          <div class="mt-4 pt-3 border-t border-[#dadce0] flex items-center justify-between text-xs">
+            <span class="text-[#70757a]">vs LYW Strategy:</span>
+            <strong class="text-[#137333]">+£399.34 (+39.9%)</strong>
+          </div>
+        </div>
+
+        <!-- VALL Card -->
+        <div class="google-card p-5 border border-[#dadce0] bg-white flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <span class="px-2 py-0.5 rounded text-[11px] font-bold bg-[#f1f3f4] text-[#5f6368] uppercase tracking-wider">VALL · Global All-Cap</span>
+              <span class="text-xs font-mono font-bold text-[#c5221f]">-3.14%</span>
+            </div>
+            <div class="text-2xl font-bold font-google text-[#202124]">£968.60</div>
+            <div class="text-xs text-[#5f6368] font-medium mt-0.5">VALL.L (Vanguard Global All-Cap Acc)</div>
+            <p class="text-xs text-[#5f6368] mt-3 leading-relaxed">
+              Bought at £3.774 (264.97 shares). Current price £3.655 on LSE.
+            </p>
+          </div>
+          <div class="mt-4 pt-3 border-t border-[#dadce0] flex items-center justify-between text-xs">
+            <span class="text-[#70757a]">vs LYW Strategy:</span>
+            <strong class="text-[#137333]">+£341.63 (+34.2%)</strong>
+          </div>
         </div>
       </div>
     </section>
@@ -374,13 +464,13 @@
               </tr>
             </thead>
             <tbody class="divide-y divide-[#dadce0] text-[#202124]">
-              <tr class="bg-[#f8fafd] font-semibold">
-                <td class="py-3 px-4 font-mono text-[#1a73e8]">2026 (Active)</td>
-                <td class="py-3 px-4">SNDK (SanDisk)</td>
+              <tr class="bg-[#fef7f7] font-semibold">
+                <td class="py-3 px-4 font-mono text-[#c5221f]">2026 (Stopped to Cash)</td>
+                <td class="py-3 px-4">SNDK (SanDisk) · Liquidated</td>
                 <td class="py-3 px-4 text-[#5f6368]">2025 S&P 500 #1 (+156.4%)</td>
                 <td class="py-3 px-4 font-mono">$1,557.71</td>
-                <td class="py-3 px-4"><span class="metric-pill bg-[#e6f4ea] text-[#137333]">Untouched ($1,012.51)</span></td>
-                <td class="py-3 px-4 text-right font-mono text-[#c5221f]">-26.1% (in flight)</td>
+                <td class="py-3 px-4"><span class="metric-pill bg-[#fce8e6] text-[#c5221f]">Breached ($998.05 exit)</span></td>
+                <td class="py-3 px-4 text-right font-mono text-[#c5221f]">-35.9% (in cash)</td>
                 <td class="py-3 px-4 text-right font-mono text-[#137333]">+14.2%</td>
               </tr>
               <tr>
@@ -487,7 +577,7 @@
 
   <script>
     function copyTradeParams() {
-      const text = "Holding: SNDK (SanDisk Corp.)\nBroker: Trading 212\nInvested: £998.50 ($1,557.71 execution on 12 Oct 2026)\nCurrent Price: $1,150.89\nStop Loss Threshold: $1,012.51 (35% fixed trailing stop)\nStatus: Stop untouched (+13.7% buffer)\nReselection: 31 Dec 2026\n2027 Leader: MRNA (+716.3% YTD)";
+      const text = "Holding: 100% Cash (SNDK Stopped Out)\nBroker: Trading 212\nExit Execution: $998.05 on 5 Nov 2026\nNet Realised Cash: £1,323.36 in pie cash\nStatus: 35% Fixed Stop Loss Breached\nReselection: 31 Dec 2026\n2027 Leader: MRNA (+716.3% YTD)\nLive Benchmarks vs £1k: VUAG £965.20 (-3.5%), VUKG £1,026.31 (+2.6%), VALL £968.60 (-3.1%)";
       navigator.clipboard.writeText(text).then(() => {
         alert("Position details copied to clipboard.");
       });

@@ -2098,22 +2098,22 @@ html{scroll-behavior:smooth; scroll-padding-top:72px}
         <div>
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
             <span class="badge-tag runner">2026 WINNER</span>
-            <span class="lyw-status-badge green" id="lywLiveStatusBadge">● STOP UNTOUCHED (+13.7% BUFFER)</span>
+            <span class="lyw-status-badge red" id="lywLiveStatusBadge">● STOPPED OUT · 100% CASH</span>
           </div>
-          <div class="lyw-stock-hero" id="lywLiveTicker">SNDK</div>
-          <div class="lyw-stock-sub" id="lywLiveName">SanDisk Corp. · Trading 212 ISA</div>
+          <div class="lyw-stock-hero" id="lywLiveTicker">100% CASH</div>
+          <div class="lyw-stock-sub" id="lywLiveName">SNDK Stopped Out · Trading 212 ISA</div>
 
           <div class="lyw-gauge-box">
             <div style="display:flex;justify-content:space-between;align-items:baseline">
-              <span style="font-size:12px;font-weight:600;color:var(--ink)">Fixed Entry Stop Buffer</span>
-              <span style="font-family:var(--mono);font-size:13px;font-weight:700;color:var(--s3)" id="lywBufferText">+$138.38 (+13.7%)</span>
+              <span style="font-size:12px;font-weight:600;color:var(--ink)">Stop Status</span>
+              <span style="font-family:var(--mono);font-size:13px;font-weight:700;color:var(--neg-ink)" id="lywBufferText">Exit Fill: $998.05 (-35.9%)</span>
             </div>
             <div class="lyw-gauge-track">
-              <div class="lyw-gauge-fill" id="lywGaugeFill" style="width: 72%;"></div>
+              <div class="lyw-gauge-fill" id="lywGaugeFill" style="width: 100%; background: var(--neg-ink);"></div>
             </div>
             <div class="lyw-gauge-labels">
-              <span id="lywStopPriceLbl">Stop: $1,012.51 (-35% from entry)</span>
-              <span id="lywPeakPriceLbl">Cost basis: $1,557.71</span>
+              <span id="lywStopPriceLbl">Liquidated: 5 Nov 2026</span>
+              <span id="lywPeakPriceLbl">Realised Cash: £1,323.36</span>
             </div>
           </div>
         </div>
@@ -2121,8 +2121,8 @@ html{scroll-behavior:smooth; scroll-padding-top:72px}
         <div>
           <div class="lyw-facts-grid">
             <div class="lyw-fact">
-              <span class="k">Live Price</span>
-              <span class="v highlight" id="lywLivePrice">$1,150.89</span>
+              <span class="k">Exit Price</span>
+              <span class="v highlight" id="lywLivePrice">$998.05</span>
             </div>
             <div class="lyw-fact">
               <span class="k">Highest Peak</span>
@@ -2150,6 +2150,21 @@ html{scroll-behavior:smooth; scroll-padding-top:72px}
             <b>Execution rule:</b> If SNDK closes at or below <b>$1,012.51</b> on any trading day, sell 100% of the position on the next market open and hold cash until 31 December 2026. This threshold is fixed at 35% below the purchase fill and does not trail upward. This allows the runner maximum room to compound through normal intra-year pullbacks.
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- ── LIVE BENCHMARK COMPARISON (VUAG, VUKG, VALL) ──────────────────── -->
+    <div style="margin-top:24px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+        <div>
+          <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--s1)">Live Benchmark Comparison</span>
+          <h3 style="font-size:18px;font-weight:700;letter-spacing:-0.01em;margin-top:2px;color:var(--ink)">Strategy vs Passive Vanguard ETFs (£1,000 Invested 12 Oct 2026)</h3>
+        </div>
+        <span style="font-size:11.5px;color:var(--muted);font-family:var(--mono)">Live LSE closing &amp; intraday prices</span>
+      </div>
+
+      <div class="engine-cards-grid" id="lywBenchmarkCards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:16px">
+        <!-- Injected dynamically via JS from DATA.lyw.benchmarks -->
       </div>
     </div>
   </section>
@@ -4384,34 +4399,93 @@ function glyph(key){
         badge.className = "lyw-status-badge " + (lp.isStopped ? "red" : "green");
       }
       var tTicker = $("#lywLiveTicker");
-      if (tTicker) tTicker.textContent = lp.ticker;
+      if (tTicker) tTicker.textContent = lp.isStopped ? "100% CASH" : lp.ticker;
       var tName = $("#lywLiveName");
-      if (tName) tName.textContent = lp.name + " · " + lp.broker;
+      if (tName) tName.textContent = lp.isStopped ? "SNDK Stopped Out · " + lp.broker + " ISA" : lp.name + " · " + lp.broker;
 
       var bText = $("#lywBufferText");
-      if (bText) bText.textContent = "+$" + lp.bufferDollars.toFixed(2) + " (+" + lp.bufferPercent.toFixed(1) + "%)";
+      if (bText) {
+        if (lp.isStopped) {
+          bText.textContent = "Exit Fill: $" + Number(lp.exitPrice || 998.05).toFixed(2) + " (-35.9%)";
+          bText.style.color = "var(--neg-ink)";
+        } else {
+          bText.textContent = "+$" + lp.bufferDollars.toFixed(2) + " (+" + lp.bufferPercent.toFixed(1) + "%)";
+        }
+      }
 
       var gFill = $("#lywGaugeFill");
       if (gFill){
-        var pctVal = Math.min(100, Math.max(5, lp.bufferPercent * 2.5));
-        gFill.style.width = pctVal + "%";
+        if (lp.isStopped) {
+          gFill.style.width = "100%";
+          gFill.style.background = "var(--neg-ink)";
+        } else {
+          var pctVal = Math.min(100, Math.max(5, lp.bufferPercent * 2.5));
+          gFill.style.width = pctVal + "%";
+        }
       }
 
       var sLbl = $("#lywStopPriceLbl");
-      if (sLbl) sLbl.textContent = "Stop: $" + lp.stopLossPrice.toFixed(2) + " (-35%)";
+      if (sLbl) sLbl.textContent = lp.isStopped ? "Liquidated: 5 Nov 2026" : "Stop: $" + lp.stopLossPrice.toFixed(2) + " (-35%)";
       var pLbl = $("#lywPeakPriceLbl");
-      if (pLbl) pLbl.textContent = "Peak: $" + lp.peakPrice.toFixed(2);
+      if (pLbl) pLbl.textContent = lp.isStopped ? "Realised Cash: £1,323.36" : "Peak: $" + lp.peakPrice.toFixed(2);
 
       var pLive = $("#lywLivePrice");
-      if (pLive) pLive.textContent = "$" + lp.currentPrice.toFixed(2);
+      if (pLive) pLive.textContent = lp.isStopped ? "$" + Number(lp.exitPrice || 998.05).toFixed(2) : "$" + lp.currentPrice.toFixed(2);
       var pPeak = $("#lywLivePeak");
       if (pPeak) pPeak.textContent = "$" + lp.peakPrice.toFixed(2);
       var pStop = $("#lywLiveStop");
-      if (pStop) pStop.textContent = "$" + lp.stopLossPrice.toFixed(2);
+      if (pStop) pStop.textContent = "$" + lp.stopLossPrice.toFixed(2) + (lp.isStopped ? " (Breached)" : "");
       var pEntry = $("#lywLiveEntry");
       if (pEntry) pEntry.textContent = "$" + lp.entryPrice.toFixed(2);
       var pBroker = $("#lywLiveBroker");
       if (pBroker) pBroker.textContent = lp.broker;
+
+      // Render Live Benchmark Comparison Cards (VUAG, VUKG, VALL, SPY)
+      var bCardsBox = $("#lywBenchmarkCards");
+      var bList = DATA.lyw.benchmarks || (lp && lp.benchmarks);
+      if (bCardsBox && bList){
+        bCardsBox.innerHTML = "";
+        var stratVal = lp.valuationGbp || 626.97;
+        var stratRet = lp.netReturnPct || -37.3;
+
+        // Card 1: Live Strategy Card
+        var sCard = el("div", {
+          class: "engine-card",
+          style: "border:2px solid var(--neg-ink);background:var(--surface-sunk);padding:14px;border-radius:10px"
+        });
+        sCard.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">' +
+          '<span style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--neg-ink)">LYW STRATEGY</span>' +
+          '<span style="font-family:var(--mono);font-size:10px;padding:2px 6px;border-radius:4px;background:rgba(220,38,38,0.12);color:var(--neg-ink)">100% CASH</span>' +
+          '</div>' +
+          '<div style="font-size:20px;font-weight:800;color:var(--ink);letter-spacing:-0.02em">£' + stratVal.toFixed(2) + '</div>' +
+          '<div style="font-size:12px;font-weight:700;color:var(--neg-ink);margin-top:2px">' + sgnpp(stratRet) + ' (Stopped Out)</div>' +
+          '<div style="font-size:11px;color:var(--muted);margin-top:8px;padding-top:6px;border-top:1px solid var(--rule)">Exit: $998.05 OTC · £1,323.36 in pie cash</div>';
+        bCardsBox.appendChild(sCard);
+
+        // Benchmark Cards (VUAG, VUKG, VALL, SPY)
+        bList.forEach(function(b){
+          var isPos = (b.netReturnPct >= 0);
+          var diff = (b.valuationGbp - stratVal);
+          var bCard = el("div", {
+            class: "engine-card",
+            style: "padding:14px;border-radius:10px;display:flex;flex-direction:column;justify-content:space-between"
+          });
+          bCard.innerHTML = '<div>' +
+            '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">' +
+              '<span style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--s1)">' + b.id + '</span>' +
+              '<span style="font-family:var(--mono);font-size:10.5px;color:var(--muted)">' + b.ticker + '</span>' +
+            '</div>' +
+            '<div style="font-size:20px;font-weight:800;color:var(--ink);letter-spacing:-0.02em">£' + b.valuationGbp.toFixed(2) + '</div>' +
+            '<div style="font-size:12px;font-weight:700;color:' + (isPos ? 'var(--pos-ink)' : 'var(--neg-ink)') + ';margin-top:2px">' +
+              sgnpp(b.netReturnPct) + ' · ' + b.name.split(' (')[0] +
+            '</div>' +
+            '</div>' +
+            '<div style="font-size:11px;color:var(--muted);margin-top:8px;padding-top:6px;border-top:1px solid var(--rule)">' +
+              'vs Strategy: <b style="color:' + (diff >= 0 ? 'var(--pos-ink)' : 'var(--neg-ink)') + '">' + (diff >= 0 ? '+' : '') + '£' + diff.toFixed(2) + '</b>' +
+            '</div>';
+          bCardsBox.appendChild(bCard);
+        });
+      }
     }
 
     // Render Top 4 Contender Cards Dynamically
