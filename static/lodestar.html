@@ -2153,16 +2153,69 @@ html{scroll-behavior:smooth; scroll-padding-top:72px}
       </div>
     </div>
 
-    <!-- ── LIVE BENCHMARK COMPARISON (VUAG, VUKG, VALL) ──────────────────── -->
-    <div style="margin-top:24px">
-      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+    <!-- ── LIVE BENCHMARK COMPARISON & MULTI-LINE CHART ─────────────────── -->
+    <div style="margin-top:28px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:14px;flex-wrap:wrap;gap:12px">
         <div>
-          <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--s1)">Live Benchmark Comparison</span>
-          <h3 style="font-size:18px;font-weight:700;letter-spacing:-0.01em;margin-top:2px;color:var(--ink)">Strategy vs Passive Vanguard ETFs (£1,000 Invested 12 Oct 2026)</h3>
+          <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--s1)">Live Benchmark Performance</span>
+          <h3 style="font-size:20px;font-weight:700;letter-spacing:-0.01em;margin-top:2px;color:var(--ink)">Strategy vs Passive Vanguard ETFs (Daily Line Chart)</h3>
+          <p style="font-size:12.5px;color:var(--muted);margin-top:2px">Daily tracking from 12 October 2026 entry through 5 November 2026 stop liquidation.</p>
         </div>
-        <span style="font-size:11.5px;color:var(--muted);font-family:var(--mono)">Live LSE closing &amp; intraday prices</span>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase">View Mode:</span>
+          <div style="display:inline-flex;background:var(--well);padding:3px;border-radius:6px;border:1px solid var(--rule)">
+            <button id="btnBenchReal" class="btn-sub active" style="font-size:11.5px;padding:4px 10px;border-radius:4px;border:none;background:var(--surface);color:var(--ink);font-weight:700;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,0.08)">Real Portfolio (£1,831.78 Actual Cash)</button>
+            <button id="btnBenchPct" class="btn-sub" style="font-size:11.5px;padding:4px 10px;border-radius:4px;border:none;background:transparent;color:var(--muted);font-weight:600;cursor:pointer">Normalised (% Return from 12 Oct)</button>
+          </div>
+        </div>
       </div>
 
+      <!-- Real Account Tranches Breakdown Card -->
+      <div id="realTranchesBanner" style="background:var(--surface-sunk);border:1px solid var(--rule-2);border-radius:8px;padding:14px 18px;margin-bottom:18px">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:10px">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--neg-ink)"></span>
+            <strong style="font-size:13px;color:var(--ink)">Actual Trading 212 Account Transactions (2 Tranches)</strong>
+          </div>
+          <span style="font-family:var(--mono);font-size:11.5px;font-weight:700;color:var(--neg-ink)">Liquidated: 5 Nov 2026 · Realised Loss: -£503.68 (-27.5%)</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;font-size:12px">
+          <div style="background:var(--surface);padding:10px 12px;border-radius:6px;border:1px solid var(--rule)">
+            <div style="font-weight:700;color:var(--s1);margin-bottom:3px">Tranche 1 · Initial Allocation</div>
+            <div style="color:var(--muted)">12 Oct 2026, 11:47 BST</div>
+            <div style="font-family:var(--mono);font-size:13px;font-weight:700;color:var(--ink);margin-top:4px">£1,000.00 <span style="font-size:11px;font-weight:500;color:var(--muted)">(0.8482 shs @ $1,557.71)</span></div>
+          </div>
+          <div style="background:var(--surface);padding:10px 12px;border-radius:6px;border:1px solid var(--rule)">
+            <div style="font-weight:700;color:var(--s1);margin-bottom:3px">Tranche 2 · Top-up Addition</div>
+            <div style="color:var(--muted)">2 Nov 2026, 08:26 GMT</div>
+            <div style="font-family:var(--mono);font-size:13px;font-weight:700;color:var(--ink);margin-top:4px">£831.78 <span style="font-size:11px;font-weight:500;color:var(--muted)">(0.9421 shs @ $1,182.88)</span></div>
+          </div>
+          <div style="background:var(--surface);padding:10px 12px;border-radius:6px;border:1px solid var(--rule)">
+            <div style="font-weight:700;color:var(--ink);margin-bottom:3px">Total Capital Invested</div>
+            <div style="color:var(--muted)">Blended Entry: $1,360.46</div>
+            <div style="font-family:var(--mono);font-size:13px;font-weight:700;color:var(--ink);margin-top:4px">£1,831.78 <span style="font-size:11px;font-weight:500;color:var(--muted)">(1.7903 shares total)</span></div>
+          </div>
+          <div style="background:rgba(220,38,38,0.06);padding:10px 12px;border-radius:6px;border:1px solid rgba(220,38,38,0.2)">
+            <div style="font-weight:700;color:var(--neg-ink);margin-bottom:3px">Liquidation Fill &amp; Pie Cash</div>
+            <div style="color:var(--muted)">5 Nov 2026, 09:03 UTC</div>
+            <div style="font-family:var(--mono);font-size:13px;font-weight:700;color:var(--neg-ink);margin-top:4px">£1,323.36 <span style="font-size:11px;font-weight:500;color:var(--muted)">($998.05 exit fill)</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Benchmark SVG Line Chart Shell -->
+      <div class="card rise" style="background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:16px 18px;margin-bottom:20px;box-shadow:0 4px 16px rgba(0,0,0,0.04)">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:14px">
+          <div style="font-size:12px;font-weight:600;color:var(--muted)" id="benchChartSubtitle">Plotting Actual Realised Portfolio Cash (£GBP) vs Vanguard Passive ETFs</div>
+          <div id="chartBenchmarkLegend" class="contenders-legend"></div>
+        </div>
+        <div style="position:relative;width:100%;min-height:380px">
+          <div id="benchmarkChartContainer" style="width:100%;min-height:380px;position:relative"></div>
+          <div id="benchmarkTooltip" class="contenders-tooltip" style="display:none;position:absolute;pointer-events:none;z-index:50"></div>
+        </div>
+      </div>
+
+      <!-- Benchmark Cards Grid -->
       <div class="engine-cards-grid" id="lywBenchmarkCards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:16px">
         <!-- Injected dynamically via JS from DATA.lyw.benchmarks -->
       </div>
@@ -4293,6 +4346,7 @@ function glyph(key){
       history.replaceState(null, "", "#lyw");
       document.title = "Last Year's Winner — S&P 500 #1 Momentum & 35% Stop";
       if (typeof renderContendersChart === "function") setTimeout(renderContendersChart, 20);
+      if (typeof renderBenchmarkLineChart === "function") setTimeout(renderBenchmarkLineChart, 20);
     } else if (targetId === "viewCombined"){
       history.replaceState(null, "", "#combined");
       document.title = "50/50 Dual Engine — Lodestar World + Last Year's Winner";
@@ -4440,13 +4494,19 @@ function glyph(key){
       var pBroker = $("#lywLiveBroker");
       if (pBroker) pBroker.textContent = lp.broker;
 
-      // Render Live Benchmark Comparison Cards (VUAG, VUKG, VALL, SPY)
-      var bCardsBox = $("#lywBenchmarkCards");
-      var bList = DATA.lyw.benchmarks || (lp && lp.benchmarks);
-      if (bCardsBox && bList){
+      // Render Live Benchmark Comparison Cards & Toggle Logic
+      var benchMode = "real";
+      var renderBenchmarkCards = function(){
+        var bCardsBox = $("#lywBenchmarkCards");
+        var bList = DATA.lyw.benchmarks || (lp && lp.benchmarks);
+        if (!bCardsBox || !bList) return;
         bCardsBox.innerHTML = "";
-        var stratVal = lp.valuationGbp || 626.97;
-        var stratRet = lp.netReturnPct || -37.3;
+
+        var isReal = (benchMode === "real");
+        var stratVal = isReal ? 1323.36 : (lp.valuationGbp || 626.97);
+        var stratRet = isReal ? -27.50 : (lp.netReturnPct || -37.30);
+        var stratSub = isReal ? "Liquidated · 2 Tranches" : "Initial £1,000 Allocation Leg";
+        var stratFoot = isReal ? "Cost £1,831.78 · Realised loss -£503.68" : "Exit $998.05 OTC · £1,323.36 pie cash";
 
         // Card 1: Live Strategy Card
         var sCard = el("div", {
@@ -4454,18 +4514,20 @@ function glyph(key){
           style: "border:2px solid var(--neg-ink);background:var(--surface-sunk);padding:14px;border-radius:10px"
         });
         sCard.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">' +
-          '<span style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--neg-ink)">LYW STRATEGY</span>' +
+          '<span style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--neg-ink)">' + (isReal ? "LYW (REAL CASH)" : "LYW (NORM £1K)") + '</span>' +
           '<span style="font-family:var(--mono);font-size:10px;padding:2px 6px;border-radius:4px;background:rgba(220,38,38,0.12);color:var(--neg-ink)">100% CASH</span>' +
           '</div>' +
           '<div style="font-size:20px;font-weight:800;color:var(--ink);letter-spacing:-0.02em">£' + stratVal.toFixed(2) + '</div>' +
-          '<div style="font-size:12px;font-weight:700;color:var(--neg-ink);margin-top:2px">' + sgnpp(stratRet) + ' (Stopped Out)</div>' +
-          '<div style="font-size:11px;color:var(--muted);margin-top:8px;padding-top:6px;border-top:1px solid var(--rule)">Exit: $998.05 OTC · £1,323.36 in pie cash</div>';
+          '<div style="font-size:12px;font-weight:700;color:var(--neg-ink);margin-top:2px">' + sgnpp(stratRet) + ' · ' + stratSub + '</div>' +
+          '<div style="font-size:11px;color:var(--muted);margin-top:8px;padding-top:6px;border-top:1px solid var(--rule)">' + stratFoot + '</div>';
         bCardsBox.appendChild(sCard);
 
         // Benchmark Cards (VUAG, VUKG, VALL, SPY)
         bList.forEach(function(b){
-          var isPos = (b.netReturnPct >= 0);
-          var diff = (b.valuationGbp - stratVal);
+          var val = isReal ? (b.realValuationGbp || b.valuationGbp) : b.valuationGbp;
+          var ret = isReal ? (b.realReturnPct !== undefined ? b.realReturnPct : b.netReturnPct) : b.netReturnPct;
+          var isPos = (ret >= 0);
+          var diff = (val - stratVal);
           var bCard = el("div", {
             class: "engine-card",
             style: "padding:14px;border-radius:10px;display:flex;flex-direction:column;justify-content:space-between"
@@ -4475,9 +4537,9 @@ function glyph(key){
               '<span style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--s1)">' + b.id + '</span>' +
               '<span style="font-family:var(--mono);font-size:10.5px;color:var(--muted)">' + b.ticker + '</span>' +
             '</div>' +
-            '<div style="font-size:20px;font-weight:800;color:var(--ink);letter-spacing:-0.02em">£' + b.valuationGbp.toFixed(2) + '</div>' +
+            '<div style="font-size:20px;font-weight:800;color:var(--ink);letter-spacing:-0.02em">£' + val.toFixed(2) + '</div>' +
             '<div style="font-size:12px;font-weight:700;color:' + (isPos ? 'var(--pos-ink)' : 'var(--neg-ink)') + ';margin-top:2px">' +
-              sgnpp(b.netReturnPct) + ' · ' + b.name.split(' (')[0] +
+              sgnpp(ret) + ' · ' + b.name.split(' (')[0] +
             '</div>' +
             '</div>' +
             '<div style="font-size:11px;color:var(--muted);margin-top:8px;padding-top:6px;border-top:1px solid var(--rule)">' +
@@ -4485,7 +4547,258 @@ function glyph(key){
             '</div>';
           bCardsBox.appendChild(bCard);
         });
+      };
+
+      // Benchmark Interactive Line Chart Renderer
+      var renderBenchmarkLineChart = function(){
+        var container = $("#benchmarkChartContainer");
+        var legend = $("#chartBenchmarkLegend");
+        var tooltip = $("#benchmarkTooltip");
+        if (!container || !DATA.lyw || !DATA.lyw.benchmarkChart) return;
+
+        var chartData = DATA.lyw.benchmarkChart;
+        var dates = chartData.dates || [];
+        var seriesList = chartData.series || [];
+        if (!dates.length || !seriesList.length) return;
+
+        var W = 1000, H = 380;
+        var padL = 65, padR = 175, padT = 28, padB = 40;
+        var pw = W - padL - padR;
+        var ph = H - padT - padB;
+        var N = dates.length;
+
+        var isReal = (benchMode === "real");
+        var yMin = isReal ? 550 : -35;
+        var yMax = isReal ? 2000 : 10;
+
+        function xPos(i){ return padL + pw * (i / (N - 1)); }
+        function yPos(val){ return padT + ph * (1 - (val - yMin) / (yMax - yMin)); }
+
+        var activeTicker = null;
+
+        function updateChart(){
+          var svg = [];
+          svg.push('<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:auto;display:block;overflow:visible;font-family:var(--sans)">');
+
+          // Y-Axis Horizontal Gridlines & Ticks
+          var yTicks = isReal ? [600, 800, 1000, 1200, 1400, 1600, 1800, 2000] : [-30, -25, -20, -15, -10, -5, 0, 5, 10];
+          yTicks.forEach(function(yt){
+            var y = yPos(yt);
+            var isZero = (yt === 0 || (isReal && yt === 1000));
+            svg.push('<line x1="' + padL + '" y1="' + y.toFixed(1) + '" x2="' + (padL + pw) + '" y2="' + y.toFixed(1) + '" stroke="' + (isZero ? 'var(--rule-2)' : 'var(--rule)') + '" stroke-width="' + (isZero ? '1.5' : '1') + '" stroke-dasharray="' + (isZero ? 'none' : '3,4') + '" />');
+            var lbl = isReal ? ('£' + yt.toLocaleString()) : ((yt > 0 ? '+' : '') + yt + '%');
+            svg.push('<text x="' + (padL - 10) + '" y="' + (y + 4).toFixed(1) + '" text-anchor="end" font-family="var(--mono)" font-size="11" fill="var(--muted)">' + lbl + '</text>');
+          });
+
+          // X-Axis Labels
+          dates.forEach(function(dStr, i){
+            var showLabel = (i === 0 || i === N - 1 || dStr === '2026-10-16' || dStr === '2026-10-21' || dStr === '2026-10-28' || dStr === '2026-11-02');
+            var x = xPos(i);
+            if (showLabel){
+              svg.push('<line x1="' + x.toFixed(1) + '" y1="' + padT + '" x2="' + x.toFixed(1) + '" y2="' + (padT + ph) + '" stroke="var(--rule)" stroke-width="1" stroke-dasharray="2,5" opacity="0.6" />');
+              var dLabel = dStr.slice(8, 10) + ' ' + (dStr.slice(5, 7) === '10' ? 'Oct' : 'Nov');
+              svg.push('<text x="' + x.toFixed(1) + '" y="' + (H - padB + 18) + '" text-anchor="middle" font-size="11" font-weight="600" fill="var(--ink-2)">' + dLabel + '</text>');
+            }
+          });
+
+          // Plot Border
+          svg.push('<rect x="' + padL + '" y="' + padT + '" width="' + pw + '" height="' + ph + '" fill="none" stroke="var(--rule)" stroke-width="1" />');
+
+          // Draw Line Series
+          seriesList.forEach(function(s){
+            var vals = isReal ? s.realValues : s.pctValues;
+            var isDimmed = (activeTicker && activeTicker !== s.id);
+            var isHighlighted = (activeTicker === s.id);
+            var isStrategy = (s.id === "LYW");
+            var isBench = (s.id === "SPY");
+            var strokeW = isHighlighted ? "3.6" : (isStrategy ? "3.0" : (isBench ? "1.6" : "2.4"));
+            var op = isDimmed ? "0.15" : "1.0";
+
+            var d = vals.map(function(pt, i){
+              return (i === 0 ? "M " : "L ") + xPos(i).toFixed(1) + " " + yPos(pt).toFixed(1);
+            }).join(" ");
+
+            svg.push('<path id="benchPath-' + s.id + '" d="' + d + '" fill="none" stroke="' + s.color + '" stroke-width="' + strokeW + '" ' + (isBench ? 'stroke-dasharray="4,4"' : '') + ' opacity="' + op + '" style="transition:all .15s ease" />');
+          });
+
+          // Marker on Tranche 2 (2 Nov 2026) for Strategy
+          var t2Idx = dates.indexOf("2026-11-02");
+          if (t2Idx >= 0){
+            var lywSeries = seriesList.find(function(s){ return s.id === "LYW"; });
+            if (lywSeries){
+              var vals = isReal ? lywSeries.realValues : lywSeries.pctValues;
+              var tx = xPos(t2Idx), ty = yPos(vals[t2Idx]);
+              svg.push('<circle cx="' + tx.toFixed(1) + '" cy="' + ty.toFixed(1) + '" r="4.5" fill="' + lywSeries.color + '" stroke="#fff" stroke-width="1.8" />');
+              var t2Lbl = isReal ? "Tranche 2 (+£831.78)" : "Tranche 2 Top-up";
+              svg.push('<rect x="' + (tx - 65).toFixed(1) + '" y="' + (ty - 24).toFixed(1) + '" width="130" height="18" rx="4" fill="var(--surface)" stroke="' + lywSeries.color + '" stroke-width="1" />');
+              svg.push('<text x="' + tx.toFixed(1) + '" y="' + (ty - 11).toFixed(1) + '" text-anchor="middle" font-size="9.5" font-family="var(--mono)" font-weight="700" fill="' + lywSeries.color + '">' + t2Lbl + '</text>');
+            }
+          }
+
+          // Right Edge Badges
+          var badgeData = seriesList.map(function(s){
+            var vals = isReal ? s.realValues : s.pctValues;
+            var lastVal = vals[vals.length - 1];
+            var y = yPos(lastVal);
+            return { s: s, val: lastVal, origY: y, y: y };
+          });
+          badgeData.sort(function(a, b){ return a.y - b.y; });
+          var minGap = 24;
+          for (var k = 0; k < 5; k++){
+            for (var bIdx = 0; bIdx < badgeData.length - 1; bIdx++){
+              var cur = badgeData[bIdx];
+              var nxt = badgeData[bIdx + 1];
+              if (nxt.y - cur.y < minGap){
+                var overlap = minGap - (nxt.y - cur.y);
+                cur.y -= overlap / 2;
+                nxt.y += overlap / 2;
+              }
+            }
+          }
+
+          badgeData.forEach(function(b){
+            var isDimmed = (activeTicker && activeTicker !== b.s.id);
+            var op = isDimmed ? "0.15" : "1.0";
+            var bx = padL + pw;
+            var by = b.y;
+            svg.push('<line x1="' + bx + '" y1="' + b.origY.toFixed(1) + '" x2="' + (bx + 14) + '" y2="' + by.toFixed(1) + '" stroke="' + b.s.color + '" stroke-width="1.2" opacity="' + op + '" />');
+            var valText = isReal ? ('£' + b.val.toFixed(2)) : ((b.val >= 0 ? '+' : '') + b.val.toFixed(1) + '%');
+            svg.push('<rect x="' + (bx + 16) + '" y="' + (by - 10).toFixed(1) + '" width="145" height="20" rx="4" fill="var(--surface)" stroke="' + b.s.color + '" stroke-width="1.2" opacity="' + op + '" />');
+            svg.push('<text x="' + (bx + 22) + '" y="' + (by + 4).toFixed(1) + '" font-size="10.5" font-weight="700" fill="' + b.s.color + '" opacity="' + op + '">' + b.s.id + ' <tspan font-family="var(--mono)" font-weight="600" fill="var(--ink)">' + valText + '</tspan></text>');
+          });
+
+          // Tracking Vertical Line & Interactive Overlay
+          svg.push('<line id="benchTrackLine" x1="0" y1="' + padT + '" x2="0" y2="' + (padT + ph) + '" stroke="var(--ink)" stroke-width="1" stroke-dasharray="3,3" opacity="0" pointer-events="none" />');
+          seriesList.forEach(function(s){
+            svg.push('<circle id="benchDot-' + s.id + '" cx="0" cy="0" r="4.5" fill="' + s.color + '" stroke="#fff" stroke-width="2" opacity="0" pointer-events="none" />');
+          });
+
+          svg.push('<rect id="benchOverlay" x="' + padL + '" y="' + padT + '" width="' + pw + '" height="' + ph + '" fill="transparent" style="cursor:crosshair" />');
+          svg.push('</svg>');
+
+          container.innerHTML = svg.join("");
+
+          // Wire Hover Events
+          var overlay = $("#benchOverlay");
+          var trackLine = $("#benchTrackLine");
+          if (overlay && trackLine){
+            function onMove(clientX, clientY){
+              var rect = overlay.getBoundingClientRect();
+              var relX = clientX - rect.left;
+              var pctX = Math.max(0, Math.min(1, relX / rect.width));
+              var idx = Math.round(pctX * (N - 1));
+              var cx = xPos(idx);
+              var svgRect = container.getBoundingClientRect();
+
+              trackLine.setAttribute("x1", cx.toFixed(1));
+              trackLine.setAttribute("x2", cx.toFixed(1));
+              trackLine.setAttribute("opacity", "0.7");
+
+              seriesList.forEach(function(s){
+                var vals = isReal ? s.realValues : s.pctValues;
+                var cy = yPos(vals[idx]);
+                var dot = $("#benchDot-" + s.id);
+                if (dot){
+                  dot.setAttribute("cx", cx.toFixed(1));
+                  dot.setAttribute("cy", cy.toFixed(1));
+                  dot.setAttribute("opacity", (activeTicker && activeTicker !== s.id) ? "0.15" : "1.0");
+                }
+              });
+
+              var curDate = dates[idx];
+              var tt = ['<div class="contenders-tooltip-hd"><span>' + curDate + '</span><span>' + (isReal ? 'Real Portfolio Cash' : 'Return vs Entry') + '</span></div>'];
+              seriesList.forEach(function(s){
+                var vals = isReal ? s.realValues : s.pctValues;
+                var v = vals[idx];
+                var vStr = isReal ? ('£' + v.toFixed(2)) : ((v >= 0 ? '+' : '') + v.toFixed(2) + '%');
+                tt.push('<div class="contenders-tooltip-row">');
+                tt.push('<div class="contenders-tooltip-name"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:' + s.color + ';margin-right:6px"></span><strong style="color:' + s.color + '">' + s.id + '</strong> <span style="font-size:11px;color:var(--muted)">' + s.name.split(" (")[0] + '</span></div>');
+                tt.push('<div class="contenders-tooltip-val" style="color:var(--ink)">' + vStr + '</div>');
+                tt.push('</div>');
+              });
+
+              tooltip.innerHTML = tt.join("");
+              tooltip.style.display = "block";
+              var ttX = (cx / W) * svgRect.width;
+              if (ttX > svgRect.width - 240) ttX -= 240;
+              else ttX += 16;
+              tooltip.style.left = Math.max(8, ttX) + "px";
+              tooltip.style.top = "18px";
+            }
+
+            overlay.onmousemove = function(ev){ onMove(ev.clientX, ev.clientY); };
+            overlay.onmouseleave = function(){
+              trackLine.setAttribute("opacity", "0");
+              seriesList.forEach(function(s){
+                var dot = $("#benchDot-" + s.id);
+                if (dot) dot.setAttribute("opacity", "0");
+              });
+              tooltip.style.display = "none";
+            };
+          }
+        }
+
+        // Legend
+        if (legend){
+          legend.innerHTML = "";
+          seriesList.forEach(function(s){
+            var btn = el("button", {
+              class: "contenders-pill" + (activeTicker === s.id ? " active" : ""),
+              style: "cursor:pointer;border-left:3px solid " + s.color + ";margin-right:4px;margin-bottom:4px"
+            });
+            btn.innerHTML = '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:' + s.color + ';margin-right:6px"></span>' +
+              '<strong>' + s.id + '</strong> <span style="color:var(--muted);font-size:11px">' + s.name.split(" (")[0] + '</span>';
+            btn.onclick = function(){
+              activeTicker = (activeTicker === s.id) ? null : s.id;
+              updateChart();
+              legend.querySelectorAll(".contenders-pill").forEach(function(p){ p.classList.remove("active"); });
+              if (activeTicker) btn.classList.add("active");
+            };
+            legend.appendChild(btn);
+          });
+        }
+
+        updateChart();
+      };
+
+      // Wire Benchmark Mode Toggles
+      var bRealBtn = $("#btnBenchReal");
+      var bPctBtn = $("#btnBenchPct");
+      var subTitle = $("#benchChartSubtitle");
+
+      if (bRealBtn && bPctBtn){
+        bRealBtn.onclick = function(){
+          benchMode = "real";
+          bRealBtn.classList.add("active");
+          bRealBtn.style.background = "var(--surface)";
+          bRealBtn.style.color = "var(--ink)";
+          bRealBtn.style.boxShadow = "0 1px 3px rgba(0,0,0,0.08)";
+          bPctBtn.classList.remove("active");
+          bPctBtn.style.background = "transparent";
+          bPctBtn.style.color = "var(--muted)";
+          bPctBtn.style.boxShadow = "none";
+          if (subTitle) subTitle.textContent = "Plotting Actual Realised Portfolio Cash (£GBP) vs Vanguard Passive ETFs";
+          renderBenchmarkLineChart();
+          renderBenchmarkCards();
+        };
+        bPctBtn.onclick = function(){
+          benchMode = "pct";
+          bPctBtn.classList.add("active");
+          bPctBtn.style.background = "var(--surface)";
+          bPctBtn.style.color = "var(--ink)";
+          bPctBtn.style.boxShadow = "0 1px 3px rgba(0,0,0,0.08)";
+          bRealBtn.classList.remove("active");
+          bRealBtn.style.background = "transparent";
+          bRealBtn.style.color = "var(--muted)";
+          bRealBtn.style.boxShadow = "none";
+          if (subTitle) subTitle.textContent = "Plotting Cumulative Percentage Return (%) from 12 October 2026 Entry";
+          renderBenchmarkLineChart();
+          renderBenchmarkCards();
+        };
       }
+
+      renderBenchmarkCards();
+      renderBenchmarkLineChart();
     }
 
     // Render Top 4 Contender Cards Dynamically
@@ -4839,7 +5152,8 @@ function glyph(key){
 
     renderContendersChart();
     window.addEventListener("resize", function(){
-      renderContendersChart();
+      if (typeof renderContendersChart === "function") renderContendersChart();
+      if (typeof renderBenchmarkLineChart === "function") renderBenchmarkLineChart();
     });
 
     // Render LYW 29-Year Archive

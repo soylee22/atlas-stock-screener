@@ -224,95 +224,73 @@
 
     <!-- Live Benchmark Comparison: Strategy vs Vanguard ETFs -->
     <section class="space-y-4">
-      <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-2 border-b border-[#dadce0] pb-3">
+      <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-3 border-b border-[#dadce0] pb-3">
         <div>
-          <span class="text-[11px] font-bold uppercase tracking-wider text-[#1a73e8]">Live Benchmark Comparison</span>
-          <h2 class="text-2xl font-normal font-google text-[#202124] tracking-tight">Strategy vs Passive Vanguard ETFs</h2>
+          <span class="text-[11px] font-bold uppercase tracking-wider text-[#1a73e8]">Live Benchmark Performance</span>
+          <h2 class="text-2xl font-normal font-google text-[#202124] tracking-tight">Strategy vs Passive Vanguard ETFs (Daily Line Chart)</h2>
           <p class="text-xs text-[#5f6368] mt-0.5">
-            Tracking £1,000 invested on 12 October 2026 across the active strategy against S&P 500, FTSE 100, and Global All-Cap index trackers.
+            Daily tracking from 12 October 2026 entry through 5 November 2026 stop liquidation.
           </p>
         </div>
-        <div class="text-xs text-[#5f6368] font-mono">
-          Prices updated from London Stock Exchange
+        <div class="flex items-center gap-2">
+          <span class="text-xs text-[#5f6368] font-medium uppercase">Mode:</span>
+          <div class="inline-flex bg-[#f1f3f4] p-1 rounded-lg border border-[#dadce0]">
+            <button id="btnBenchRealAtlas" class="text-xs px-3 py-1 rounded font-bold bg-white text-[#202124] shadow-sm">Real (£1,831.78 Cash)</button>
+            <button id="btnBenchPctAtlas" class="text-xs px-3 py-1 rounded font-medium text-[#5f6368]">Normalised (% Return)</button>
+          </div>
         </div>
       </div>
 
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <!-- Strategy Card -->
-        <div class="google-card p-5 border-2 border-[#c5221f] bg-[#fef7f7] flex flex-col justify-between">
-          <div>
-            <div class="flex items-center justify-between mb-3">
-              <span class="px-2 py-0.5 rounded text-[11px] font-bold bg-[#fce8e6] text-[#c5221f] uppercase tracking-wider">LYW Strategy</span>
-              <span class="text-xs font-mono font-bold text-[#c5221f]">-37.30%</span>
-            </div>
-            <div class="text-2xl font-bold font-google text-[#202124]">£626.97</div>
-            <div class="text-xs text-[#5f6368] font-medium mt-0.5">100% Cash (Stopped Out)</div>
-            <p class="text-xs text-[#5f6368] mt-3 leading-relaxed">
-              Exit executed at $998.05 on 5 Nov 2026. £1,323.36 in pie cash sits uninvested until January 2027.
-            </p>
+      <!-- Real Account Tranches Breakdown Card -->
+      <div class="p-4 rounded-xl bg-[#f8f9fa] border border-[#dadce0]">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-[#c5221f]"></span>
+            <strong class="text-xs font-bold text-[#202124] uppercase tracking-wider">Trading 212 Account Transactions (2 Tranches)</strong>
           </div>
-          <div class="mt-4 pt-3 border-t border-[#f5c2c7] flex items-center justify-between text-xs">
-            <span class="text-[#70757a]">Status:</span>
-            <strong class="text-[#c5221f]">Stopped Out to Cash</strong>
+          <span class="font-mono text-xs font-bold text-[#c5221f]">Liquidated: 5 Nov 2026 · Realised Loss: -£503.68 (-27.5%)</span>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+          <div class="p-3 bg-white rounded-lg border border-[#dadce0]">
+            <div class="font-bold text-[#1a73e8]">Tranche 1 · Initial Allocation</div>
+            <div class="text-[#5f6368] text-[11px]">12 Oct 2026, 11:47 BST</div>
+            <div class="font-mono font-bold text-[#202124] mt-1 text-sm">£1,000.00 <span class="text-[11px] font-normal text-[#5f6368]">(0.8482 shs @ $1,557.71)</span></div>
+          </div>
+          <div class="p-3 bg-white rounded-lg border border-[#dadce0]">
+            <div class="font-bold text-[#1a73e8]">Tranche 2 · Top-up Addition</div>
+            <div class="text-[#5f6368] text-[11px]">2 Nov 2026, 08:26 GMT</div>
+            <div class="font-mono font-bold text-[#202124] mt-1 text-sm">£831.78 <span class="text-[11px] font-normal text-[#5f6368]">(0.9421 shs @ $1,182.88)</span></div>
+          </div>
+          <div class="p-3 bg-white rounded-lg border border-[#dadce0]">
+            <div class="font-bold text-[#202124]">Total Capital Invested</div>
+            <div class="text-[#5f6368] text-[11px]">Blended Basis: $1,360.46</div>
+            <div class="font-mono font-bold text-[#202124] mt-1 text-sm">£1,831.78 <span class="text-[11px] font-normal text-[#5f6368]">(1.7903 shares)</span></div>
+          </div>
+          <div class="p-3 bg-[#fce8e6] rounded-lg border border-[#f5c2c7]">
+            <div class="font-bold text-[#c5221f]">Liquidation Fill &amp; Pie Cash</div>
+            <div class="text-[#5f6368] text-[11px]">5 Nov 2026, 09:03 UTC</div>
+            <div class="font-mono font-bold text-[#c5221f] mt-1 text-sm">£1,323.36 <span class="text-[11px] font-normal text-[#5f6368]">($998.05 OTC)</span></div>
           </div>
         </div>
+      </div>
 
-        <!-- VUAG Card -->
-        <div class="google-card p-5 border border-[#dadce0] bg-white flex flex-col justify-between">
-          <div>
-            <div class="flex items-center justify-between mb-3">
-              <span class="px-2 py-0.5 rounded text-[11px] font-bold bg-[#e8f0fe] text-[#1a73e8] uppercase tracking-wider">VUAG · S&P 500</span>
-              <span class="text-xs font-mono font-bold text-[#c5221f]">-3.48%</span>
-            </div>
-            <div class="text-2xl font-bold font-google text-[#202124]">£965.20</div>
-            <div class="text-xs text-[#5f6368] font-medium mt-0.5">VUAG.L (Vanguard S&P 500 Acc)</div>
-            <p class="text-xs text-[#5f6368] mt-3 leading-relaxed">
-              Bought at £114.36 (8.744 shares). Current price £110.38 on LSE.
-            </p>
+      <!-- Benchmark SVG Line Chart Shell -->
+      <div class="google-card p-5 bg-white border border-[#dadce0] rounded-xl shadow-sm">
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+          <div class="text-xs font-semibold text-[#5f6368]" id="atlasBenchSubtitle">
+            Plotting Actual Realised Portfolio Cash (£GBP) vs Vanguard Passive ETFs
           </div>
-          <div class="mt-4 pt-3 border-t border-[#dadce0] flex items-center justify-between text-xs">
-            <span class="text-[#70757a]">vs LYW Strategy:</span>
-            <strong class="text-[#137333]">+£338.23 (+33.8%)</strong>
-          </div>
+          <div id="atlasBenchLegend" class="flex flex-wrap gap-2 text-xs"></div>
         </div>
+        <div class="relative w-full" style="min-height:360px">
+          <div id="atlasBenchmarkChartContainer" style="width:100%;min-height:360px"></div>
+          <div id="atlasBenchmarkTooltip" class="absolute pointer-events-none bg-white border border-[#dadce0] rounded-lg shadow-xl p-3 text-xs" style="display:none;z-index:50;min-width:240px"></div>
+        </div>
+      </div>
 
-        <!-- VUKG Card -->
-        <div class="google-card p-5 border border-[#dadce0] bg-white flex flex-col justify-between">
-          <div>
-            <div class="flex items-center justify-between mb-3">
-              <span class="px-2 py-0.5 rounded text-[11px] font-bold bg-[#e6f4ea] text-[#137333] uppercase tracking-wider">VUKG · FTSE 100</span>
-              <span class="text-xs font-mono font-bold text-[#137333]">+2.63%</span>
-            </div>
-            <div class="text-2xl font-bold font-google text-[#202124]">£1,026.31</div>
-            <div class="text-xs text-[#5f6368] font-medium mt-0.5">VUKG.L (Vanguard FTSE 100 Acc)</div>
-            <p class="text-xs text-[#5f6368] mt-3 leading-relaxed">
-              Bought at £57.39 (17.425 shares). Current price £58.90 on LSE.
-            </p>
-          </div>
-          <div class="mt-4 pt-3 border-t border-[#dadce0] flex items-center justify-between text-xs">
-            <span class="text-[#70757a]">vs LYW Strategy:</span>
-            <strong class="text-[#137333]">+£399.34 (+39.9%)</strong>
-          </div>
-        </div>
-
-        <!-- VALL Card -->
-        <div class="google-card p-5 border border-[#dadce0] bg-white flex flex-col justify-between">
-          <div>
-            <div class="flex items-center justify-between mb-3">
-              <span class="px-2 py-0.5 rounded text-[11px] font-bold bg-[#f1f3f4] text-[#5f6368] uppercase tracking-wider">VALL · Global All-Cap</span>
-              <span class="text-xs font-mono font-bold text-[#c5221f]">-3.14%</span>
-            </div>
-            <div class="text-2xl font-bold font-google text-[#202124]">£968.60</div>
-            <div class="text-xs text-[#5f6368] font-medium mt-0.5">VALL.L (Vanguard Global All-Cap Acc)</div>
-            <p class="text-xs text-[#5f6368] mt-3 leading-relaxed">
-              Bought at £3.774 (264.97 shares). Current price £3.655 on LSE.
-            </p>
-          </div>
-          <div class="mt-4 pt-3 border-t border-[#dadce0] flex items-center justify-between text-xs">
-            <span class="text-[#70757a]">vs LYW Strategy:</span>
-            <strong class="text-[#137333]">+£341.63 (+34.2%)</strong>
-          </div>
-        </div>
+      <!-- Dynamic Cards Grid -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" id="atlasBenchmarkCards">
+        <!-- Rendered dynamically -->
       </div>
     </section>
 
@@ -576,8 +554,269 @@
   </footer>
 
   <script>
+    const BENCH_DATA = {
+      dates: ["2026-10-12", "2026-10-13", "2026-10-14", "2026-10-15", "2026-10-16", "2026-10-19", "2026-10-20", "2026-10-21", "2026-10-22", "2026-10-23", "2026-10-26", "2026-10-27", "2026-10-28", "2026-10-29", "2026-10-30", "2026-11-02", "2026-11-03", "2026-11-04", "2026-11-05"],
+      series: [
+        { id: "LYW", ticker: "LYW (SNDK → Cash)", name: "Last Year's Winner", color: "#c5221f", realValues: [953.51, 951.81, 901.81, 895.04, 832.96, 874.19, 872.76, 877.01, 800.78, 786.16, 797.94, 831.63, 898.37, 848.74, 731.43, 1438.25, 1504.48, 1383.07, 1323.36], pctValues: [-4.65, -4.82, -9.82, -10.50, -16.70, -12.58, -12.72, -12.30, -19.92, -21.38, -20.21, -16.84, -10.16, -15.13, -26.86, -21.48, -17.87, -24.50, -27.50], normValues: [953.51, 951.81, 901.81, 895.04, 832.96, 874.19, 872.76, 877.01, 800.78, 786.16, 797.94, 831.63, 898.37, 848.74, 731.43, 689.86, 722.84, 664.55, 626.97] },
+        { id: "VUAG", ticker: "VUAG.L", name: "Vanguard S&P 500 (Acc)", color: "#1a73e8", realValues: [1000.0, 994.75, 996.15, 986.36, 979.19, 981.81, 976.74, 979.01, 969.92, 969.05, 973.42, 982.51, 983.91, 977.09, 959.95, 1794.52, 1779.85, 1789.63, 1800.07], pctValues: [0.0, -0.52, -0.38, -1.36, -2.08, -1.82, -2.33, -2.10, -3.01, -3.09, -2.66, -1.75, -1.61, -2.29, -4.01, -2.03, -2.83, -2.30, -1.73], normValues: [1000.0, 994.75, 996.15, 986.36, 979.19, 981.81, 976.74, 979.01, 969.92, 969.05, 973.42, 982.51, 983.91, 977.09, 959.95, 962.75, 954.88, 960.13, 965.72] },
+        { id: "VUKG", ticker: "VUKG.L", name: "Vanguard FTSE 100 (Acc)", color: "#137333", realValues: [1000.0, 999.65, 1007.84, 1017.95, 1021.78, 1010.98, 1008.19, 1009.58, 1007.49, 1003.83, 1010.98, 1004.01, 1004.70, 1006.79, 1006.79, 1842.56, 1822.24, 1845.42, 1871.17], pctValues: [0.0, -0.03, 0.78, 1.79, 2.18, 1.10, 0.82, 0.96, 0.75, 0.38, 1.10, 0.40, 0.47, 0.68, 0.68, 0.59, -0.52, 0.74, 2.15], normValues: [1000.0, 999.65, 1007.84, 1017.95, 1021.78, 1010.98, 1008.19, 1009.58, 1007.49, 1003.83, 1010.98, 1004.01, 1004.70, 1006.79, 1006.79, 1010.80, 999.65, 1012.37, 1026.49] },
+        { id: "VALL", ticker: "VALL.L", name: "Vanguard Global All-Cap (Acc)", color: "#5f6368", realValues: [1000.0, 994.70, 994.17, 985.43, 980.13, 981.45, 976.95, 979.99, 968.47, 967.81, 972.31, 981.05, 982.51, 977.74, 961.31, 1798.98, 1784.44, 1792.82, 1801.77], pctValues: [0.0, -0.53, -0.58, -1.46, -1.99, -1.85, -2.31, -2.00, -3.15, -3.22, -2.77, -1.89, -1.75, -2.23, -3.87, -1.79, -2.58, -2.13, -1.64], normValues: [1000.0, 994.70, 994.17, 985.43, 980.13, 981.45, 976.95, 979.99, 968.47, 967.81, 972.31, 981.05, 982.51, 977.74, 961.31, 967.28, 959.46, 963.96, 968.73] }
+      ]
+    };
+
+    let atlasBenchMode = "real";
+    let activeBenchTicker = null;
+
+    function renderAtlasBenchmarkCards() {
+      const box = document.getElementById("atlasBenchmarkCards");
+      if (!box) return;
+      const isReal = (atlasBenchMode === "real");
+      const stratVal = isReal ? 1323.36 : 626.97;
+      const stratRet = isReal ? -27.50 : -37.30;
+      const stratSub = isReal ? "Liquidated · 2 Tranches" : "Initial £1,000 Leg";
+      const stratDesc = isReal ? "Cost £1,831.78 · Realised loss -£503.68" : "Exit $998.05 OTC · £1,323.36 pie cash";
+
+      const items = [
+        {
+          id: isReal ? "LYW (REAL CASH)" : "LYW (NORM £1K)",
+          ticker: "100% Cash",
+          name: "Last Year's Winner",
+          val: stratVal,
+          ret: stratRet,
+          isStrat: true,
+          desc: stratDesc,
+          status: "Stopped Out to Cash"
+        },
+        {
+          id: "VUAG · S&P 500",
+          ticker: "VUAG.L",
+          name: "Vanguard S&P 500 Acc",
+          val: isReal ? 1800.07 : 965.72,
+          ret: isReal ? -1.73 : -3.43,
+          desc: isReal ? "16.30 shares (£1,831.78 cost basis)" : "8.74 shares (£1,000.00 cost basis)",
+          diff: isReal ? (1800.07 - stratVal) : (965.72 - stratVal)
+        },
+        {
+          id: "VUKG · FTSE 100",
+          ticker: "VUKG.L",
+          name: "Vanguard FTSE 100 Acc",
+          val: isReal ? 1871.17 : 1026.49,
+          ret: isReal ? 2.15 : 2.65,
+          desc: isReal ? "31.76 shares (£1,831.78 cost basis)" : "17.42 shares (£1,000.00 cost basis)",
+          diff: isReal ? (1871.17 - stratVal) : (1026.49 - stratVal)
+        },
+        {
+          id: "VALL · Global All-Cap",
+          ticker: "VALL.L",
+          name: "Vanguard All-Cap Acc",
+          val: isReal ? 1801.77 : 968.73,
+          ret: isReal ? -1.64 : -3.13,
+          desc: isReal ? "492.82 shares (£1,831.78 cost basis)" : "264.97 shares (£1,000.00 cost basis)",
+          diff: isReal ? (1801.77 - stratVal) : (968.73 - stratVal)
+        }
+      ];
+
+      box.innerHTML = items.map(item => {
+        const isPos = item.ret >= 0;
+        const retCls = isPos ? "text-[#137333]" : "text-[#c5221f]";
+        const retSign = isPos ? "+" : "";
+        if (item.isStrat) {
+          return `
+            <div class="google-card p-5 border-2 border-[#c5221f] bg-[#fef7f7] flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between mb-3">
+                  <span class="px-2 py-0.5 rounded text-[11px] font-bold bg-[#fce8e6] text-[#c5221f] uppercase tracking-wider">${item.id}</span>
+                  <span class="text-xs font-mono font-bold text-[#c5221f]">${retSign}${item.ret.toFixed(2)}%</span>
+                </div>
+                <div class="text-2xl font-bold font-google text-[#202124]">£${item.val.toFixed(2)}</div>
+                <div class="text-xs text-[#5f6368] font-medium mt-0.5">${stratSub}</div>
+                <p class="text-xs text-[#5f6368] mt-3 leading-relaxed">${item.desc}</p>
+              </div>
+              <div class="mt-4 pt-3 border-t border-[#f5c2c7] flex items-center justify-between text-xs">
+                <span class="text-[#70757a]">Status:</span>
+                <strong class="text-[#c5221f]">${item.status}</strong>
+              </div>
+            </div>`;
+        }
+        return `
+          <div class="google-card p-5 border border-[#dadce0] bg-white flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between mb-3">
+                <span class="px-2 py-0.5 rounded text-[11px] font-bold bg-[#f1f3f4] text-[#202124] uppercase tracking-wider">${item.id}</span>
+                <span class="text-xs font-mono font-bold ${retCls}">${retSign}${item.ret.toFixed(2)}%</span>
+              </div>
+              <div class="text-2xl font-bold font-google text-[#202124]">£${item.val.toFixed(2)}</div>
+              <div class="text-xs text-[#5f6368] font-medium mt-0.5">${item.name}</div>
+              <p class="text-xs text-[#5f6368] mt-3 leading-relaxed">${item.desc}</p>
+            </div>
+            <div class="mt-4 pt-3 border-t border-[#dadce0] flex items-center justify-between text-xs">
+              <span class="text-[#70757a]">vs LYW Strategy:</span>
+              <strong class="text-[#137333]">+£${item.diff.toFixed(2)}</strong>
+            </div>
+          </div>`;
+      }).join("");
+    }
+
+    function renderAtlasBenchmarkLineChart() {
+      const container = document.getElementById("atlasBenchmarkChartContainer");
+      const legend = document.getElementById("atlasBenchLegend");
+      const tooltip = document.getElementById("atlasBenchmarkTooltip");
+      if (!container) return;
+
+      const dates = BENCH_DATA.dates;
+      const seriesList = BENCH_DATA.series;
+      const N = dates.length;
+      const isReal = (atlasBenchMode === "real");
+      const W = 1000, H = 360;
+      const padL = 60, padR = 160, padT = 24, padB = 36;
+      const pw = W - padL - padR, ph = H - padT - padB;
+
+      const yMin = isReal ? 550 : -35;
+      const yMax = isReal ? 2000 : 10;
+      const xPos = i => padL + pw * (i / (N - 1));
+      const yPos = v => padT + ph * (1 - (v - yMin) / (yMax - yMin));
+
+      const svg = [];
+      svg.push(`<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block;overflow:visible;font-family:sans-serif">`);
+
+      const yTicks = isReal ? [600, 800, 1000, 1200, 1400, 1600, 1800, 2000] : [-30, -25, -20, -15, -10, -5, 0, 5, 10];
+      yTicks.forEach(yt => {
+        const y = yPos(yt);
+        const isZero = (yt === 0 || (isReal && yt === 1000));
+        svg.push(`<line x1="${padL}" y1="${y.toFixed(1)}" x2="${padL + pw}" y2="${y.toFixed(1)}" stroke="${isZero ? '#dadce0' : '#f1f3f4'}" stroke-width="${isZero ? '1.5' : '1'}" stroke-dasharray="${isZero ? 'none' : '3,4'}" />`);
+        const lbl = isReal ? ('£' + yt.toLocaleString()) : ((yt > 0 ? '+' : '') + yt + '%');
+        svg.push(`<text x="${padL - 10}" y="${(y + 4).toFixed(1)}" text-anchor="end" font-family="monospace" font-size="11" fill="#70757a">${lbl}</text>`);
+      });
+
+      dates.forEach((dStr, i) => {
+        const show = (i === 0 || i === N - 1 || dStr === '2026-10-16' || dStr === '2026-10-21' || dStr === '2026-10-28' || dStr === '2026-11-02');
+        if (show) {
+          const x = xPos(i);
+          svg.push(`<line x1="${x.toFixed(1)}" y1="${padT}" x2="${x.toFixed(1)}" y2="${padT + ph}" stroke="#f1f3f4}" stroke-width="1" stroke-dasharray="2,4" />`);
+          const dLbl = dStr.slice(8, 10) + ' ' + (dStr.slice(5, 7) === '10' ? 'Oct' : 'Nov');
+          svg.push(`<text x="${x.toFixed(1)}" y="${H - padB + 16}" text-anchor="middle" font-size="11" font-weight="600" fill="#5f6368">${dLbl}</text>`);
+        }
+      });
+
+      svg.push(`<rect x="${padL}" y="${padT}" width="${pw}" height="${ph}" fill="none" stroke="#dadce0" stroke-width="1" />`);
+
+      seriesList.forEach(s => {
+        const vals = isReal ? s.realValues : s.pctValues;
+        const isDim = (activeBenchTicker && activeBenchTicker !== s.id);
+        const isAct = (activeBenchTicker === s.id);
+        const isStrat = (s.id === "LYW");
+        const strokeW = isAct ? "3.6" : (isStrat ? "3.0" : "2.2");
+        const op = isDim ? "0.15" : "1.0";
+
+        const d = vals.map((pt, i) => (i === 0 ? "M " : "L ") + xPos(i).toFixed(1) + " " + yPos(pt).toFixed(1)).join(" ");
+        svg.push(`<path id="atlasPath-${s.id}" d="${d}" fill="none" stroke="${s.color}" stroke-width="${strokeW}" opacity="${op}" style="transition:all .15s ease" />`);
+      });
+
+      // Marker for Tranche 2 on Strategy
+      const t2Idx = dates.indexOf("2026-11-02");
+      if (t2Idx >= 0) {
+        const lyw = seriesList[0];
+        const vals = isReal ? lyw.realValues : lyw.pctValues;
+        const tx = xPos(t2Idx), ty = yPos(vals[t2Idx]);
+        svg.push(`<circle cx="${tx.toFixed(1)}" cy="${ty.toFixed(1)}" r="4" fill="${lyw.color}" stroke="#fff" stroke-width="1.5" />`);
+        svg.push(`<rect x="${(tx - 60).toFixed(1)}" y="${(ty - 22).toFixed(1)}" width="120" height="18" rx="4" fill="#fff" stroke="${lyw.color}" stroke-width="1" />`);
+        svg.push(`<text x="${tx.toFixed(1)}" y="${(ty - 10).toFixed(1)}" text-anchor="middle" font-size="9.5" font-family="monospace" font-weight="700" fill="${lyw.color}">Tranche 2 (+£831.78)</text>`);
+      }
+
+      // Right Margin Labels
+      seriesList.forEach((s, idx) => {
+        const vals = isReal ? s.realValues : s.pctValues;
+        const lastVal = vals[vals.length - 1];
+        const by = yPos(lastVal);
+        const bx = padL + pw;
+        const isDim = (activeBenchTicker && activeBenchTicker !== s.id);
+        const op = isDim ? "0.15" : "1.0";
+        const valText = isReal ? ('£' + lastVal.toFixed(2)) : ((lastVal >= 0 ? '+' : '') + lastVal.toFixed(1) + '%');
+        svg.push(`<line x1="${bx}" y1="${by.toFixed(1)}" x2="${bx + 12}" y2="${by.toFixed(1)}" stroke="${s.color}" stroke-width="1" opacity="${op}" />`);
+        svg.push(`<rect x="${bx + 14}" y="${(by - 9).toFixed(1)}" width="140" height="18" rx="4" fill="#fff" stroke="${s.color}" stroke-width="1.2" opacity="${op}" />`);
+        svg.push(`<text x="${bx + 20}" y="${(by + 4).toFixed(1)}" font-size="10" font-weight="700" fill="${s.color}" opacity="${op}">${s.id} <tspan font-family="monospace" fill="#202124">${valText}</tspan></text>`);
+      });
+
+      svg.push(`<line id="atlasTrackLine" x1="0" y1="${padT}" x2="0" y2="${padT + ph}" stroke="#202124" stroke-width="1" stroke-dasharray="3,3" opacity="0" pointer-events="none" />`);
+      svg.push(`<rect id="atlasOverlay" x="${padL}" y="${padT}" width="${pw}" height="${ph}" fill="transparent" style="cursor:crosshair" />`);
+      svg.push(`</svg>`);
+
+      container.innerHTML = svg.join("");
+
+      // Legend
+      if (legend) {
+        legend.innerHTML = seriesList.map(s => `
+          <button class="px-2 py-1 rounded text-xs font-semibold border ${activeBenchTicker === s.id ? 'bg-[#202124] text-white border-[#202124]' : 'bg-white text-[#5f6368] border-[#dadce0]'}" onclick="toggleAtlasBenchSeries('${s.id}')">
+            <span class="inline-block w-2 h-2 rounded-full mr-1.5" style="background:${s.color}"></span>
+            ${s.id}
+          </button>
+        `).join("");
+      }
+
+      // Pointer event tracking
+      const overlay = document.getElementById("atlasOverlay");
+      const trackLine = document.getElementById("atlasTrackLine");
+      if (overlay && trackLine) {
+        overlay.onmousemove = e => {
+          const rect = overlay.getBoundingClientRect();
+          const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+          const idx = Math.round(pct * (N - 1));
+          const cx = xPos(idx);
+
+          trackLine.setAttribute("x1", cx.toFixed(1));
+          trackLine.setAttribute("x2", cx.toFixed(1));
+          trackLine.setAttribute("opacity", "0.7");
+
+          const curDate = dates[idx];
+          let tt = `<div class="font-bold border-b border-[#dadce0] pb-1 mb-1.5 flex justify-between text-[#202124]"><span>${curDate}</span><span>${isReal ? 'Actual Cash (£)' : 'Return (%)'}</span></div>`;
+          seriesList.forEach(s => {
+            const vals = isReal ? s.realValues : s.pctValues;
+            const v = vals[idx];
+            const vStr = isReal ? ('£' + v.toFixed(2)) : ((v >= 0 ? '+' : '') + v.toFixed(2) + '%');
+            tt += `<div class="flex justify-between items-center py-0.5"><span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full" style="background:${s.color}"></span><strong style="color:${s.color}">${s.id}</strong></span><span class="font-mono font-bold text-[#202124]">${vStr}</span></div>`;
+          });
+          tooltip.innerHTML = tt;
+          tooltip.style.display = "block";
+          const cRect = container.getBoundingClientRect();
+          let tx = e.clientX - cRect.left + 15;
+          if (tx + 250 > cRect.width) tx = e.clientX - cRect.left - 255;
+          tooltip.style.left = Math.max(10, tx) + "px";
+          tooltip.style.top = "20px";
+        };
+        overlay.onmouseleave = () => {
+          trackLine.setAttribute("opacity", "0");
+          tooltip.style.display = "none";
+        };
+      }
+    }
+
+    function toggleAtlasBenchSeries(id) {
+      activeBenchTicker = (activeBenchTicker === id) ? null : id;
+      renderAtlasBenchmarkLineChart();
+    }
+
+    document.getElementById("btnBenchRealAtlas").onclick = () => {
+      atlasBenchMode = "real";
+      document.getElementById("btnBenchRealAtlas").className = "text-xs px-3 py-1 rounded font-bold bg-white text-[#202124] shadow-sm";
+      document.getElementById("btnBenchPctAtlas").className = "text-xs px-3 py-1 rounded font-medium text-[#5f6368]";
+      document.getElementById("atlasBenchSubtitle").textContent = "Plotting Actual Realised Portfolio Cash (£GBP) vs Vanguard Passive ETFs";
+      renderAtlasBenchmarkCards();
+      renderAtlasBenchmarkLineChart();
+    };
+    document.getElementById("btnBenchPctAtlas").onclick = () => {
+      atlasBenchMode = "pct";
+      document.getElementById("btnBenchPctAtlas").className = "text-xs px-3 py-1 rounded font-bold bg-white text-[#202124] shadow-sm";
+      document.getElementById("btnBenchRealAtlas").className = "text-xs px-3 py-1 rounded font-medium text-[#5f6368]";
+      document.getElementById("atlasBenchSubtitle").textContent = "Plotting Cumulative Percentage Return (%) from 12 October 2026 Entry";
+      renderAtlasBenchmarkCards();
+      renderAtlasBenchmarkLineChart();
+    };
+
+    renderAtlasBenchmarkCards();
+    renderAtlasBenchmarkLineChart();
+
     function copyTradeParams() {
-      const text = "Holding: 100% Cash (SNDK Stopped Out)\nBroker: Trading 212\nExit Execution: $998.05 on 5 Nov 2026\nNet Realised Cash: £1,323.36 in pie cash\nStatus: 35% Fixed Stop Loss Breached\nReselection: 31 Dec 2026\n2027 Leader: MRNA (+716.3% YTD)\nLive Benchmarks vs £1k: VUAG £965.20 (-3.5%), VUKG £1,026.31 (+2.6%), VALL £968.60 (-3.1%)";
+      const text = "Holding: 100% Cash (SNDK Stopped Out)\nBroker: Trading 212\nExit Execution: $998.05 on 5 Nov 2026\nNet Realised Cash: £1,323.36 in pie cash\nStatus: 35% Fixed Stop Loss Breached\nReselection: 31 Dec 2026\n2027 Leader: MRNA (+716.3% YTD)\nLive Benchmarks vs £1.83k: VUAG £1,800.07 (-1.7%), VUKG £1,871.17 (+2.1%), VALL £1,801.77 (-1.6%)";
       navigator.clipboard.writeText(text).then(() => {
         alert("Position details copied to clipboard.");
       });
