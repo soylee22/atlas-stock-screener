@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-11-05T01:50:17.380432+00:00",
+  "last_updated": "2026-11-06T01:58:52.582377+00:00",
   "history": [
     {
       "date": "2026-10-30",
@@ -250,6 +250,32 @@
           "qm": 91.0,
           "vm": 70.0,
           "style": "High Flyer"
+        }
+      }
+    },
+    {
+      "date": "2026-11-06",
+      "timestamp": "2026-11-06T01:58:52.582377+00:00",
+      "scores": {
+        "CSH2.L": {
+          "stockrank": null,
+          "quality": null,
+          "value": null,
+          "momentum": null,
+          "qv": null,
+          "qm": null,
+          "vm": null,
+          "style": null
+        },
+        "IWFV.L": {
+          "stockrank": null,
+          "quality": null,
+          "value": null,
+          "momentum": null,
+          "qv": null,
+          "qm": null,
+          "vm": null,
+          "style": null
         }
       }
     }
