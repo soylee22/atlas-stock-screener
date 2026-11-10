@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-11-07T01:20:49.798975+00:00",
+  "last_updated": "2026-11-10T03:50:12.975203+00:00",
   "history": [
     {
       "date": "2026-10-30",
@@ -294,6 +294,52 @@
           "style": null
         },
         "IWFV.L": {
+          "stockrank": null,
+          "quality": null,
+          "value": null,
+          "momentum": null,
+          "qv": null,
+          "qm": null,
+          "vm": null,
+          "style": null
+        }
+      }
+    },
+    {
+      "date": "2026-11-10",
+      "timestamp": "2026-11-10T03:50:12.975203+00:00",
+      "scores": {
+        "CNX1": {
+          "stockrank": null,
+          "quality": null,
+          "value": null,
+          "momentum": null,
+          "qv": null,
+          "qm": null,
+          "vm": null,
+          "style": null
+        },
+        "SSLN.L": {
+          "stockrank": null,
+          "quality": null,
+          "value": null,
+          "momentum": null,
+          "qv": null,
+          "qm": null,
+          "vm": null,
+          "style": null
+        },
+        "SMGB.L": {
+          "stockrank": null,
+          "quality": null,
+          "value": null,
+          "momentum": null,
+          "qv": null,
+          "qm": null,
+          "vm": null,
+          "style": null
+        },
+        "IUMO.L": {
           "stockrank": null,
           "quality": null,
           "value": null,
