@@ -1,0 +1,56 @@
+name: SD Channel Daily Scan
+
+on:
+  schedule:
+    # 22:15 UTC Monday to Friday, after the US close.
+    - cron: '15 22 * * 1-5'
+  workflow_dispatch:
+
+concurrency:
+  group: sd-channel-daily
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install yfinance==0.2.65 pandas numpy
+
+      - name: Run scan and send email
+        env:
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          NOTIFY_EMAIL: ${{ secrets.NOTIFY_EMAIL }}
+        run: python sd_channel/daily.py
+
+      - name: Commit state for tomorrow's crossings
+        run: |
+          git config --local user.name "github-actions[bot]"
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git add sd_channel/state.json sd_channel/latest.csv
+          git commit -m "Update SD channel state [skip ci]" || echo "No state change"
+          git pull --rebase origin main && git push origin main || echo "Push skipped"
+
+      - name: Upload email HTML and CSV
+        uses: actions/upload-artifact@v4
+        with:
+          name: sd-channel-latest
+          path: |
+            sd_channel/latest.html
+            sd_channel/latest.csv
+          retention-days: 14

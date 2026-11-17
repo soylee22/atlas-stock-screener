@@ -1,0 +1,1107 @@
+ticker,name,kind,region,size_usd_bn,aum_currency
+RMS.PA,Hermes International SCA,stock,fr,151.17407369352324,
+INTU,Intuit Inc.,stock,us,94.842054688,
+MC.PA,LVMH Moet Hennessy Louis Vuitton SE,stock,fr,213.91441843574844,
+TMUS,"T-Mobile US, Inc.",stock,us,170.329515625,
+MCD,McDonald's Corporation,stock,us,178.771484375,
+TRI.TO,Thomson Reuters Corporation,stock,ca,52.407648844515904,
+ORCL,Oracle Corporation,stock,us,379.59984375,
+BX,Blackstone Inc.,stock,us,146.523640625,
+SYK,Stryker Corporation,stock,us,117.787609375,
+CDI.PA,Christian Dior SE,stock,fr,85.8597548538393,
+NOVO-B.CO,Novo Nordisk A/S Class B,stock,dk,175.8743762172073,
+LOW,"Lowe's Companies, Inc.",stock,us,114.662609375,
+EL.PA,EssilorLuxottica SA,stock,fr,91.89831489781142,
+AON,Aon Plc Class A,stock,us,65.080078125,
+CRM,"Salesforce, Inc.",stock,us,205.988671875,
+HD,"Home Depot, Inc.",stock,us,326.97284375,
+ABT,Abbott Laboratories,stock,us,177.38159375,
+SRE,Sempra,stock,us,55.431128906,
+NKE,"NIKE, Inc. Class B",stock,us,56.91703222700001,
+PEP,"PepsiCo, Inc.",stock,us,189.18934375,
+KKR,KKR & Co Inc,stock,us,83.560898438,
+ACN,Accenture Plc Class A,stock,us,152.925202377,
+UNH,UnitedHealth Group Incorporated,stock,us,381.4598749999999,
+CSU.TO,Constellation Software Inc.,stock,ca,50.67297975411638,
+CMCSA,Comcast Corporation Class A,stock,us,81.05085797100001,
+SPGI,"S&P Global, Inc.",stock,us,133.573875,
+CI,Cigna Group,stock,us,83.46828124999999,
+PLD,"Prologis, Inc.",stock,us,122.768392334,
+BKNG,Booking Holdings Inc.,stock,us,121.04739843800002,
+APO,Apollo Global Management Inc,stock,us,67.812070312,
+REL.L,RELX PLC,stock,gb,69.47472603782,
+DHR,Danaher Corporation,stock,us,161.63620312500004,
+SU.PA,Schneider Electric SE,stock,fr,155.75181728912733,
+RHM.DE,Rheinmetall AG,stock,de,53.053504061484965,
+LSEG.L,London Stock Exchange Group plc,stock,gb,59.99866286313055,
+SHW,Sherwin-Williams Company,stock,us,83.9045,
+MRSH,"Marsh & McLennan Companies, Inc.",stock,us,94.755742188,
+QCOM,QUALCOMM Incorporated,stock,us,184.554703125,
+RACE.MI,Ferrari NV,stock,it,87.17429530961347,
+DGE.L,Diageo plc,stock,gb,52.63007949191206,
+DG.PA,VINCI SA,stock,fr,66.20022627333121,
+UPS,"United Parcel Service, Inc. Class B",stock,us,86.371347656,
+AMT,American Tower Corporation,stock,us,84.604367188,
+7974.T,"Nintendo Co., Ltd.",stock,jp,57.02344245951514,
+PCAR,PACCAR Inc,stock,us,57.68433203099999,
+005380.KS,Hyundai Motor Company,stock,kr,68.02865223224366,
+ETN,Eaton Corp. Plc,stock,us,143.315703125,
+4063.T,"Shin-Etsu Chemical Co., Ltd.",stock,jp,72.61407564952735,
+MCO,Moody's Corporation,stock,us,84.65701562499999,
+HON,Honeywell International Inc.,stock,us,69.191171875,
+ELV,"Elevance Health, Inc.",stock,us,96.205367188,
+MDLZ,"Mondelez International, Inc. Class A",stock,us,83.20253125,
+SAN.PA,Sanofi SA,stock,fr,100.72179358622536,
+AJG,Arthur J. Gallagher & Co.,stock,us,69.452171875,
+TJX,TJX Companies Inc,stock,us,162.1141875,
+NESN.SW,Nestle S.A.,stock,ch,260.5640712354403,
+NOC,Northrop Grumman Corp.,stock,us,78.4693125,
+DTE.DE,Deutsche Telekom AG,stock,de,140.27419471940638,
+CRH,CRH public limited company,stock,us,57.50053906200001,
+NEE,"NextEra Energy, Inc.",stock,us,171.76937499999997,
+NTES,Netease Inc Sponsored ADR,stock,us,73.85222777662861,
+7741.T,HOYA Corporation,stock,jp,53.41211676019946,
+MRK.DE,Merck KGaA,stock,de,71.285847536194,
+O,Realty Income Corporation,stock,us,53.991203125,
+BABA,Alibaba Group Holding Limited Sponsored ADR,stock,us,247.14187038150888,
+ATD.TO,Alimentation Couche-Tard Inc.,stock,ca,54.46713952897221,
+9432.T,"NTT, Inc.",stock,jp,87.13105326378222,
+RIO.L,Rio Tinto plc,stock,gb,142.52896198195754,
+6861.T,Keyence Corporation,stock,jp,125.08464745845606,
+PFE,Pfizer Inc.,stock,us,173.384078125,
+FCX,"Freeport-McMoRan, Inc.",stock,us,92.75236718800002,
+BN,Brookfield Corporation,stock,us,93.86624632754966,
+TT,Trane Technologies plc,stock,us,98.746398438,
+4519.T,"Chugai Pharmaceutical Co., Ltd.",stock,jp,63.74727695122363,
+9984.T,SoftBank Group Corp.,stock,jp,227.06024552326173,
+PGR,Progressive Corporation,stock,us,133.43217187500002,
+PG,Procter & Gamble Company,stock,us,384.6113125,
+DVN,Devon Energy Corporation,stock,us,54.098,
+TGT,Target Corporation,stock,us,71.828851562,
+CMI,Cummins Inc.,stock,us,71.520835938,
+COF,Capital One Financial Corp,stock,us,124.80121875,
+NXPI,NXP Semiconductors NV,stock,us,59.96211718799999,
+SCHW,Charles Schwab Corp,stock,us,158.130453125,
+NVDA,NVIDIA Corporation,stock,us,5114.261,
+ITW,Illinois Tool Works Inc.,stock,us,79.52754687499998,
+7011.T,"Mitsubishi Heavy Industries, Ltd.",stock,jp,80.53868896879736,
+BAC,Bank of America Corp,stock,us,353.61128125,
+SAP.DE,SAP SE,stock,de,281.6870274341316,
+OR.PA,L'Oreal S.A.,stock,fr,246.13353500108033,
+SBUX,Starbucks Corporation,stock,us,116.17740625,
+FANG,"Diamondback Energy, Inc.",stock,us,55.204,
+AZN.L,AstraZeneca PLC,stock,gb,266.02297833858495,
+IBM,International Business Machines Corporation,stock,us,237.5215,
+META,Meta Platforms Inc Class A,stock,us,1652.554234375,
+MSFT,Microsoft Corporation,stock,us,3869.7625,
+PSA,Public Storage,stock,us,57.761652344,
+AXP,American Express Company,stock,us,219.5905,
+SO,Southern Company,stock,us,107.927046875,
+CAT,Caterpillar Inc.,stock,us,323.6340937499999,
+GLEN.L,Glencore plc,stock,gb,83.0966328389732,
+LIN,Linde plc,stock,us,235.265828125,
+OKE,"ONEOK, Inc.",stock,us,59.19542187500001,
+VOLV-A.ST,Volvo AB Class A,stock,se,63.34671042226553,
+BMY,Bristol-Myers Squibb Company,stock,us,128.691023438,
+5802.T,"Sumitomo Electric Industries, Ltd.",stock,jp,50.062935067475586,
+DIS,Walt Disney Company,stock,us,195.340078125,
+WM,"Waste Management, Inc.",stock,us,95.571898438,
+5803.T,Fujikura Ltd.,stock,jp,61.35523611902344,
+DLR,"Digital Realty Trust, Inc.",stock,us,63.41852343800001,
+TMO,Thermo Fisher Scientific Inc.,stock,us,250.1488125,
+BKR,Baker Hughes Company Class A,stock,us,53.227183594,
+IFX.DE,Infineon Technologies AG,stock,de,72.73035741312162,
+OXY,Occidental Petroleum Corporation,stock,us,62.47733593799999,
+ADP,"Automatic Data Processing, Inc.",stock,us,122.021703125,
+HO.PA,Thales SA,stock,fr,52.19712217702983,
+GOOG,Alphabet Inc. Class C,stock,us,3946.0873125,
+T,AT&T Inc,stock,us,153.18740625,
+ICE,"Intercontinental Exchange, Inc.",stock,us,91.978867188,
+CFR.SW,Compagnie Financiere Richemont SA,stock,ch,121.49098670988718,
+6981.T,"Murata Manufacturing Co., Ltd.",stock,jp,101.291707489229,
+CVS,CVS Health Corporation,stock,us,120.837125,
+HUM,Humana Inc.,stock,us,50.550207031,
+2308.TW,"Delta Electronics, Inc.",stock,tw,167.2413386543086,
+BA.L,BAE Systems plc,stock,gb,74.73406585499318,
+ENB.TO,Enbridge Inc.,stock,ca,106.8908521538442,
+NSC,Norfolk Southern Corporation,stock,us,75.969289062,
+EQIX,"Equinix, Inc.",stock,us,93.99661718800002,
+TFC,Truist Financial Corporation,stock,us,59.151140625,
+CP.TO,Canadian Pacific Kansas City Limited,stock,ca,78.27700573208661,
+ULVR.L,Unilever PLC,stock,gb,141.6470653648588,
+2317.TW,"Hon Hai Precision Industry Co., Ltd.",stock,tw,112.78123428110156,
+REGN,"Regeneron Pharmaceuticals, Inc.",stock,us,84.329406128,
+MRVL,"Marvell Technology, Inc.",stock,us,195.96084375,
+8035.T,Tokyo Electron Limited,stock,jp,184.0908609085889,
+SLB,SLB Limited,stock,us,73.539296875,
+CNR.TO,Canadian National Railway Company,stock,ca,74.29614766697131,
+GLW,Corning Inc,stock,us,106.80353125,
+AMAT,"Applied Materials, Inc.",stock,us,298.05934375000004,
+7203.T,Toyota Motor Corporation,stock,jp,219.63604852118263,
+MDT,Medtronic Plc,stock,us,123.555015625,
+CTAS,Cintas Corporation,stock,us,88.960703125,
+KLAC,KLA Corporation,stock,us,192.919109375,
+VZ,Verizon Communications Inc.,stock,us,187.79584375,
+TEL,TE Connectivity plc,stock,us,60.34034375,
+LRCX,Lam Research Corporation,stock,us,288.0153125,
+2303.TW,United Microelectronics Corporation,stock,tw,58.08990555692871,
+ASML.AS,ASML Holding NV,stock,nl,607.5126269165027,
+PNC,"PNC Financial Services Group, Inc.",stock,us,89.973765625,
+6501.T,"Hitachi, Ltd.",stock,jp,159.96892689281054,
+SCCO,Southern Copper Corporation,stock,us,155.0130625,
+WFC,Wells Fargo & Company,stock,us,249.166046875,
+ABBN.SW,ABB Ltd.,stock,ch,148.71274505139797,
+MUV2.DE,Munchener Ruckversicherungs-Gesellschaft AG,stock,de,78.45432807900625,
+SAF.PA,Safran SA,stock,fr,141.057695196754,
+WMB,"Williams Companies, Inc.",stock,us,86.3923125,
+COP,ConocoPhillips,stock,us,174.950796875,
+HWM,Howmet Aerospace Inc.,stock,us,77.084320312,
+AVGO,Broadcom Inc.,stock,us,1543.0281250000005,
+6503.T,Mitsubishi Electric Corporation,stock,jp,68.99597734366162,
+AIR.PA,Airbus SE,stock,fr,172.71407539412564,
+BLK,"BlackRock, Inc.",stock,us,184.782547852,
+NWG.L,NatWest Group Plc,stock,gb,66.11094668875441,
+LMT,Lockheed Martin Corporation,stock,us,136.145765625,
+WDC,Western Digital Corporation,stock,us,132.5815625,
+EOG,"EOG Resources, Inc.",stock,us,82.854632812,
+GD,General Dynamics Corporation,stock,us,94.908757812,
+GS,"Goldman Sachs Group, Inc.",stock,us,259.52107812500003,
+ENEL.MI,Enel SpA,stock,it,102.21862771941832,
+009150.KS,"Samsung Electro-Mechanics Co., Ltd.",stock,kr,94.47565449797608,
+MS,Morgan Stanley,stock,us,288.93709375,
+BARC.L,Barclays PLC,stock,gb,72.05841367297614,
+STX,Seagate Technology Holdings PLC,stock,us,146.01815625,
+UNP,Union Pacific Corporation,stock,us,177.08796875000004,
+ABX.TO,Barrick Mining Corporation,stock,ca,62.44216267372214,
+2914.T,Japan Tobacco Inc.,stock,jp,77.93595072086865,
+NG.L,National Grid plc,stock,gb,81.30953698609848,
+GSK.L,GSK plc,stock,gb,101.34996637988404,
+000660.KS,SK hynix Inc.,stock,kr,941.2628543421092,
+D,Dominion Energy Inc,stock,us,57.520996094,
+DUK,Duke Energy Corporation,stock,us,97.77465625,
+AEP,"American Electric Power Company, Inc.",stock,us,71.120070312,
+LLOY.L,Lloyds Banking Group plc,stock,gb,76.01992312333262,
+PH,Parker-Hannifin Corporation,stock,us,112.644867188,
+AME,"AMETEK, Inc.",stock,us,54.752171875,
+RSG,"Republic Services, Inc.",stock,us,74.072921875,
+IBKR,"Interactive Brokers Group, Inc. Class A",stock,us,139.98372089371998,
+8031.T,"Mitsui & Co., Ltd.",stock,jp,89.25762517426904,
+JPM,JPMorgan Chase & Co.,stock,us,894.5860625,
+BP.L,BP PLC,stock,gb,124.95875091960548,
+RCL,Royal Caribbean Group,stock,us,76.526070312,
+KMI,Kinder Morgan Inc Class P,stock,us,75.087765625,
+BNP.PA,BNP Paribas S.A. Class A,stock,fr,102.18571190007287,
+DBK.DE,Deutsche Bank Aktiengesellschaft,stock,de,58.773449144617125,
+ECL,Ecolab Inc.,stock,us,81.940046875,
+GE,GE Aerospace,stock,us,303.330125,
+005930.KS,"Samsung Electronics Co., Ltd.",stock,kr,1333.5014546316015,
+6752.T,Panasonic Holdings Corporation,stock,jp,70.4763145037212,
+COST,Costco Wholesale Corporation,stock,us,451.19875,
+AEM.TO,Agnico Eagle Mines Limited,stock,ca,88.18017033902184,
+CL,Colgate-Palmolive Company,stock,us,77.636664062,
+CSCO,"Cisco Systems, Inc.",stock,us,413.5379375,
+UBSG.SW,UBS Group AG,stock,ch,141.12509960736654,
+JCI,Johnson Controls International plc,stock,us,86.62103125,
+SREN.SW,Swiss Re AG,stock,ch,50.346061598204464,
+ITX.MC,"Industria de Diseno Textil, S.A.",stock,es,196.10445797839827,
+SIE.DE,Siemens AG,stock,de,218.36315523964043,
+USB,U.S. Bancorp,stock,us,93.514242188,
+6758.T,Sony Group Corporation,stock,jp,139.23573840508007,
+COR,"Cencora, Inc.",stock,us,64.591179688,
+AFL,Aflac Incorporated,stock,us,61.80058593799999,
+ENGI.PA,ENGIE S.A.,stock,fr,65.78623505111419,
+CVE.TO,Cenovus Energy Inc.,stock,ca,57.19024905377347,
+C,Citigroup Inc.,stock,us,205.50278125,
+9433.T,KDDI Corporation,stock,jp,67.43962505824756,
+CNQ.TO,Canadian Natural Resources Limited,stock,ca,109.18732059775292,
+PWR,"Quanta Services, Inc.",stock,us,83.055710938,
+DE,Deere & Company,stock,us,173.5363125,
+BDX,"Becton, Dickinson and Company",stock,us,54.591765625,
+HSBA.L,HSBC Holdings Plc,stock,gb,309.4462115677096,
+RR.L,Rolls-Royce Holdings plc,stock,gb,145.22414998611873,
+BAS.DE,BASF SE,stock,de,52.36543769225692,
+3037.TW,Unimicron Technology Corp.,stock,tw,67.49090500604004,
+BATS.L,British American Tobacco p.l.c.,stock,gb,127.18620656532292,
+SAN.MC,"Banco Santander, S.A.",stock,es,187.08079357275753,
+DELL,"Dell Technologies, Inc. Class C",stock,us,287.991390625,
+CS.PA,AXA SA,stock,fr,96.91372610591868,
+GRMN,Garmin Ltd.,stock,us,56.968640625,
+WPM.TO,Wheaton Precious Metals Corp,stock,ca,55.11843239122722,
+MSI,"Motorola Solutions, Inc.",stock,us,79.074585938,
+NEM,Newmont Corporation,stock,us,120.23682812500002,
+MRK,"Merck & Co., Inc.",stock,us,363.266375,
+ETR,Entergy Corporation,stock,us,51.69075,
+DHL.DE,DHL AG,stock,de,71.62354721110678,
+URI,"United Rentals, Inc.",stock,us,68.790570312,
+ROST,"Ross Stores, Inc.",stock,us,75.60496874999998,
+XOM,Exxonmobil Holdings Corporation,stock,us,732.8660625000001,
+SHEL.L,Shell Plc,stock,gb,292.15738880838666,
+CVX,Chevron Corporation,stock,us,447.8678125,
+RTX,RTX Corporation,stock,us,262.74959375,
+MPWR,"Monolithic Power Systems, Inc.",stock,us,57.395589844,
+HCA,HCA Healthcare Inc,stock,us,101.1733125,
+CME,CME Group Inc. Class A,stock,us,110.024061728,
+APH,Amphenol Corporation Class A,stock,us,180.1881875,
+GM,General Motors Company,stock,us,65.13045312499999,
+MA,Mastercard Incorporated Class A,stock,us,554.698256836,
+FDX,FedEx Corporation,stock,us,71.92888281199998,
+2383.TW,"Elite Material Co., Ltd.",stock,tw,67.46653071805078,
+SPG,"Simon Property Group, Inc.",stock,us,68.605859375,
+6857.T,Advantest Corporation,stock,jp,191.2261553057324,
+NUE,Nucor Corporation,stock,us,58.547535156,
+PM,Philip Morris International Inc.,stock,us,314.4346875,
+EOAN.DE,E.ON SE,stock,de,53.763361959832714,
+EMR,Emerson Electric Co.,stock,us,89.40975781199998,
+CABK.MC,CaixaBank SA,stock,es,86.89561208262408,
+MMM,3M Company,stock,us,90.71703906199998,
+WMT,Walmart Inc.,stock,us,960.935375,
+MET,"MetLife, Inc.",stock,us,65.81634374999999,
+MU,"Micron Technology, Inc.",stock,us,969.0526875,
+2408.TW,Nanya Technology Corporation,stock,tw,56.88939057094336,
+IMO.TO,Imperial Oil Limited,stock,ca,62.68687362783483,
+TTE.PA,TotalEnergies SE,stock,fr,200.01164178747297,
+INGA.AS,ING Groep N.V.,stock,nl,89.91502116690599,
+NDAQ,"Nasdaq, Inc.",stock,us,57.742363281,
+TRP.TO,TC Energy Corporation,stock,ca,63.489816034345885,
+BBVA.MC,"Banco Bilbao Vizcaya Argentaria, S.A.",stock,es,136.64309347845202,
+2330.TW,Taiwan Semiconductor Manufacturing Company Limited,stock,tw,2105.3761241003435,
+L.TO,Loblaw Companies Limited,stock,ca,57.182839217022995,
+8306.T,"Mitsubishi UFJ Financial Group, Inc.",stock,jp,261.5184447168262,
+DAL,"Delta Air Lines, Inc.",stock,us,52.146132812,
+8316.T,"Sumitomo Mitsui Financial Group, Inc.",stock,jp,164.56406577575098,
+NA.TO,National Bank of Canada,stock,ca,56.31998236128397,
+8053.T,Sumitomo Corporation,stock,jp,52.08593686740869,
+ZURN.SW,Zurich Insurance Group Ltd,stock,ch,109.89609648750208,
+STAN.L,Standard Chartered PLC,stock,gb,56.76899330075204,
+TRGP,Targa Resources Corp.,stock,us,62.086359375,
+LNG,"Cheniere Energy, Inc.",stock,us,59.277371094,
+BNY,Bank of New York Mellon Corp,stock,us,98.600226562,
+TXN,Texas Instruments Incorporated,stock,us,255.252734375,
+MO,"Altria Group, Inc.",stock,us,127.017414062,
+ADI,"Analog Devices, Inc.",stock,us,186.925984375,
+EBAY,eBay Inc.,stock,us,54.307800781,
+CM.TO,Canadian Imperial Bank of Commerce,stock,ca,102.5492906893976,
+BMO.TO,Bank of Montreal,stock,ca,116.34812764241082,
+8058.T,Mitsubishi Corporation,stock,jp,109.25492566131788,
+SU.TO,Suncor Energy Inc.,stock,ca,88.93639021685533,
+MFC.TO,Manulife Financial Corporation,stock,ca,74.27494303763565,
+WELL,Welltower Inc.,stock,us,171.10484375,
+HPE,Hewlett Packard Enterprise Co.,stock,us,73.63446875,
+CB,Chubb Limited,stock,us,140.411859375,
+INVE-A.ST,Investor AB Class A,stock,se,124.62954805453356,
+G.MI,Assicurazioni Generali S.p.A.,stock,it,71.34683982669067,
+RY.TO,Royal Bank of Canada,stock,ca,275.0689902131427,
+3711.TW,"ASE Technology Holding Co., Ltd.",stock,tw,102.75872959580272,
+CSX,CSX Corporation,stock,us,95.248382812,
+7182.T,"JAPAN POST BANK Co., Ltd.",stock,jp,78.09315748613818,
+AI.PA,Air Liquide SA,stock,fr,123.8607466687113,
+8411.T,"Mizuho Financial Group, Inc.",stock,jp,135.6919230831582,
+GWW,"W.W. Grainger, Inc.",stock,us,64.061046875,
+ENI.MI,Eni S.p.A.,stock,it,85.62061677430589,
+2454.TW,MediaTek Inc.,stock,tw,246.7971210230625,
+BNS.TO,Bank of Nova Scotia,stock,ca,112.92627380007784,
+FAST,Fastenal Company,stock,us,60.497207031,
+ALV.DE,Allianz SE,stock,de,183.53468601372128,
+8001.T,ITOCHU Corporation,stock,jp,96.57582308588523,
+V,Visa Inc. Class A,stock,us,773.592367188,
+HLT,Hilton Worldwide Holdings Inc.,stock,us,80.588992188,
+8766.T,"Tokio Marine Holdings, Inc.",stock,jp,93.69970514014553,
+TD.TO,Toronto-Dominion Bank,stock,ca,207.57947364419329,
+CCEP,Coca-Cola Europacific Partners plc,stock,us,50.628753906,
+ALL,Allstate Corporation,stock,us,65.515496094,
+NOVN.SW,Novartis AG,stock,ch,283.2595203217191,
+LLY,Eli Lilly and Company,stock,us,1230.06175,
+AAPL,Apple Inc.,stock,us,5081.9855,
+2882.TW,"Cathay Financial Holding Co., Ltd.",stock,tw,51.60023594260254,
+IBE.MC,Iberdrola SA,stock,es,160.6182417180499,
+MCK,McKesson Corporation,stock,us,118.02909375000002,
+GWO.TO,Great-West Lifeco Inc.,stock,ca,57.62220088339784,
+9983.T,"Fast Retailing Co., Ltd.",stock,jp,146.80296648640137,
+MAR,"Marriott International, Inc. Class A",stock,us,103.47206250000002,
+4502.T,Takeda Pharmaceutical Company Limited,stock,jp,57.81569473989258,
+PSX,Phillips 66,stock,us,113.573320312,
+CAH,"Cardinal Health, Inc.",stock,us,59.195828125,
+ABBV,"AbbVie, Inc.",stock,us,503.9641874999999,
+VLO,Valero Energy Corporation,stock,us,122.73771874999998,
+GILD,"Gilead Sciences, Inc.",stock,us,194.9085625,
+JNJ,Johnson & Johnson,stock,us,644.22025,
+TRV,"Travelers Companies, Inc.",stock,us,83.093445312,
+2881.TW,"Fubon Financial Holding Co., Ltd.",stock,tw,66.31137224364551,
+MPC,Marathon Petroleum Corporation,stock,us,128.97719531200002,
+DB1.DE,Deutsche Boerse AG,stock,de,63.15615732683813,
+6098.T,"Recruit Holdings Co., Ltd.",stock,jp,149.21558064570118,
+AMGN,Amgen Inc.,stock,us,241.813890625,
+KO,Coca-Cola Company,stock,us,410.20503124999993,
+1303.TW,Nan Ya Plastics Corporation,stock,tw,72.98150050728516,
+CSP1.L,iShares Core S&P 500 UCITS ETF,etf,gb,119.42961306008164,GBP
+IWDA.L,iShares Core MSCI World UCITS ETF,etf,gb,112.72532169427508,GBP
+VUSA.L,Vanguard S&P 500 UCITS ETF,etf,gb,40.66728282893968,GBP
+EIMI.L,iShares Core MSCI EM IMI UCITS ETF,etf,gb,34.56945404263165,GBP
+SPXP.L,Invesco S&P 500 UCITS ETF,etf,gb,31.754725199742957,USD
+EGLN.L,iShares Physical Gold ETC,etf,gb,28.665891395628726,GBP
+ISAC.L,iShares V PLC - iShares MSCI All Country World UCITS ETF Accum.Shs USD,etf,gb,27.226928318254245,GBP
+III.L,3i Group plc,etf,gb,24.121679992,GBP
+XEON.DE,Xtrackers II EUR Overnight Rate Swap UCITS ETF,etf,de,23.5333622195724,USD
+CNX1.L,iShares NASDAQ 100 UCITS ETF USD,etf,gb,22.89563883152381,GBP
+SGLD.L,Invesco Physical Gold ETC,etf,gb,21.69995192608765,GBP
+4GLD.DE,Borse Commodities GmbH Xetra-Gold,etf,de,20.46475741235,USD
+VWRL.L,Vanguard FTSE All-World UCITS ETF,etf,gb,20.38400655535062,USD
+XWLD.L,Xtrackers MSCI World UCITS ETF,etf,gb,18.579677135633226,USD
+IDUS.L,iShares Core S&P 500 UCITS ETF USD (Dist),etf,gb,17.594588791992724,GBP
+ISF.L,iShares Core FTSE 100 UCITS ETF GBP (Dist),etf,gb,16.4082129979504,USD
+SPX5.L,State Street SPDR S&P 500 UCITS ETF USD,etf,gb,16.252029122420144,USD
+SMT.L,Scottish Mortgage Investment Trust Plc,etf,gb,16.13984,GBP
+IITU.L,iShares S&P 500 Information Technology Sector UCITS ETF,etf,gb,15.86037783640762,GBP
+ACWI.L,State Street SPDR MSCI All Country World UCITS ETF Accum Shs USD,etf,gb,15.24490750799737,USD
+HMWO.L,HSBC MSCI World UCITS ETF USD,etf,gb,12.095833179558438,USD
+EQQQ.L,Invesco EQQQ Nasdaq-100 UCITS ETF Dist,etf,gb,10.360970895945131,USD
+XDUS.L,Xtrackers MSCI USA UCITS ETF,etf,gb,10.33995227630049,USD
+XDWE.L,Xtrackers S&P 500 Equal Weight UCITS ETF,etf,gb,9.726389037653062,USD
+EXSA.DE,iShares STOXX Europe 600 UCITS ETF,etf,de,9.513874586981,USD
+EXW1.DE,iShares Core EURO STOXX 50 UCITS ETF (DE),etf,de,9.2917687146175,USD
+ISEU.L,iShares Core MSCI Europe UCITS ETF,etf,gb,8.948033507754694,USD
+VHYL.L,Vanguard FTSE All-World High Dividend Yield UCITS ETF USD,etf,gb,8.602466839358437,USD
+TDGB.L,VanEck Vectors ETFs NV - Morningstar Dev. Mrkts. Div. Ldrs.,etf,gb,8.560154456770688,USD
+EXS1.DE,iShares Core DAX UCITS ETF (DE),etf,de,8.5479833009326,USD
+IEMA.L,iShares MSCI EM UCITS ETF USD (Acc),etf,gb,8.104826099257439,GBP
+MXWS.L,Invesco MSCI World UCITS ETF,etf,gb,7.908031281336866,USD
+HSPX.L,HSBC S&P 500 UCITS ETF USD,etf,gb,7.672826798257948,USD
+IEBC.L,iShares Core EUR Corp Bond UCITS ETF,etf,gb,7.505571549976955,USD
+IDWR.L,iShares MSCI World UCITS ETF USD (Dist),etf,gb,7.210574412035692,GBP
+IEEM.L,iShares MSCI EM UCITS ETF USD (Dist),etf,gb,7.097272832805186,USD
+IMID.L,State Street SPDR MSCI All Country World Investable Market UCITS ETF Accum USD,etf,gb,7.0460858609643395,USD
+PCT.L,Polar Capital Technology Trust PLC,etf,gb,6.9319281,GBP
+CW8.PA,Amundi MSCI World Swap -UCITS ETF- Capitalisation,etf,fr,6.8823523848492005,USD
+PSH.L,"Pershing Square Holdings, Ltd. Public Class USD Accum.Shs",etf,gb,6.6686658981,GBP
+CEA1.L,iShares MSCI EM Asia UCITS ETF,etf,gb,6.619410721665255,GBP
+IJPA.L,iShares Core MSCI Japan IMI UCITS ETF,etf,gb,6.5615582538599115,GBP
+XMEU.L,Xtrackers MSCI EUROPE UCITS ETF Capitalisation 1C,etf,gb,6.529643205117474,USD
+XMAW.DE,Xtrackers MSCI AC World Screened UCITS ETF Accum Shs -1C- EUR,etf,de,6.4659336271712,USD
+FCIT.L,F&C Investment Trust PLC GBP,etf,gb,6.34405856,GBP
+CS51.L,iShares Core EURO STOXX 50 UCITS ETF,etf,gb,6.274008713418482,USD
+MXUS.L,Invesco MSCI USA UCITS ETF Acc,etf,gb,6.234861387382552,USD
+CU71.L,iShares USD Treasury Bond 3-7yr UCITS ETF,etf,gb,6.097922231497106,USD
+XDAX.L,Xtrackers DAX UCITS ETF,etf,gb,5.779833114669918,USD
+IWFV.L,iShares Edge MSCI World Value Factor UCITS ETF,etf,gb,5.770897976603568,GBP
+IBTA.L,iShares USD Treasury Bond 1-3yr UCITS ETF,etf,gb,5.735899405019773,USD
+ISPA.DE,iShares STOXX Global Select Dividend 100 UCITS ETF (DE),etf,de,5.409176506560001,USD
+XMJP.L,Xtrackers MSCI JAPAN UCITS ETF Capitalisation 1C,etf,gb,5.306738707427283,USD
+XESC.L,Xtrackers EURO STOXX 50 UCITS ETF Capitalisation 1C,etf,gb,5.203722634403105,USD
+CEU1.L,iShares Core MSCI EMU UCITS ETF,etf,gb,5.124905444846952,GBP
+IWFQ.L,iShares Edge MSCI World Quality Factor UCITS ETF,etf,gb,5.031992874859076,USD
+PHGP.L,WisdomTree Physical Gold,etf,gb,5.015558509044435,USD
+SDIA.L,iShares USD Short Duration Corp Bond UCITS ETF Unhedged USD,etf,gb,4.975534886709426,USD
+ALW.L,Alliance Witan PLC,etf,gb,4.96707425,GBP
+XXTW.L,Xtrackers MSCI World Information Technology UCITS ETF,etf,gb,4.913474560319579,USD
+XESX.L,Xtrackers EURO STOXX 50 UCITS ETF Distribution 1D,etf,gb,4.825146766215019,USD
+EUE.L,iShares Core EURO STOXX 50 UCITS ETF (Irl),etf,gb,4.647562547676355,GBP
+IWDE.L,iShares MSCI World EUR Hedged UCITS ETF (Acc),etf,gb,4.5997132061566255,GBP
+SEGA.L,iShares Core EUR Govt Bond UCITS ETF,etf,gb,4.596118949033372,GBP
+XMWD.L,Xtrackers MSCI WORLD SWAP UCITS ETF Capitalisation 1C,etf,gb,4.5716444351050445,USD
+IWFM.L,iShares Edge MSCI World Momentum Factor UCITS ETF,etf,gb,4.568102326193161,USD
+VUKE.L,Vanguard FTSE 100 UCITS ETF,etf,gb,4.529855923762,GBP
+LYSX.DE,Amundi EURO STOXX 50 II UCITS ETF Act -Acc-,etf,de,4.517701058595001,USD
+SPX4.L,State Street SPDR S&P 400 US Mid Cap UCITS ETF,etf,gb,4.494567322973087,GBP
+BBOX.L,Tritax Big Box REIT PLC,etf,gb,4.257184551000001,GBP
+SHYG.L,iShares Euro High Yield Corp Bond UCITS ETF EUR,etf,gb,4.227597390650342,USD
+XMUS.L,Xtrackers MSCI USA SWAP UCITS ETF Capitalisation 1C,etf,gb,4.072408822081924,USD
+RBTX.L,iShares Automation & Robotics UCITS ETF,etf,gb,4.025960391632694,USD
+LQDA.L,iShares USD Corp Bond UCITS ETF Acc,etf,gb,4.013295947000807,GBP
+AEME.PA,Amundi Core MSCI Emerging Markets -UCITS ETF DR- Capitalisation,etf,fr,4.000240366318,USD
+AMEM.DE,Amundi MSCI Emerging Markets Swap -UCITS ETF EUR C- Capitalisation,etf,de,3.9994327339946,USD
+VEUR.L,Vanguard FTSE Developed Europe UCITS ETF,etf,gb,3.9874464338421007,GBP
+CU1.L,iShares MSCI USA UCITS ETF,etf,gb,3.9726969363571967,GBP
+IJPN.L,iShares MSCI Japan UCITS ETF USD (Dist),etf,gb,3.950382496220139,GBP
+SGBX.L,WisdomTree Physical Swiss Gold,etf,gb,3.924002045039572,USD
+SEML.L,iShares J.P. Morgan EM Local Govt Bond UCITS ETF,etf,gb,3.867805846271702,USD
+UC44.L,UBS ETF SICAV - UBS ETF - MSCI World Socially Responsible UCITS ETF A Distribution,etf,gb,3.7171236365501694,USD
+DBXP.DE,Xtrackers II Eurozone Government Bond 1-3 UCITS ETF,etf,de,3.633841665424,USD
+VEVE.L,Vanguard FTSE Developed World UCITS ETF,etf,gb,3.584532552820744,USD
+XSX6.L,Xtrackers Stoxx Europe 600 UCITS ETF Capitalisation 1C,etf,gb,3.54005768162881,USD
+R2SC.L,State Street SPDR RUSSELL 2000 U.S. SMALL CAP UCITS ETF Accum Ptg USD,etf,gb,3.504575816853438,USD
+CMOD.L,Invesco Bloomberg Commodity UCITS ETF,etf,gb,3.4778671601082034,GBP
+USPY.L,Legal & General UCITS ETF ICAV - L&G Cyber Security UCITS ETF,etf,gb,3.385350635438412,USD
+IGLT.L,iShares Core UK Gilts UCITS ETF,etf,gb,3.3682137020300003,GBP
+LYPS.DE,Amundi Core S&P 500 Swap UCITS ETF EUR Dist,etf,de,3.36809635149,USD
+CUKX.L,iShares Core FTSE 100 UCITS ETF GBP (Acc),etf,gb,3.3331734793484,USD
+MSED.L,Amundi Index Solutions - Euro STOXX 50 DR UCITS ETF EUR Cap,etf,gb,3.331827992198185,USD
+XWHS.L,Xtrackers MSCI World Health Care UCITS ETF,etf,gb,3.320264040633822,USD
+IUAA.L,iShares US Aggregate Bond UCITS ETF,etf,gb,3.3049358236528548,GBP
+JGGI.L,JPMorgan Global Growth & Income PLC GBP,etf,gb,3.28881903,GBP
+XDEV.L,Xtrackers MSCI World Value UCITS ETF,etf,gb,3.2550630603983466,USD
+XSPX.L,Xtrackers S&P 500 SWAP UCITS ETF Capitalisation 1C,etf,gb,3.196786032411274,USD
+IAUP.L,iShares Gold Producers UCITS ETF USD,etf,gb,3.13469207095352,GBP
+SEMB.L,iShares J.P. Morgan USD EM Bond UCITS ETF,etf,gb,3.078290256358361,USD
+CAC.PA,Multi Units France Sicav - Amundi CAC 40 UCITS ETF,etf,fr,3.0707218864,USD
+VERX.L,Vanguard FTSE Developed Europe ex UK UCITS ETF,etf,gb,3.0634880959344892,USD
+CPJ1.L,iShares Core MSCI Pacific ex Japan UCITS ETF,etf,gb,3.0373138239110222,GBP
+RCP.L,Rit Capital Partners PLC,etf,gb,3.032705835,GBP
+GDX.L,VanEck Gold Miners UCITS ETF Accum A USD,etf,gb,3.026464798109445,USD
+USDV.L,State Street SPDR S&P US Dividend Aristocrats UCITS ETF USD,etf,gb,2.976554866523262,USD
+HMEF.L,HSBC MSCI Emerging Markets UCITS ETF,etf,gb,2.91927127970357,USD
+EXI2.DE,iShares Dow Jones Global Titans 50 UCITS ETF (DE),etf,de,2.91031202013,USD
+IDTM.L,iShares USD Treasury Bond 7-10yr UCITS ETF,etf,gb,2.9008978330266246,USD
+ERN1.L,iShares EUR Ultrashort Bond UCITS ETF,etf,gb,2.8981315681420594,GBP
+EXV1.DE,iShares STOXX Europe 600 Banks UCITS ETF (DE),etf,de,2.843743719704,USD
+LQDS.L,iShares USD Corp Bond UCITS ETF,etf,gb,2.822145712400451,USD
+ITPS.L,iShares USD TIPS UCITS ETF,etf,gb,2.812758763078091,USD
+XXSC.L,Xtrackers MSCI Europe Small Cap UCITS ETF Capitalisation 1C,etf,gb,2.7986377335765504,USD
+TEM.L,Templeton Emerging Markets Investment Trust PLC,etf,gb,2.79415722,GBP
+VECP.L,Vanguard EUR Corporate Bond UCITS ETF,etf,gb,2.7646372753205735,USD
+500G.L,Amundi Index Solutions - S&P 500 UCITS ETF,etf,gb,2.7505759690702742,USD
+EXSI.DE,iShares EURO STOXX UCITS ETF (DE),etf,de,2.733972403239,USD
+VDEM.L,Vanguard FTSE Emerging Markets UCITS ETF,etf,gb,2.732030242081325,GBP
+VDNR.L,Vanguard FTSE North America UCITS ETF,etf,gb,2.6685168075947185,GBP
+UIMI.DE,UBS ETF SICAV - UBS ETF - MSCI Emerging Markets UCITS ETF A Distribution,etf,de,2.6466995026383047,USD
+IUVF.L,iShares Edge MSCI USA Value Factor UCITS ETF,etf,gb,2.635488583542428,USD
+SUUS.L,iShares MSCI USA SRI UCITS ETF,etf,gb,2.5890131709700865,USD
+IUHC.L,iShares S&P 500 Health Care Sector UCITS ETF,etf,gb,2.588322185515312,USD
+SE15.L,iShares EUR Corp Bond 1-5yr UCITS ETF,etf,gb,2.5859041726339087,USD
+UKW.L,Greencoat UK Wind Plc,etf,gb,2.5647732,GBP
+IESG.L,iShares MSCI Europe SRI UCITS ETF,etf,gb,2.553757019473336,USD
+VDJP.L,Vanguard FTSE Japan UCITS ETF,etf,gb,2.515022894986285,GBP
+HICL.L,HICL Infrastructure PLC,etf,gb,2.50989336,GBP
+SUES.L,iShares MSCI EM SRI UCITS ETF,etf,gb,2.5076079472422137,GBP
+XGLE.DE,Xtrackers II Eurozone Government Bond UCITS ETF,etf,de,2.462024884569,USD
+MNKS.L,Monks Investment Trust PLC,etf,gb,2.4043579,GBP
+EXX1.DE,iShares EURO STOXX Banks 30-15 UCITS ETF (DE) Anteile,etf,de,2.3246314122916,USD
+SUSS.L,iShares II PLC - iShares EUR Corp Bond 0-3Yr ESG SRI UCITS ETF Shs EUR,etf,gb,2.3001862765173975,GBP
+XAD5.DE,Xtrackers Physical Gold ETC (EUR),etf,de,2.296416516979807,USD
+ATT.L,Allianz Technology Trust PLC,etf,gb,2.29134515,GBP
+IMBA.L,iShares US Mortgage Backed Securities UCITS ETF Acc,etf,gb,2.2728750074149273,USD
+XDEQ.L,Xtrackers MSCI World Quality UCITS ETF,etf,gb,2.260945346302142,USD
+LYQ2.DE,Amundi Euro Government Bond 1-3Y UCITS ETF Acc,etf,de,2.2601647742255997,USD
+MYI.L,Murray International Trust PLC,etf,gb,2.18870505,GBP
+IGLS.L,iShares UK Gilts 0-5yr UCITS ETF,etf,gb,2.1600731161739,USD
+SSLN.L,iShares Physical Silver ETC,etf,gb,2.116313634135663,USD
+GBSP.L,Wisdomtree Physical Gold - GBP Daily Hedged,etf,gb,2.1108052161469,USD
+IHYA.L,iShares USD High Yield Corp Bond UCITS ETF Acc,etf,gb,2.0997997038935408,USD
+MVOL.L,iShares Edge MSCI World Minimum Volatility UCITS ETF USD,etf,gb,2.0974294346825095,USD
+IEFV.L,iShares Edge MSCI Europe Value Factor UCITS ETF,etf,gb,2.0718363094230634,USD
+LYQ3.DE,Multi Units LU Amundi Euro Government Bond 3-5Y Acc- Capitalisation,etf,de,2.0659438857432,USD
+PHAG.L,WisdomTree Physical Silver,etf,gb,2.055946322417171,GBP
+XLKQ.L,Invesco Technology S&P US Select Sector UCITS ETF,etf,gb,2.0497809581654822,GBP
+CUS1.L,iShares VII PLC - iShares MSCI USA Small Cap CTB Enhanced ESG UCITS ETF Accum.Ptg.Shs USD,etf,gb,2.0490311824816234,USD
+MINT.L,PIMCO US Dollar Short Maturity UCITS ETF,etf,gb,2.0358745285464743,GBP
+JAM.L,JPMorgan American Investment Trust Plc,etf,gb,2.0156572,GBP
+FEV.L,Fidelity European Trust PLC GBP,etf,gb,1.99660129,GBP
+XD5E.DE,Xtrackers MSCI EMU UCITS ETF Distribution 1D,etf,de,1.9814232639113,USD
+INRG.L,iShares Global Clean Energy Transition UCITS ETD USD,etf,gb,1.9767876372877864,USD
+HPRO.L,HSBC FTSE EPRA/NAREIT Developed UCITS ETF,etf,gb,1.971456222040135,USD
+IBTS.L,iShares USD Treasury Bond 1-3yr UCITS ETF USD,etf,gb,1.9693588389388952,USD
+INFR.L,iShares Global Infrastructure UCITS ETF USD,etf,gb,1.9436614409601656,USD
+XB4F.DE,Xtrackers II ESG EUR Corporate Bond UCITS ETF 1D,etf,de,1.9334736646574,USD
+ERNS.L,iShares GBP Ultrashort Bond UCITS ETF,etf,gb,1.9243349417976,USD
+CNYA.L,iShares MSCI China A UCITS ETF,etf,gb,1.910227753789076,GBP
+CSH2.L,Amundi Smart Overnight Return UCITS ETF C-GBP- Capitalisation,etf,gb,1.90196424780515,GBP
+ISP6.L,iShares S&P SmallCap 600 UCITS ETF USD,etf,gb,1.895516746047351,USD
+XAD1.DE,Xtrackers Physical Gold EUR Hedged ETC,etf,de,1.85033041186832,USD
+HGT.L,HGCapital Trust PLC,etf,gb,1.811976,GBP
+WRDD.L,UBS Core MSCI World UCITS ETF Class -A- USD,etf,gb,1.7950320503458097,USD
+UC79.L,UBS MSCI EM Socially Responsible UCITS ETF USD dis Distribution,etf,gb,1.789680287335588,USD
+XHYA.DE,Xtrackers II EUR HIGH YIELD CORPORATE BOND UCITS ETF (DR) Capitalisation 1C,etf,de,1.764057789504,USD
+XSMI.DE,Xtrackers Switzerland UCITS ETF Distribution 1D,etf,de,1.7622450180444875,USD
+JPEA.L,iShares J.P. Morgan USD EM Bond UCITS ETF Acc,etf,gb,1.7539605427086,USD
+UIFS.L,iShares S&P 500 Financials Sector UCITS ETF,etf,gb,1.7470061736189404,USD
+MRC.L,Mercantile Investment Trust PLC,etf,gb,1.72740182,GBP
+IBGX.L,iShares EUR Govt Bond 3-5 Year UCITS ETF,etf,gb,1.7250180315761414,GBP
+EMBE.L,iShares J.P. Morgan USD EM Bond EUR Hedged UCITS ETF (Dist),etf,gb,1.717564652503119,GBP
+PNL.L,Personal Assets Trust PLC GBP,etf,gb,1.70527424,GBP
+XCHA.DE,Xtrackers CSI300 Swap UCITS ETF Capitalisation 1C,etf,de,1.704665448365236,USD
+IGSG.L,iShares Dow Jones Global Leaders Screened UCITS ETF USD (Acc),etf,gb,1.70304618234049,GBP
+CSCA.L,iShares MSCI Canada UCITS ETF,etf,gb,1.6959920151218626,GBP
+SXRU.DE,iShares Dow Jones Industrial Average UCITS ETF,etf,de,1.6873582160973617,USD
+IS15.L,iShares GBP Corp Bond 0-5yr UCITS ETF,etf,gb,1.6779746151612,USD
+IUS6.DE,iShares EUR Covered Bond UCITS ETF,etf,de,1.6652116922237998,USD
+XDEM.L,Xtrackers MSCI World Momentum UCITS ETF,etf,gb,1.6633361220405862,USD
+BRWM.L,Blackrock World Mining Trust PLC,etf,gb,1.66162101,GBP
+GXLK.L,SSgA SPDR ETFs Europe II Plc - S&P US Technology Select Sector,etf,gb,1.6598183344607291,USD
+JMRE.L,JPMorgan ETFs (IE) ICAV - Glb. EM REI Eq. Ind. Active,etf,gb,1.6443995716882374,USD
+DLTM.L,iShares MSCI EM Latin America UCITS ETF USD,etf,gb,1.6420809010456607,GBP
+XRSG.L,Xtrackers Russell 2000 UCITS ETF,etf,gb,1.6406000991497185,USD
+XDW0.L,Xtrackers MSCI World Energy UCITS ETF,etf,gb,1.6402882787498227,USD
+AASI.PA,Amundi MSCI Em Asia Shs -UCITS ETF- Capitalisation,etf,fr,1.6238190468682,USD
+XWEH.DE,Xtrackers MSCI WORLD SWAP UCITS ETF Capitalisation 4C,etf,de,1.6202091112743,USD
+IH2O.L,iShares Global Water UCITS ETF,etf,gb,1.6077335958304395,USD
+SEMG.L,Multi Units Luxembourg SICAV - Amundi MSCI Semiconductors UCITS ETF Acc Capitalisation,etf,gb,1.590274862744691,USD
+LWDB.L,Law Debenture Corp PLC,etf,gb,1.58194924352,GBP
+EMRD.L,State Street SPDR MSCI Emerging Markets UCITS ETF Accum.Shs USD,etf,gb,1.5807994717977,USD
+IUES.L,iShares S&P 500 Energy Sector UCITS ETF,etf,gb,1.573899454329125,USD
+EUDV.L,State Street SPDR S&P Euro Dividend Aristocrats UCITS ETF EUR,etf,gb,1.557540126622999,USD
+IBCI.L,iShares PLC - iShares Euro Inflation Linked Government Bond UCITS ETF AccumEUR,etf,gb,1.5534580261907407,GBP
+VMID.L,Vanguard FTSE 250 UCITS ETF,etf,gb,1.5381094904736,GBP
+SHYU.L,iShares USD High Yield Corp Bond UCITS ETF,etf,gb,1.536603874660654,USD
+SPMV.L,iShares Edge S&P 500 Minimum Volatility UCITS ETF,etf,gb,1.5231039614242203,USD
+FSV.L,Fidelity Special Values PLC GBP,etf,gb,1.516331575,GBP
+C001.DE,Amundi Core DAX UCITS ETF Dist,etf,de,1.4987820279033,USD
+LYXD.DE,Amundi Euro Government Bond 7-10Y UCITS ETF Acc,etf,de,1.497681926258,USD
+IUQA.L,iShares Edge MSCI USA Quality Factor UCITS ETF,etf,gb,1.4848613335328622,GBP
+JMGI.L,JPMorgan Emerging Markets Growth & Income PLC GBP,etf,gb,1.477629732,GBP
+X710.DE,Xtrackers II Eurozone Government Bond 7-10 UCITS ETF Capitalisation 1C,etf,de,1.47382820761,USD
+IBGS.L,iShares EUR Govt Bond 1-3 UCITS ETF EUR (Dist),etf,gb,1.465282643598607,GBP
+XUTE.DE,Xtrackers II US Treasuries UCITS ETF,etf,de,1.455158749632,USD
+ASL.L,Aberforth Smaller Companies Trust PLC,etf,gb,1.435639608,GBP
+IBCX.L,iShares EUR Corp Bond Large Cap UCITS ETF,etf,gb,1.4329598139703406,GBP
+COPB.L,WisdomTree Copper,etf,gb,1.4299441001032844,USD
+LYQ7.DE,Amundi Euro Government Inflation Linked Bond -Acc- Capitalisation,etf,de,1.4202030549252,USD
+SLXX.L,iShares Core GBP Corp Bond UCITS ETF,etf,gb,1.412783929844,GBP
+VAPX.L,Vanguard FTSE Developed Asia Pacific (ex-Japan) UCITS ETF,etf,gb,1.4064829004922963,USD
+BNKR.L,Bankers Investment Trust PLC GBP,etf,gb,1.369385748,GBP
+CSJP.L,iShares MSCI Japan UCITS ETF,etf,gb,1.3675914126332025,GBP
+EXSH.DE,iShares STOXX Europe Select Dividend 30 UCITS ETF (DE),etf,de,1.3619149803,USD
+BHMG.L,BH Macro Ltd GBP,etf,gb,1.3569948245,GBP
+IDVY.L,iShares PLC - iShares Euro Dividend UCITS ETF EUR,etf,gb,1.3354042315893178,USD
+EXS3.DE,iShares MDAX UCITS ETF (DE),etf,de,1.3320077153325,USD
+GBDV.L,SSGA SPDR ETFs Europe I PLC - State Street SPDR S&P Global Dividend Aristocrats UCITS ETF Ptg USD,etf,gb,1.331207634293574,USD
+CORP.L,iShares Global Corp Bond UCITS ETF,etf,gb,1.3266832279944216,GBP
+ISDW.L,iShares MSCI World Islamic UCITS ETF,etf,gb,1.3221995677849776,GBP
+TMPL.L,Temple Bar Investment Trust PLC GBP,etf,gb,1.32166322,GBP
+UBU9.DE,UBS Core S&P 500 UCITS ETF Class -A- USD,etf,de,1.2990356047350733,USD
+WWH.L,Worldwide Healthcare Trust PLC GBP,etf,gb,1.29900045,GBP
+EUNS.DE,iShares III PLC - iShares Euro Corporate Bond ex-Financials 1-5yr UCITS ETF EUR,etf,de,1.2850455807902998,USD
+LQQ.PA,Amundi NASDAQ-100 Daily (2X) Leveraged UCITS ETF -Acc-,etf,fr,1.2778558720488,USD
+WATL.L,Amundi MSCI Water UCITS ETF Parts Dist,etf,gb,1.266696796478069,USD
+WOSC.L,State Street SPDR MSCI World Small Cap UCITS ETF Accum.Shs USD,etf,gb,1.2615315011452086,USD
+IUKD.L,iShares UK Dividend UCITS ETF GBP,etf,gb,1.2576174119531,GBP
+IFFF.L,iShares MSCI AC Far East ex-Japan UCITS ETF,etf,gb,1.2456374362913942,USD
+IGSD.L,iShares USD Short Duration Corp Bond UCITS ETF,etf,gb,1.2398324775249472,GBP
+SPYQ.DE,State Street SPDR MSCI Europe Industrials UCITS ETF,etf,de,1.23837793606,USD
+SEAG.L,iShares Euro Aggregate Bond ESG SRI UCITS ETF,etf,gb,1.237814662840719,USD
+H50E.L,HSBC ETFs PLC - HSBC EURO STOXX 50 UCITS ETF,etf,gb,1.23461200154168,USD
+ROBG.L,L&G ROBO Global Robotics and Automation UCITS ETF USD Class A,etf,gb,1.2315210471972942,USD
+UC15.L,UBS CMCI Composite SF UCITS ETF Accum USD,etf,gb,1.2277889662983843,USD
+D5BH.DE,Xtrackers MSCI Canada Screened UCITS ETF -1C- Capitalisation,etf,de,1.22173935896887,USD
+UB02.L,UBS Core MSCI Japan UCITS ETF JPY dis Distribution,etf,gb,1.2198699438467562,USD
+IGUS.L,iShares S&P 500 GBP Hedged UCITS ETF (Acc),etf,gb,1.213331172,GBP
+GROW.L,Molten Ventures PLC,etf,gb,1.212155914,GBP
+ITWN.L,iShares MSCI Taiwan UCITS ETF,etf,gb,1.1988905060984592,USD
+JFJ.L,JPMorgan Japanese Investment Trust,etf,gb,1.1983626,GBP
+DRDR.L,iShares Healthcare Innovation UCITS ETF,etf,gb,1.1901378553325817,USD
+SEQI.L,Sequoia Economic Infrastructure Income Fund Limited Ptg.Shs GBP,etf,gb,1.1885373,GBP
+IEDY.L,iShares EM Dividend UCITS ETF,etf,gb,1.1859992539804198,GBP
+INAA.L,iShares MSCI North America UCITS ETF,etf,gb,1.1699622565591885,USD
+CE71.L,iShares EUR Govt Bond 3-7 UCITS ETF (Acc),etf,gb,1.1649472593015922,USD
+EMDD.L,SSGA SPDR ETFs Europe I PLC - State Street SPDR Bloomberg Emerging Markets Local Bond UCITS ETF USD,etf,gb,1.1484826487939,GBP
+UC04.L,UBS Core MSCI USA UCITS ETF Class -A- USD,etf,gb,1.1431992622623075,USD
+AUEG.L,Amundi MSCI Emerging Markets Swap -UCITS ETF USD C- Capitalisation,etf,gb,1.138955862042841,USD
+FUSI.L,Fidelity US Quality Income UCITS ETF INC-USD,etf,gb,1.1381179180759111,USD
+VETY.L,Vanguard EUR Eurozone Government Bond UCITS ETF,etf,gb,1.132946026887803,USD
+XWFS.L,Xtrackers MSCI World Financials UCITS ETF,etf,gb,1.1092715704005265,USD
+EMAD.L,State Street SPDR MSCI EM Asia UCITS ETF Accum USD,etf,gb,1.1072422970949647,USD
+ETSZ.DE,BNP Paribas Easy Stoxx Europe 600 UCITS ETF Act C EUR,etf,de,1.1011555087176002,USD
+IEUX.L,iShares MSCI Europe ex-UK UCITS ETF,etf,gb,1.097880506293076,GBP
+XDEB.L,Xtrackers MSCI World Minimum Volatility UCITS ETF,etf,gb,1.0737260514317926,USD
+EDIN.L,Edinburgh Investment Trust PLC,etf,gb,1.05692702,GBP
+XY4P.DE,Xtrackers II iBoxx Eurozone Government Bond Yield Plus UCITS,etf,de,1.0511156051564,USD
+IBCQ.DE,iShares Global Corp Bond EUR Hedged UCITS ETF,etf,de,1.0478233929436,USD
+CAPU.L,Ossiam Shiller Barclays Cape US Sector Value UCITS ETF 1C USD,etf,gb,1.0411246160323555,GBP
+AIGI.L,WisdomTree Industrial Metals,etf,gb,1.0392096680093037,USD
+X03G.DE,Xtrackers II Germany Government Bond UCITS ETF,etf,de,1.038694161942,USD
+BHMU.L,BH Macro Ltd USD,etf,gb,1.038147683193929,USD
+FCSS.L,Fidelity China Special Situations PLC,etf,gb,1.03751427,GBP
+IJPE.L,iShares MSCI Japan EUR Hedged UCITS ETF (Acc),etf,gb,1.009108873246032,GBP
+XWIS.L,Xtrackers MSCI World Industrials UCITS ETF,etf,gb,0.999857512546862,USD
+MRCH.L,Merchants Trust PLC,etf,gb,0.99357009,GBP
+PSRF.L,Invesco Markets III PLC - Invesco RAFI US Fundamental Value UCITS ETF USD,etf,gb,0.9909634000826756,USD
+SGLO.L,iShares Global Govt Bond UCITS ETF,etf,gb,0.9907704941294252,USD
+SX5S.L,Invesco EURO STOXX 50 UCITS ETF,etf,gb,0.9809343505770556,USD
+TFIF.L,TwentyFour Income Fund Ltd GBP,etf,gb,0.98045389,GBP
+AGT.L,AVI Global Trust PLC GBP,etf,gb,0.97977097,GBP
+XRSM.DE,Xtrackers MSCI USA Screened UCITS ETF Accum Shs -1C- USD,etf,de,0.9680614196002733,USD
+SOI.L,Schroder Oriental Income Fund LTD GBP,etf,gb,0.9642576,GBP
+XHYG.DE,Xtrackers II EUR HIGH YIELD CORPORATE BOND UCITS ETF (DR) Distribution 1D,etf,de,0.9612008754639,USD
+SDP.L,Schroder AsiaPacific Fund Plc,etf,gb,0.95835957,GBP
+TECW.L,State Street SPDR MSCI World Technology UCITS ETF Accum Ptg USD,etf,gb,0.9530503403315296,USD
+TFG.L,Tetragon Financial Group Limited,etf,gb,0.9515789767353868,USD
+GLTY.L,State Street SPDR Bloomberg UK Gilt UCITS ETF GBP,etf,gb,0.949778199972,USD
+MUT.L,Murray Income Trust PLC,etf,gb,0.947837,GBP
+OCI.L,Oakley Capital Investments Ltd Registered,etf,gb,0.94560048,GBP
+IAD.L,Invesco Asia Dragon Trust PLC GBP,etf,gb,0.945246705,GBP
+C3M.PA,Amundi Euro Government Bond 0-6 M UCITS ETF Parts -Acc-,etf,fr,0.93850666112,USD
+ATR.L,Schroder Asian Total Return Investment Company plc,etf,gb,0.93647455,GBP
+LYPE.DE,Amundi MSCI World Health Care UCITS ETF EUR ACC,etf,de,0.9317262703784,USD
+EWI.L,Edinburgh Worldwide Investment Trust,etf,gb,0.93042796,GBP
+SUAG.L,iShares US Aggregate Bond UCITS ETF USD,etf,gb,0.9233366740883128,USD
+GDXJ.L,VanEck Junior Gold Miners UCITS ETF Accum A USD,etf,gb,0.9186973921104,GBP
+XASX.DE,Xtrackers MSCI UK ESG UCITS ETF (DR) 1D- Distribution,etf,de,0.9071521328374474,USD
+UIQI.DE,UBS MSCI AC Asia ex Japan SF UCITS ETF Accum USD,etf,de,0.9026429919492074,USD
+IUSU.L,iShares S&P 500 Utilities Sector UCITS ETF,etf,gb,0.8998900789177001,USD
+TRY.L,TR Property Investment Trust PLC Ordinary Shares Class GBP,etf,gb,0.89810333,GBP
+XMK9.DE,Xtrackers MSCI Japan UCITS ETF,etf,de,0.8947321126064001,USD
+BRNG.L,WisdomTree Brent Crude Oil,etf,gb,0.8880631845867343,USD
+VEIL.L,Vietnam Enterprise Investments Ltd Red.Shs,etf,gb,0.8838621,GBP
+HWWA.L,HSBC Multi Factor Worldwide Equity UCITS ETF,etf,gb,0.8767616174069899,USD
+XGSD.L,Xtrackers STOXX GLOBAL SELECT DIVIDEND 100 SWAP UCITS ETF Distribution 1D,etf,gb,0.876284682817179,USD
+XDGU.DE,Xtrackers USD Corporate Bond UCITS ETF,etf,de,0.8724703642259786,USD
+JUP.L,Jupiter Fund Management plc,etf,gb,0.870219719,GBP
+IPOL.L,iShares MSCI Poland UCITS ETF,etf,gb,0.86524143267408,GBP
+PJSR.DE,PIMCO Euro Short Maturity UCITS ETF,etf,de,0.8579547353207999,USD
+XDN0.L,Xtrackers MSCI Nordic UCITS ETF,etf,gb,0.8568219857688623,USD
+HUKX.L,HSBC FTSE 100 UCITS ETF,etf,gb,0.844628378,GBP
+ICGT.L,ICG Enterprise Trust PLC GBP,etf,gb,0.83635387,GBP
+RICA.L,Ruffer Investment Co. Ltd.,etf,gb,0.83549376,GBP
+BPCR.L,BioPharma Credit PLC USD,etf,gb,0.8231941867400944,USD
+FGT.L,Finsbury Growth & Income Trust PLC,etf,gb,0.823125348,GBP
+UC99.L,UBS Factor MSCI USA Quality Screened UCITS ETF Shs dis USD,etf,gb,0.8223738643751973,USD
+GXLE.L,SSgA SPDR ETFs Europe II PLC - State Street SPDR S&P U.S. Energy Select Sector UCITS ETF Accum.Ptg.Shs USD,etf,gb,0.8054244696459978,USD
+IMVU.L,iShares Edge MSCI Europe Minimum Volatility UCITS ETF,etf,gb,0.8047036137252078,USD
+SAIN.L,Scottish American Investment Company P.L.C.,etf,gb,0.80405532,GBP
+JEGI.L,JPMorgan European Growth & Income PLC GBP,etf,gb,0.80175818,GBP
+CGT.L,Capital Gearing Trust PLC GBP,etf,gb,0.79836536,GBP
+IBGM.L,iShares EUR Govt Bond 7-10 Year UCITS ETF,etf,gb,0.7871199589291851,GBP
+STZ.PA,State Street SPDR MSCI Europe Financials UCITS ETF,etf,fr,0.78463025116,USD
+IBTL.L,iShares USD Treasury Bond 20+yr UCITS ETF,etf,gb,0.7776084845703121,USD
+IKOR.L,iShares MSCI Korea UCITS ETF USD (Dist),etf,gb,0.7770753153701616,USD
+LYXC.DE,Amundi Euro Government Bond 5-7Y UCITS ETF Acc,etf,de,0.7737324845770001,USD
+SYNC.L,Syncona Ltd GBP,etf,gb,0.771188724,GBP
+UKSR.L,UBS MSCI United Kingdom IMI Socially Responsible UCITS ETF dis GBP,etf,gb,0.7703484990012,USD
+ZPRX.DE,SSgA SPDR ETFs Europe II PLC - State Street SPDR MSCI Europe Small Cap Value Weighted UCITS ETF Accum Ptg EUR,etf,de,0.76974149,USD
+USSC.L,SSgA SPDR ETFs Europe II PLC - State Street SPDR MSCI USA Small Cap Value Weighted UCITS ETF Accum Ptg USD,etf,gb,0.7672271811481199,USD
+XQUI.DE,Xtrackers Portfolio Total Return UCITS ETF (DR) Capitalisation 1C,etf,de,0.7666537618088,USD
+SYB3.DE,State Street SPDR Bloomberg 1-3 Year Euro Government Bond UCITS ETF EUR,etf,de,0.7665988855424,USD
+KRWL.L,Multi Units LU Amundi MSCI Korea ETF Acc- Capitalisation,etf,gb,0.7639180764878859,USD
+PHI.L,Pacific Horizon Investment Trust PLC,etf,gb,0.76284262,GBP
+GSCT.L,Global Smaller Companies Trust PLC,etf,gb,0.759636416,GBP
+ESCT.L,European Smaller Companies Trust PLC,etf,gb,0.7524416,GBP
+GLCB.L,State Street SPDR FTSE Global Convertible Bond UCITS ETF USD,etf,gb,0.749501037081849,USD
+XCS6.L,Xtrackers MSCI CHINA UCITS ETF Capitalisation 1C,etf,gb,0.7469301944491988,USD
+CE01.L,iShares EUR Govt Bond 7-10 UCITS ETF EUR (Acc),etf,gb,0.7455530535709293,USD
+XWCS.L,Xtrackers MSCI World Consumer Staples UCITS ETF,etf,gb,0.7432135674822999,USD
+IBGL.L,iShares EUR Govt Bond 15-30 Year UCITS ETF,etf,gb,0.7421012376873455,GBP
+TP05.L,iShares USD TIPS 0-5 UCITS ETF USD,etf,gb,0.7418809147460353,USD
+EMCP.L,iShares JP Morgan USD EM Corp Bond UCITS ETF USD,etf,gb,0.7379087758410373,USD
+SDHG.L,iShares USD Short Duration High Yield Corp Bond UCITS ETF,etf,gb,0.7262400084679443,USD
+SXLI.L,SSgA SPDR ETFs Europe II Plc - S&P US Industrial Select Sector,etf,gb,0.7218955100095199,USD
+X57E.DE,Xtrackers II Eurozone Government Bond 5-7 UCITS ETF Capitalisation 1C,etf,de,0.7208521117056,USD
+DBZB.DE,Xtrackers II Global Government Bond UCITS ETF,etf,de,0.7156166179184,USD
+SLVP.L,Invesco Physical Silver ETC,etf,gb,0.7155858022335964,USD
+CMFP.L,L&G Longer Dated All Commodities UCITS ETF,etf,gb,0.7129131846652556,GBP
+XDWU.L,Xtrackers MSCI World Utilities UCITS ETF,etf,gb,0.7118752208525696,USD
+EEXF.L,iShares EUR Corp Bond ex-Financials UCITS ETF,etf,gb,0.7094257360773167,GBP
+VUCP.L,Vanguard USD Corporate Bond UCITS ETF,etf,gb,0.7085658872040587,USD
+XMEM.L,Xtrackers MSCI Emerging Markets Swap UCITS ETF Capitalisation 1C,etf,gb,0.7010901928959038,USD
+IGHY.L,iShares Global High Yield Corp Bond UCITS ETF USD,etf,gb,0.6960489334372041,USD
+SPYU.DE,State Street SPDR MSCI Europe Utilities UCITS ETF,etf,de,0.69383620425,USD
+XJSE.DE,Xtrackers II Japan Government Bond UCITS ETF -1C- Capitalisation,etf,de,0.6927970502239996,USD
+FGQD.L,Fidelity Global Quality Income UCITS ETF,etf,gb,0.6914087034949267,USD
+IWDP.L,iShares Developed Markets Property Yield UCITS ETF,etf,gb,0.6888491370963549,USD
+BUT.L,Brunner Investment Trust PLC,etf,gb,0.68522078,GBP
+FSWD.L,iShares STOXX World Equity Multifactor UCITS ETF Accum Shs USD,etf,gb,0.6839394097939121,USD
+NRJL.L,Multi Units France SICAV - Amundi MSCI New Energy UCITS ETF Dist,etf,gb,0.6798901949706284,USD
+CES1.L,iShares MSCI EMU Small Cap UCITS ETF,etf,gb,0.6787262893590504,USD
+EXH1.DE,iShares STOXX Europe 600 Oil & Gas UCITS ETF (DE),etf,de,0.6780106389474,USD
+BGFD.L,Baillie Gifford Japan Trust PLC,etf,gb,0.674730144,GBP
+MIB.PA,Amundi FTSE MIB UCITS ETF,etf,fr,0.6741012640558,USD
+SYBC.DE,State Street SPDR Bloomberg Euro Corporate Bond UCITS ETF EUR,etf,de,0.6733192095695,USD
+ISDE.L,iShares MSCI EM Islamic UCITS ETF,etf,gb,0.6719990989393136,GBP
+UEFY.DE,UBS (Lux) Fund Solutions SICAV - UBS SBI Foreign AAA-BBB 1-5 ESG UCITS ETF A Distribution,etf,de,0.6674048978515296,USD
+AGES.L,iShares Ageing Population UCITS ETF,etf,gb,0.6636806934430666,USD
+UIMC.DE,UBS (Lux) Fd. Sol. - Bloomberg MSCI Euro Ar. Liq. Corp. Sust.,etf,de,0.6626026983135,USD
+CSKR.L,iShares MSCI Korea UCITS ETF USD (Acc),etf,gb,0.6576121549881521,GBP
+EXXW.DE,iShares Dow Jones Asia Pacific Select Dividend 30 UCITS ETF,etf,de,0.656572,USD
+UC46.L,UBS (Lux) Fund Solutions SICAV - UBS MSCI USA Socially Responsible UCITS ETF USD dis- Distribution,etf,gb,0.6544235651749718,USD
+UC07.L,UBS MSCI USA Value UCITS ETF USD,etf,gb,0.6525866009357384,USD
+L100.L,Multi Units LU - Amundi FTSE 100,etf,gb,0.652320529908,USD
+BRSC.L,Blackrock Smaller Companies Trust PLC,etf,gb,0.65001027,GBP
+IAEX.L,iShares AEX UCITS ETF,etf,gb,0.6468060682736372,GBP
+MIDD.L,iShares FTSE 250 UCITS ETF,etf,gb,0.644221475821,GBP
+WLDH.PA,Amundi MSCI World Swap II UCITS ETF Act -Monthly Hedged to EUR - Dist-,etf,fr,0.6441277665378999,USD
+DGTL.L,iShares Digitalisation UCITS ETF,etf,gb,0.6330462719508716,USD
+XD3E.L,Xtrackers Euro Stoxx Quality Dividend UCITS ETF,etf,gb,0.6325546109407899,USD
+SPYH.DE,State Street SPDR MSCI Europe Health Care UCITS ETF Accum Ptg EUR,etf,de,0.62926618905,USD
+IPRP.L,iShares European Property Yield UCITS ETF EUR,etf,gb,0.6235218767661095,GBP
+AUCO.L,L&G Gold Mining UCITS ETF,etf,gb,0.6188269282162577,GBP
+LYY5.DE,Amundi MSCI Europe UCITS ETF Act -Acc-,etf,de,0.6134539732668001,USD
+IEFM.L,iShares Edge MSCI Europe Momentum Factor UCITS ETF,etf,gb,0.6107881946465261,GBP
+XDPG.L,Xtrackers S&P 500 UCITS ETF Accum Shs -2C- Hedged GBP,etf,gb,0.607822433002,USD
+UB39.L,UBS ETF SICAV - UBS ETF - MSCI EMU Socially Responsible UCITS ETF A Distribution,etf,gb,0.6074125629986595,USD
+AGAP.L,WisdomTree Agriculture,etf,gb,0.6056328964893597,USD
+AASG.L,Amundi MSCI Em Asia UCITS ETF Capitalisation USD,etf,gb,0.6023215543404735,USD
+HMXJ.L,HSBC ETFs Plc - HSBC MSCI Pacific ex Japan UCITS ETF USD,etf,gb,0.6017743434200676,USD
+SYBR.DE,SSgA SPDR ETFs Europe I Plc - Blmb. 1-10 Yr. U.S. Corp. Bd.,etf,de,0.6016762701468421,USD
+FXC.L,iShares China Large Cap UCITS ETF USD,etf,gb,0.5944433916412911,GBP
+HMCH.L,HSBC MSCI China UCITS ETF,etf,gb,0.5894490575963923,USD
+HDIQ.L,iShares MSCI USA Quality Dividend ESG UCITS ETF,etf,gb,0.5848415845767757,USD
+SMBS.L,iShares US Mortgage Backed Securities UCITS ETF USD,etf,gb,0.5821795194829013,USD
+GGRG.L,WisdomTree Global Quality Dividend Growth UCITS ETF USD Acc,etf,gb,0.5809542262758361,USD
+HFEL.L,Henderson Far East Income LTD GBP,etf,gb,0.579189,GBP
+XSMW.L,Xtrackers MSCI World Materials UCITS ETF,etf,gb,0.579113184729876,USD
+H4ZN.DE,HSBC ETFs PLC - HSBC S&P 500 UCITS ETF Accum USD,etf,de,0.5787724988914053,USD
+IUCD.L,iShares S&P 500 Consumer Discretionary Sector UCITS ETF,etf,gb,0.577419487319675,USD
+CGI.L,Canadian General Investments Ltd,etf,gb,0.576892247913416,GBP
+AAS.L,Aberdeen Asia Focus PLC,etf,gb,0.57385811,GBP
+GIN.L,SSgA SPDR ETFs Europe II PLC - State Street SPDR Morningstar Multi-Asset Global Infrastructure UCITS ETF Ptg USD,etf,gb,0.5732162955366165,USD
+SYBD.DE,SSGA SPDR ETFs Europe I PLC - State Street SPDR Bloomberg 0-3 Year Euro Corporate Scored UCITS ETF EUR,etf,de,0.5719102145818,USD
+UBUJ.DE,UBS Core MSCI USA hEUR UCITS ETF Accum Shs EUR,etf,de,0.5694471524672,USD
+HEAW.L,State Street SPDR MSCI World Health Care UCITS ETF Accum.Ptg. USD,etf,gb,0.5680356184243517,USD
+STHE.L,PIMCO Advantage US Short-Term High Yield Corporate Bond UCITS ETF Hedged EUR,etf,gb,0.5659808912108552,USD
+NBPE.L,Neuberger Private Equity Partners Limited USD Class A,etf,gb,0.561748512,GBP
+SYBA.DE,State Street SPDR Bloomberg Euro Aggregate Bond UCITS ETF EUR,etf,de,0.5603089094304,USD
+FGEN.L,Foresight Environmental Infrastructure Limited GBP,etf,gb,0.556017496,GBP
+XSGI.L,Xtrackers S&P Global Infrastructure Swap UCITS ETF Capitalisation 1C,etf,gb,0.5503321233240136,USD
+IBGY.L,iShares EUR Govt Bond 5-7 Year UCITS ETF,etf,gb,0.5486611049940664,GBP
+XDDX.DE,Xtrackers DAX ESG Screened UCITS ETF 1D,etf,de,0.5484554763539999,USD
+IDAP.L,iShares Asia Pacific Dividend UCITS ETF,etf,gb,0.545299218410204,USD
+DGRA.L,WisdomTree US Quality Dividend Growth UCITS ETF USD Acc,etf,gb,0.5435787590276663,GBP
+HRI.L,Herald Investment Trust PLC,etf,gb,0.54158139,GBP
+IPRV.L,iShares Listed Private Equity UCITS ETF,etf,gb,0.5387994240777902,USD
+JEDT.L,JPMorgan European Discovery Trust plc,etf,gb,0.53702244,GBP
+GXLF.L,SSgA SPDR ETFs Europe II Plc - S&P US Financials Select Sector,etf,gb,0.5340480721533258,USD
+NAS.L,North Atlantic Smaller Companies Investment Trust plc,etf,gb,0.53366742,GBP
+FSEU.L,iShares Edge MSCI Europe Multifactor UCITS ETF,etf,gb,0.5328501306739375,USD
+ENGE.L,State Street SPDR MSCI Europe Energy UCITS ETF,etf,gb,0.5298997835937497,USD
+IGET.L,Invesco Global Equity Income Trust plc Global Equity IncomeGBP,etf,gb,0.52961819,GBP
+SAUS.L,iShares MSCI Australia UCITS ETF USD,etf,gb,0.5251732341333333,USD
+HSL.L,Henderson Smaller Companies Investment Trust PLC,etf,gb,0.524793768,GBP
+IISU.L,iShares S&P 500 Industrials Sector UCITS ETF,etf,gb,0.5243450018789928,USD
+CNKY.L,iShares Nikkei 225 UCITS ETF,etf,gb,0.5242983544030609,GBP
+ICBU.L,iShares USD Intermediate Credit Bond UCITS ETF,etf,gb,0.520935968725974,USD
+CU31.L,iShares VII plc-iShares USD Treasury Bond 1-3yr UCITS ETF USD (Acc) B,etf,gb,0.5172470989161969,USD
+JCH.L,JPMorgan Claverhouse Investment Trust PLC,etf,gb,0.51690165,GBP
+X7PP.L,Invesco STOXX Europe 600 Optimised Banks UCITS ETF,etf,gb,0.5160822359497245,USD
+CRUP.L,WisdomTree WTI Crude Oil,etf,gb,0.5152276976216641,USD
+XDER.L,Xtrackers FTSE EPRA/NAREIT DEVELOPED EUROPE REAL ESTATE UCITS ETF (DR) Capitalisation 1C,etf,gb,0.5141496404054112,USD
+JEMI.L,JPMorgan Emerging Markets Dividend Income plc GBP,etf,gb,0.51118722,GBP
+VOF.L,VinaCapital Vietnam Opportunity Fund Limited AccumUSD,etf,gb,0.50989214,GBP
+ENGW.L,State Street SPDR MSCI World Energy UCITS ETF Accum Ptg USD,etf,gb,0.5096271189182262,USD
+VEMT.L,Vanguard USD Emerging Markets Government Bond UCITS ETF,etf,gb,0.5096219257493423,USD
+AE50.DE,Amundi Stoxx Europe 50 UCITS ETF FCP Parts -Acc-,etf,de,0.503887775274,USD
+NAIT.L,North American Income Trust PLC GBP Ord.Shs,etf,gb,0.50116908,GBP
+FEML.L,Fidelity Emerging Markets Limited Red Pref Shs GBP,etf,gb,0.500272562,GBP
+ERNU.L,iShares USD Ultrashort Bond UCITS ETF,etf,gb,0.4986194744500564,USD
+IEFQ.L,iShares Edge MSCI Europe Quality Factor UCITS ETF,etf,gb,0.4973994948285574,GBP
+IDJP.L,iShares MSCI Japan Small Cap UCITS ETF,etf,gb,0.4970090843308168,GBP
+BRGE.L,Blackrock Greater Europe Investment Trust PLC,etf,gb,0.495455492,GBP
+WCOG.L,WisdomTree Enhanced Commodity UCITS ETF USD,etf,gb,0.4932615449951147,USD
+IS0M.DE,iShares Italy Govt Bond UCITS ETF,etf,de,0.4931638254502999,USD
+ISUS.L,iShares MSCI USA Islamic UCITS ETF USD,etf,gb,0.4923483001639234,USD
+IJPD.L,iShares MSCI Japan USD Hedged UCITS ETF,etf,gb,0.4832792467456799,GBP
+PCGH.L,Polar Capital Global Healthcare Trust plc,etf,gb,0.48091725,GBP
+MGT.PA,Amundi DJ Global Titans 50 UCITS ETF Act -Dist-,etf,fr,0.4792064294499999,USD
+EXV6.DE,iShares STOXX Europe 600 Basic Resources UCITS ETF (DE),etf,de,0.4785934422777,USD
+EUHD.L,Invesco Markets III Plc - EURO STOXX High Div. Low Vol.,etf,gb,0.4774774385668706,GBP
+SXLV.L,SSgA SPDR ETFs Europe II Plc - S&P US Health Care Sel. Sec. UCITS ETF Accum Ptg USD,etf,gb,0.4769066145627829,USD
+DJAM.DE,Amundi Dow Jones Industrial Average UCITS ETF FCP Parts -Dist-,etf,de,0.4723823850284,USD
+EUN.L,iShares STOXX Europe 50 UCITS ETF,etf,gb,0.4717341350162762,USD
+UEM.L,Utilico Emerging Markets Trust PLC GBP,etf,gb,0.46889388,GBP
+XS2D.L,Xtrackers S&P 500 2X LEVERAGED DAILY UCITS ETF Capitalisation 1C,etf,gb,0.4664659540395843,USD
+IGWD.L,iShares MSCI World GBP Hedged UCITS ETF (Acc),etf,gb,0.463808088,GBP
+IUMF.L,iShares Edge MSCI USA Momentum Factor UCITS ETF,etf,gb,0.4593495471723412,USD
+DJMC.L,iShares EURO STOXX Mid UCITS ETF,etf,gb,0.4519727512087947,GBP
+XAD6.DE,Xtrackers Physical Silver ETC,etf,de,0.4495070239671628,USD
+XDPE.DE,Xtrackers S&P 500 UCITS ETF,etf,de,0.4494105552724,USD
+ISAG.L,iShares Agribusiness UCITS ETF,etf,gb,0.44906501238648,GBP
+INXG.L,iShares GBP Index-Linked Gilts UCITS ETF,etf,gb,0.4488730356089,GBP
+IBZL.L,iShares MSCI Brazil UCITS ETF USD (Dist),etf,gb,0.4486359040166313,GBP
+VUTY.L,Vanguard USD Treasury Bond UCITS ETF,etf,gb,0.4463620183736189,USD
+GRE.PA,Amundi MSCI Greece UCITS ETF -Dist-,etf,fr,0.443949976599,USD
+EMSM.L,State Street SPDR MSCI Emerging Markets Small Cap UCITS ETF Accum USD,etf,gb,0.4428738827508455,USD
+UBUD.DE,UBS Solactive Global Pure Gold Miners UCITS ETF USD,etf,de,0.4403233624673784,USD
+LQQ3.L,WisdomTree NASDAQ 100 3x Daily Leveraged,etf,gb,0.4395659545856806,USD
+GWI.L,Globalworth Real Estate Investments Limited,etf,gb,0.438827841040953,EUR
+XLVS.L,Invesco Health Care S&P US Select Sector UCITS ETF,etf,gb,0.4380101707170528,USD
+BIPS.L,Invesco Bond Income Plus Limited,etf,gb,0.43595956,GBP
+IUSP.L,iShares US Property Yield UCITS ETF,etf,gb,0.4350812477080045,USD
+IS06.DE,iShares EUR Corp Bond BBB-BB UCITS ETF,etf,de,0.434595190887,USD
+JUGI.L,JPMorgan UK Small Cap Growth & Income plc GBP,etf,gb,0.43011717,GBP
+S600.L,Invesco STOXX Europe 600 UCITS ETF,etf,gb,0.4295281853495772,USD
+IS3B.DE,iShares EUR Corp Bond Financials UCITS ETF,etf,de,0.4288852983455,USD
+SJG.L,Schroder Japan Trust PLC,etf,gb,0.42460125,GBP
+SYBJ.DE,State Street SPDR Bloomberg Euro High Yield Bond UCITS ETF EUR,etf,de,0.4241698371932,USD
+SYBB.DE,SSGA SPDR ETFs Europe I PLC - State Street SPDR Bloomberg Euro Government Bond UCITS ETF EUR,etf,de,0.4225661160839,USD
+XCX5.L,Xtrackers MSCI INDIA SWAP UCITS ETF Capitalisation 1C,etf,gb,0.4213927711116122,USD
+AAIF.L,Aberdeen Asian Income Fund Limited,etf,gb,0.42085872,GBP
+EXX5.DE,iShares Dow Jones U.S. Select Dividend UCITS ETF (DE),etf,de,0.4206906934109781,USD
+XDEP.DE,Xtrackers iBoxx EUR Corporate Bond Yield Plus UCITS ETF,etf,de,0.4135895170437,USD
+GIL5.L,Multi Units Luxembourg SICAV - Amundi UK Government Bond Dist Distribution,etf,gb,0.408731332359,GBP
+LWI.L,Lowland Investment Co PLC,etf,gb,0.40733275,GBP
+DXJG.L,WisdomTree Japan Equity UCITS ETF JPY Acc,etf,gb,0.4051113740100544,GBP
+TIPG.L,Multi Units Luxembourg SICAV - Amundi US TIPS -Dist- Distribution,etf,gb,0.4038895364073657,USD
+XEIN.DE,Xtrackers II Eurozone Inflation-Linked Bond UCITS ETF,etf,de,0.4028954497099999,USD
+ICSU.L,iShares S&P 500 Consumer Staples Sector UCITS ETF,etf,gb,0.4007557872980082,USD
+SSHY.L,PIMCO Advantage US Short-Term High Yield Corporate Bond UCITS ETF USD,etf,gb,0.3996143626102207,GBP
+LCEU.DE,BNP Paribas Easy Low Carbon 100 Europe PAB UCITS ETF,etf,de,0.3951413907756,USD
+FTAL.L,State Street SPDR FTSE UK All Share UCITS ETF Accum. GBP,etf,gb,0.3929802622761,USD
+MXFP.L,Invesco MSCI Emerging Markets UCITS ETF,etf,gb,0.390579060960009,GBP
+SGIL.L,iShares Global Inflation Linked Govt Bond UCITS ETF,etf,gb,0.3896372745023675,USD
+ANXG.L,Amundi Index Solutions - NASDAQ-100 UCITS ETF,etf,gb,0.3880999663475385,USD
+TREG.L,VanEck Global Real Estate UCITS ETF,etf,gb,0.3823944299351185,USD
+SUJA.L,iShares MSCI Japan SRI UCITS ETF Accum USD,etf,gb,0.3785339808970313,USD
+XIEE.DE,Xtrackers MSCI EUROPE UCITS ETF Distribution 1D,etf,de,0.373844895095708,USD
+EMMV.L,iShares Edge MSCI EM Minimum Volatility UCITS ETF,etf,gb,0.37357965088416,GBP
+CCJI.L,CC Japan Income & Growth Trust PLC GBP,etf,gb,0.36781563,GBP
+FSFL.L,Foresight Solar Fund Limited GBP,etf,gb,0.366111648,GBP
+SBIO.L,Invesco NASDAQ Biotech UCITS ETF,etf,gb,0.3659617398774702,GBP
+TPXE.PA,Amundi Index Solutions - Japan TOPIX UCITS ETF,etf,fr,0.3645595719973999,USD
+WCOB.L,WisdomTree Enhanced Commodity UCITS ETF USD Acc,etf,gb,0.364501783070575,USD
+PCFT.L,Polar Capital Global Financials Trust Plc GBP,etf,gb,0.36426552,GBP
+NCYF.L,CQS New City High Yield Fund Ltd GBP,etf,gb,0.364046448,GBP
+DIG.L,Dunedin Income Growth Investment Trust PLC,etf,gb,0.36369974,GBP
+FAS.L,Fidelity Asian Values PLC GBP,etf,gb,0.362033768,GBP
+JIGI.L,JPMorgan India Growth & Income PLC GBP,etf,gb,0.361435776,GBP
+XGLD.L,Xtrackers Physical Gold ETC 2010-15.6.60 Physical Gold Commodity,etf,gb,0.3612727051599566,GBP
+CV9.PA,Amundi MSCI Europe Value Factor UCITS ETF - EUR (C),etf,fr,0.3607180860548999,USD
+HMAD.L,HSBC MSCI AC FAR EAST ex JAPAN UCITS ETF USD,etf,gb,0.360073916702053,GBP
+IUKP.L,iShares UK Property UCITS ETF,etf,gb,0.3574183750544,GBP
+JAGI.L,JPMorgan Asia Growth & Income PLC GBP,etf,gb,0.35680766,GBP
+SPOG.L,iShares Oil & Gas Exploration & Production UCITS ETF USD,etf,gb,0.3563500338218714,USD
+BGEU.L,Baillie Gifford European Growth Trust PLC GBP,etf,gb,0.3546925,GBP
+GGOV.PA,Amundi Index Solutions - J.P. Morgan GBI Global Govies,etf,fr,0.353984717406,USD
+XGIN.DE,Xtrackers II Global Inflation-Linked Bond UCITS ETF,etf,de,0.3537060148008,USD
+PPTX.L,WisdomTree Physical Platinum,etf,gb,0.3531850708782164,USD
+AEI.L,Aberdeen Equity Income Trust PLC GBP,etf,gb,0.352286028,GBP
+CMB1.L,iShares FTSE MIB UCITS ETF EUR (Acc),etf,gb,0.348145882696166,GBP
+ZPRE.DE,State Street SPDR MSCI EMU UCITS ETF Accum.Shs EUR,etf,de,0.348030828,USD
+UEFD.DE,UBS (Lux) Fund Solutions SICAV - UBS MSCI EMU Small Cap UCITS ETF EUR dis- Distribution,etf,de,0.3479644268816,USD
+CVCG.L,CVC Income & Growth Limited GBP,etf,gb,0.347949232,GBP
+HHI.L,Henderson High Income Trust PLC,etf,gb,0.34751395,GBP
+XMAS.DE,Xtrackers MSCI EM Asia Screened Swap UCITS ETF-1C- Capitalisation,etf,de,0.34679492574122,USD
+VGOV.L,Vanguard UK Gilt UCITS ETF,etf,gb,0.34487506944,GBP
+DJSC.L,iShares EURO STOXX Small UCITS ETF,etf,gb,0.3441808622112284,USD
+D5BL.DE,Xtrackers MSCI Europe Value Factor UCITS ETF (DR) Capitalisation 1C,etf,de,0.3436483053999999,USD
+XBAE.DE,Xtrackers II ESG Global Aggregate Bond UCITS ETF 5C - EUR Hedged- Capitalisation,etf,de,0.341348048339,USD
+UEFZ.DE,UBS (Lux) Fund Solutions SICAV - SBI Foreign AAA-BBB 5-10 ESG UCITS ETF A Distribution,etf,de,0.3397615485014456,USD
+ASIL.L,Multi Units LU - Amundi MSCI China ESG Leaders Extra -Acc- Capitalisation,etf,gb,0.3387265167996176,GBP
+MNL.L,Manchester & London Investment Trust PLC,etf,gb,0.337658448,GBP
+IWFS.L,iShares MSCI World Mid-Cap Equal Weight UCITS ETF USD,etf,gb,0.3375112739571589,USD
+HDLV.L,Invesco S&P 500 High Dividend Low Volatility UCITS ETF,etf,gb,0.3373078175250445,USD
+UINC.L,First Trust Global Funds ICAV - First Trust US Equity Income UCITS ETF A USD Exchange Traded Fund,etf,gb,0.3346815362269824,USD
+HKOR.L,HSBC MSCI Korea Capped UCITS ETF,etf,gb,0.3299772356257046,USD
+UEF6.DE,UBS BBG Euro Area Liquid Corp 1-5 UCITS ETF -EUR dis- Distribution,etf,de,0.3292891437692999,USD
+JPNL.L,Amundi Japan TOPIX II UCITS ETF -Dist EUR-,etf,gb,0.3290668119362539,USD
+CTPE.L,CT Private Equity Trust PLC,etf,gb,0.32891334,GBP
+LYXA.DE,Amundi Euro Highest Rated Macro-Weighted Government Bond UCITS ETF Acc,etf,de,0.3271189687901999,USD
+BGS.L,Baillie Gifford Shin Nippon PLC,etf,gb,0.3261468,GBP
+XMTD.L,Xtrackers MSCI TAIWAN UCITS ETF Capitalisation 1C,etf,gb,0.3250706651920974,USD
+CTUK.L,CT UK Capital and Income Investment Trust PLC GBP,etf,gb,0.32421168,GBP
+IBT.L,International Biotechnology Trust PLC,etf,gb,0.32285856,GBP
+HTWD.L,HSBC MSCI TAIWAN UCITS ETF USD,etf,gb,0.32248942833471,GBP
+ERO.L,State Street SPDR MSCI Europe UCITS ETF,etf,gb,0.3192059498838872,USD
+FUQA.L,Fidelity US Quality Income UCITS ETF Acc,etf,gb,0.3119961894024803,USD
+SMIF.L,TwentyFour Select Monthly Income Fund Ltd 2014-17.2.15 GBP Ptg.Shs,etf,gb,0.307008916,GBP
+EPRA.L,Amundi FTSE EPRA Nareit Global -UCITS ETF DR- Capitalisation,etf,gb,0.3068885103032217,USD
+XAXJ.DE,Xtrackers MSCI AC Asia ex Japan ESG UCITS ETF -1C- Capitalisation,etf,de,0.3041050796690211,USD
+CMPG.L,CT Global Managed Portfolio Trust PLC Growth Shs GBP,etf,gb,0.302548062,GBP
+HMEU.L,HSBC MSCI Europe UCITS ETF EUR,etf,gb,0.3014413397479243,USD
+ANII.L,Aberdeen New India Investment Trust PLC GBP,etf,gb,0.300131896,GBP
+XFFE.L,Xtrackers II USD Overnight Rate Swap UCITS ETF -1C- Capitalisation,etf,gb,0.2990604665388537,USD
+MOGB.L,VanEck Morningstar US ESG Wide Moat UCITS ETF,etf,gb,0.2983870950770387,USD
+BRFI.L,BlackRock Frontiers Investment Trust PLC,etf,gb,0.297765435,GBP
+XSSW.L,Xtrackers MSCI World Communication Services UCITS ETF,etf,gb,0.2972889057684329,USD
+LYXF.DE,Amundi Euro Government Bond 15+Y UCITS ETF Acc,etf,de,0.2965224319002,USD
+PSRW.L,Invesco Markets III PLC - Invesco RAFI All-World Fundamental Value UCITS ETF,etf,gb,0.2953534349138192,GBP
+D5BI.DE,Xtrackers SICAV - MSCI Mexico UCITS ETF,etf,de,0.2915072784433301,USD
+FNCW.L,State Street SPDR MSCI World Financials UCITS ETF Accum Ptg USD,etf,gb,0.2907423355878241,USD
+SST.L,Scottish Oriental Smaller Companies Trust PLC,etf,gb,0.2865293,GBP
+SMC.PA,SSgA SPDR ETFs EUROPE II PLC - State Street SPDR MSCI Europe Small Cap UCITS ETF,etf,fr,0.2862341951011,USD
+EUN8.DE,iShares EUR Govt Bond 10-15 Year UCITS ETF,etf,de,0.2839985605938,USD
+XSDR.L,Xtrackers SICAV - Xtrackers MSCI Europe Health Care Screened UCITS ETF-1C- Capitalisation,etf,gb,0.2839211142883332,USD
+LYS4.DE,Multi Units Luxembourg SICAV - Amundi Euro Highest Rated Macro-Weighted Government Bond 1-3Y -Acc- Capitalisation,etf,de,0.2835868899584,USD
+PHPM.L,WisdomTree Metal Securities Ltd.,etf,gb,0.2823522848742547,GBP
+XMBR.DE,Xtrackers MSCI BRAZIL UCITS ETF Capitalisation 1C,etf,de,0.2816705559887127,USD
+XLFS.L,Invesco Financials S&P US Select Sector UCITS ETF,etf,gb,0.2766837733039611,USD
+GLTL.L,State Street SPDR Bloomberg 15+ Year Gilt UCITS ETF GBP,etf,gb,0.276592433892,USD
+FRCK.DE,UBS (Lux) Fund Solutions SICAV - UBS BBG USD EM Sovereign UCITS ETF -hEUR acc- Capitalisation,etf,de,0.2738924762688,USD
+ARR.L,Aurora UK Alpha plc,etf,gb,0.273624,GBP
+CVCE.L,CVC Income & Growth Limited EUR,etf,gb,0.266648941135616,EUR
+MLPP.L,Invesco Morningstar US Energy Infrastructure MLP UCITS ETF,etf,gb,0.2648405687702367,USD
+XESD.DE,Xtrackers Spanish Equity UCITS ETF (DR) Distribution 1D,etf,de,0.2644414821706,USD
+XG7S.L,Xtrackers II Global Government Bond UCITS ETF 5C Capitalisation,etf,gb,0.2636035683036165,USD
+GBRE.L,State Street SPDR Dow Jones Global Real Estate UCITS ETF USD,etf,gb,0.2629767685086809,USD
+XFVT.L,Xtrackers Vietnam Swap UCITS ETF 1C Capitalisation,etf,gb,0.2604524724446448,USD
+IEMS.L,iShares MSCI EM Small Cap UCITS ETF,etf,gb,0.2599904377568496,GBP
+BIOG.L,Biotech Growth Trust PLC,etf,gb,0.25744894,GBP
+XWDS.L,Xtrackers MSCI World Consumer Discretionary UCITS ETF,etf,gb,0.2542457927323562,USD
+RQFI.DE,Xtrackers Harvest CSI300 UCITS ETF Distribution 1D,etf,de,0.2535869062214674,USD
+USVL.L,State Street SPDR MSCI USA Value UCITS ETF Accum USD,etf,gb,0.2518664681147999,USD
+LVC.PA,Amundi CAC 40 Daily (2X) Leveraged UCITS ETF -Acc-,etf,fr,0.24958463415,USD
+EXV2.DE,iShares STOXX Europe 600 Telecommunications UCITS ETF (DE),etf,de,0.2490815890785999,USD
+RECI.L,Real Estate Credit Investments Limited,etf,gb,0.2486745,GBP
+STS.L,STS Global Income & Growth Trust PLC,etf,gb,0.24476665,GBP
+EGL.L,Ecofin Global Utilities and Infrastructure Trust Plc,etf,gb,0.24369722,GBP
+JPSR.L,UBS ETF SICAV - MSCI Japan Socially Responsible UCITS ETF -(JPY) A-dis- Distribution,etf,gb,0.2432421426685717,USD
+XHY1.DE,Xtrackers II Rolling Target Maturity Sept 2027 EUR High Yield UCITS ETF 1D Distribution,etf,de,0.2431157707062,USD
+INFL.PA,Amundi Euro Inflation Expectations 2-10Y UCITS ETF,etf,fr,0.242469296355,USD
+UEF7.DE,UBS (Lux) Fund Solutions - Bloomberg US Liquid Corporates 1-5 Year UCITS ETF,etf,de,0.2381537350276789,USD
+SXLP.L,SSgA SPDR ETFs Europe II Plc - S&P US Cons. Stap. Sel. Sector,etf,gb,0.2377111328846227,USD
+IDJG.L,iShares Euro Total Market Growth Large UCITS ETF EUR,etf,gb,0.2369296329884644,USD
+XDND.DE,Xtrackers MSCI North America High Dividend Yield UCITS ETF,etf,de,0.2368177700043136,USD
+SCF.L,Schroder Income Growth Fund PLC GBP,etf,gb,0.236522742,GBP
+AUSC.L,Aberdeen UK Smaller Companies Growth Trust plc GBP,etf,gb,0.232605296,GBP
+EMUU.L,iShares MSCI EMU USD Hedged UCITS ETF (Acc),etf,gb,0.2318365791419999,GBP
+C030.DE,Amundi DJ Switzerland Titans 30 UCITS ETF Distribution,etf,de,0.2308582363824054,USD
+SPLT.L,iShares Physical Platinum ETC,etf,gb,0.2283844851709883,USD
+EMHD.L,Invesco Markets III Plc - FTSE EM High Div. Low Vol.,etf,gb,0.2254379886542704,GBP
+PJEU.DE,Invesco Euro Cash 3 Months UCITS ETF,etf,de,0.22491053625984,USD
+EXV3.DE,iShares STOXX Europe 600 Technology UCITS ETF (DE) EUR -D,etf,de,0.2227000062726,USD
+BGUK.L,Baillie Gifford UK Growth Trust PLC GBP,etf,gb,0.222588225,GBP
+IUSZ.L,iShares MSCI USA Mid-Cap Equal Weight UCITS ETF Accum Shs USD,etf,gb,0.222422355001,USD
+XESP.DE,Xtrackers Spanish Equity UCITS ETF (DR) Capitalisation 1C,etf,de,0.220477998554,USD
+UEQD.DE,UBS Core S&P 500 UCITS ETF Accum -A- Hedged EUR,etf,de,0.2174063611965,USD
+XLPE.L,Xtrackers LPX MM PRIVATE EQUITY UCITS ETF Capitalisation 1C,etf,gb,0.2129975493607067,USD
+MWY.L,Mid Wynd International Investment Trust PLC,etf,gb,0.21165758,GBP
+CLIG.L,City of London Investment Group PLC,etf,gb,0.211550894,GBP
+HMUS.L,HSBC MSCI USA Quality UCITS ETF USD,etf,gb,0.210488318151071,USD
+SUKC.L,SSgA SPDR ETFs EUROPE II PLC - State Street SPDR Bloomberg 0-5 Year Sterling Corporate Bond UCITS ETF GBP,etf,gb,0.207326207712,USD
+UTIP.L,State Street SPDR Bloomberg U.S. TIPS UCITS ETF USD,etf,gb,0.206248959491319,USD
+SDEU.L,iShares Germany Govt Bond UCITS ETF,etf,gb,0.205674372438977,USD
+BRAI.L,BlackRock American Income Trust plc GBP,etf,gb,0.204731737,GBP
+ALAG.L,Amundi MSCI EM Latin America,etf,gb,0.2038908350845546,USD
+GGRP.L,WisdomTree Global Quality Dividend Growth UCITS ETF USD,etf,gb,0.2030280143705374,USD
+IS0P.DE,iShares Spain Govt Bond UCITS ETF,etf,de,0.201886101891,USD
+IRCP.L,iShares V PLC - iShares EUR Corp Bond Interest Rate Hedged ESG SRI UCITS ETF Shs EUR,etf,gb,0.2007994275810765,GBP
+MTE.L,Montanaro European Smaller Companies Trust PLC,etf,gb,0.19969458,GBP
+XSTR.L,Xtrackers II GBP Overnight Rate Swap UCITS ETF 1D Distribution,etf,gb,0.1994990032854,USD
+CLIM.L,Multi Units Luxembourg SICAV - Amundi Global Aggregate Green Bond Acc Capitalisation,etf,gb,0.1994442120102653,USD
+OSX6.DE,Ossiam Stoxx Europe 600 ESG Equal Weight NR UCITS ETF 1C (EUR) Capitalisation,etf,de,0.19824720516,USD
+SPYC.DE,State Street SPDR MSCI Europe Consumer Staples ETF Acc Ptg EUR,etf,de,0.19797250374,USD
+USTY.L,SSGA SPDR ETFs Europe I PLC - State Street SPDR Bloomberg U.S. Treasury Bond UCITS ETF USD,etf,gb,0.1973766923219842,USD
+JUSC.L,JPMorgan US Smaller Companies Investment Trust PLC GBP,etf,gb,0.197346486,GBP
+TTPX.DE,Amundi Japan TOPIX UCITS ETF - Daily Hedged EUR (C),etf,de,0.1968739203777,USD
+XEMB.DE,Xtrackers II J.P. Morgan USD Emerging Markets Bond UCITS ETF -1C - EUR Hedged- Capitalisation,etf,de,0.1968590312127,USD
+RKW.L,Rockwood Strategic Plc Registered,etf,gb,0.19476928,GBP
+OIG.L,Oryx International Growth Fund Ltd GBP Accum.Shs,etf,gb,0.1939,GBP
+XYP1.DE,Xtrackers II iBoxx Eurozone Government Bond Yield Plus 1-3,etf,de,0.189720245715,USD
+UTL.L,UIL Limited,etf,gb,0.188384442,GBP
+PADV.L,SSGA SPDR ETFs Europe I PLC - State Street SPDR S&P Pan Asia Dividend Aristocrats UCITS ETF Ptg USD,etf,gb,0.186033319376956,USD
+UBUM.DE,UBS S&P Dividend Aristocrats ESG Elite UCITS ETF Shs USD,etf,de,0.1849815106632157,USD
+MAJE.L,Majedie Investments PLC,etf,gb,0.184965812,GBP
+RISE.L,iShares Fallen Angels High Yield Corp Bond UCITS ETF,etf,gb,0.1849330147887813,GBP
+WNDU.L,State Street SPDR MSCI World Industrials UCITS ETF Accum Ptg USD,etf,gb,0.1840705037833365,USD
+IJPH.L,iShares MSCI Japan GBP Hedged UCITS ETF (Acc),etf,gb,0.182319648,GBP
+BASC.L,Brown Advisory US Smaller Companies PLC GBP,etf,gb,0.18172644,GBP
+EMLB.L,PIMCO Advantage Emerging Markets Local Bond UCITS ETF Accum USD,etf,gb,0.1812796223385673,GBP
+LYY8.DE,Amundi LevDax Daily (2x) leveraged UCITS ETF Acc,etf,de,0.180859494998,USD
+C007.DE,Amundi Index Solutions - MDAX ESG UCITS ETF,etf,de,0.1800199013008,USD
+JCGI.L,JPMorgan China Growth & Income PLC,etf,gb,0.178847304,GBP
+SPYK.DE,State Street SPDR MSCI Europe Technology UCITS ETF Accum Ptg EUR,etf,de,0.1779482925,USD
+EMLC.L,VanEck J.P. Morgan EM Local Currency Bond UCITS ETF Accum A USD,etf,gb,0.1771056244082048,USD
+LDCE.DE,PIMCO ETFs PLC - PIMCO Advantage Euro Low Duration Corporate Bond UCITS ETF Shs EUR,etf,de,0.1767552596346,USD
+EUXS.L,iShares MSCI Europe ex-UK GBP Hedged UCITS ETF (Dist),etf,gb,0.17478909,GBP
+SRSA.L,iShares MSCI South Africa UCITS ETF USD,etf,gb,0.1746278689325817,USD
+HMJP.L,HSBC MSCI Japan UCITS ETF USD,etf,gb,0.1745342224550169,USD
+GLTS.L,SSgA SPDR ETFs Europe I Plc - Blmb. 1-5 Yr Gilt UCITS ETF GBP,etf,gb,0.1728769149216,USD
+FRNH.DE,Amundi Index Solutions - USD Flo Rate Corp Bd ESG UCITS ETF,etf,de,0.17063542797,USD
+BX4.PA,Amundi CAC 40 Daily (-2X) Inverse UCITS ETF -Acc-,etf,fr,0.170386060104,USD
+MD4X.DE,Multi Units France - Amundi MDAX UCITS ETF,etf,de,0.169979426838,USD
+IEM.L,Impax Environmental Markets PLC,etf,gb,0.167871744,GBP
+ANRJ.L,Amundi Global Hydrogen UCITS ETF Parts,etf,gb,0.1678448111053859,USD
+SCP.L,Schroder UK Mid Cap Fund PLC GBP,etf,gb,0.166796274,GBP
+WMAT.L,State Street SPDR MSCI World Materials UCITS ETF Accum Ptg USD,etf,gb,0.1663634413371859,USD
+S7XE.DE,Invesco EURO STOXX Optimised Banks UCITS ETF,etf,de,0.16555640706,USD
+SXR0.DE,iShares Edge MSCI World Minimum Volatility UCITS ETF EUR Hedged Accum,etf,de,0.1654065045402,USD
+BERI.L,BlackRock Energy and Resources Income Trust plc,etf,gb,0.164710234,GBP
+EDVD.L,State Street SPDR S&P Emerging Markets Dividend Aristocrats UCITS ETF USD,etf,gb,0.1618838440799999,GBP
+C005.DE,Amundi Index Solutions - SDAX UCITS ETF,etf,de,0.160484393291,USD
+RTWP.L,L&G Russell 2000 US Small Cap Quality UCITS ETF,etf,gb,0.1596133326799214,GBP
+3GOL.L,WisdomTree Gold 3x Daily Leveraged,etf,gb,0.1593407512782658,USD
+CG9.PA,Amundi MSCI Europe Growth UCITS ETF Cap,etf,fr,0.1593325314749999,USD
+IS05.DE,iShares EUR Govt Bond 20 Year Target Duration UCITS ETF,etf,de,0.1578700421632,USD
+EEI.L,WisdomTree Europe High Dividend UCITS ETF Ptg. EUR,etf,gb,0.1575255105435631,GBP
+DEM.L,WisdomTree Emerging Markets High Dividend UCITS ETF USD,etf,gb,0.1573302641753099,GBP
+IS3G.DE,iShares MSCI EMU Large Cap UCITS ETF EUR,etf,de,0.1571825545344,USD
+CYN.L,City Natural Resources Growth and Income PLC GBP,etf,gb,0.15552498,GBP
+SPXJ.L,iShares MSCI Pacific ex-Japan UCITS ETF (Dist) USD,etf,gb,0.1553862830568959,USD
+SBUY.L,Invesco Global Buyback Achievers UCITS ETF,etf,gb,0.1541165816009019,USD
+HIDR.L,HSBC MSCI Indonesia UCITS ETF,etf,gb,0.1523915387072529,USD
+IMSU.L,iShares S&P 500 Materials Sector UCITS ETF,etf,gb,0.1498167700112739,USD
+U71G.L,Amundi US Treasury Bond 7-10Y UCITS ETF -Dist- Distribution,etf,gb,0.1466356122270184,GBP
+SAAA.L,iShares Global AAA-AA Govt Bond UCITS ETF,etf,gb,0.146580299468696,USD
+INFU.PA,Amundi US Inflation Expectations 10Y ETF,etf,fr,0.1463579111897444,USD
+UKDV.L,State Street SPDR S&P UK Dividend Aristocrats UCITS ETF GBP,etf,gb,0.14615167,USD
+BGCG.L,Baillie Gifford China Growth Trust Plc,etf,gb,0.145555455,GBP
+RGL.L,Regional REIT Ltd.,etf,gb,0.145393374,GBP
+ISFR.L,iShares MSCI France UCITS ETF,etf,gb,0.1450992539093573,USD
+XS7R.DE,Xtrackers SICAV - Xtrackers MSCI Europe Financials UCITS ETF -1C- Capitalisation,etf,de,0.143333843772,USD
+UKRE.L,iShares MSCI Target UK Real Estate UCITS ETF,etf,gb,0.1430803577,GBP
+IDAR.L,iShares Asia Property Yield UCITS ETF,etf,gb,0.1416069335418686,USD
+XLUS.L,Invesco Utilities S&P US Select Sector UCITS ETF,etf,gb,0.139743428887982,USD
+TORO.L,Chenavari Toro Income Fund Limited EUR,etf,gb,0.1384760239310175,EUR
+XB4A.DE,Xtrackers ATX UCITS ETF (DR) Capitalisation 1C,etf,de,0.13770776628,USD
+SYBV.DE,SSgA SPDR ETFs Europe I Plc - Blm. 10+ Yr. EUR Gov. Bd. ETF,etf,de,0.1368679195697,USD
+XSPS.L,Xtrackers S&P 500 INVERSE DAILY SWAP UCITS ETF Capitalisation 1C,etf,gb,0.1365036421748215,USD
+SXLU.L,SSgA SPDR ETFs Europe II Plc - S&P US Utilities Select Sector,etf,gb,0.136376069336815,USD
+3LUS.L,WisdomTree S&P 500 3x Daily Leveraged,etf,gb,0.1342775507378744,USD
+CHIB.L,CT UK High Income Trust PLC B GBP,etf,gb,0.132550867,GBP
+CHI.L,CT UK High Income Trust PLC GBP,etf,gb,0.132550867,GBP
+LYPD.DE,Amundi MSCI World Financials UCITS ETF EUR ACC,etf,de,0.1308243278476,USD
+VOOL.DE,Amundi S&P 500 VIX Futures Enhanced Roll UCITS ETF ACC,etf,de,0.12949441743934,USD
+CMPI.L,CT Global Managed Portfolio Trust PLC GBP,etf,gb,0.127488806,GBP
+UEQU.DE,UBS CMCI Ex-Agriculture SF UCITS ETF Accum USD,etf,de,0.1261776029670369,USD
+USAG.L,State Street SPDR Bloomberg U.S. Aggregate Bond UCITS ETF USD,etf,gb,0.1257848715248994,GBP
+XDBC.DE,Xtrackers Bloomberg Commodity ex-Agriculture & Livestock Swap UCITS ETF 1C - EUR Hedged,etf,de,0.1255944809821,USD
+GHYS.L,iShares Global High Yield Corp Bond GBP Hedged UCITS ETF Dist,etf,gb,0.1255154802564,GBP
+XNIF.L,Xtrackers NIFTY 50 SWAP UCITS ETF Capitalisation 1C,etf,gb,0.1250746222827508,USD
+FAIR.L,Fair Oaks Income Limited 2021 Shs USD,etf,gb,0.1245164784155638,EUR
+UBTP.L,UBS (LUX) Fund Sol - UBS Core BBG TIPS 1-10 UCITS ETF -hGBP acc- Capitalisation,etf,gb,0.123177088179,USD
+BSRT.L,Baker Steel Resources Trust Ltd GBP Ptg.Shs,etf,gb,0.12305845539,GBP
+MTU.L,Montanaro UK Smaller Companies Investment Trust PLC,etf,gb,0.1216028,GBP
+3BAL.L,WisdomTree EURO STOXX Banks 3x Daily Leveraged,etf,gb,0.1191451313384772,USD
+XDEX.L,Xtrackers MSCI Emerging Markets Ex China UCITS ETF,etf,gb,0.1189205650927,USD
+AHYI.DE,Amundi Pea Dow Jones Industrial Average Distribution -UCITS ETF USD-,etf,de,0.1181864786379812,USD
+AIGCP.PA,WisdomTree Broad Commodities,etf,fr,0.1176094779303308,USD
+WCOS.L,SSgA SPDR ETFs Europe II PLC - State Street SPDR MSCI World Consumer Staples UCITS ETF Accum Ptg USD,etf,gb,0.1167840208897452,USD
+FEX.L,First Trust Global Funds ICAV - First Trust US Large Cap Core AlphaDEX UCITS ETF Accum.Shs Class A USD,etf,gb,0.1161165981690353,GBP
+XLES.L,Invesco Energy S&P US Select Sector UCITS ETF,etf,gb,0.1158141518257946,USD
+RIII.L,Rights & Issues Investment Trust PLC,etf,gb,0.115334352,GBP
+LTI.L,Lindsell Train Investment Trust PLC,etf,gb,0.1152,GBP
+AFL.L,Artemis UK Future Leaders plc GBP,etf,gb,0.1151816,GBP
+UIMB.DE,UBS (Lux) Fund Solutions - UBS BBG TIPS 10+ UCITS ETF Adis- Distribution,etf,de,0.1140929487248822,USD
+JPNH.DE,Amundi Japan TOPIX II UCITS ETF -Daily Hedged to EUR - Dist-,etf,de,0.1140272474964,USD
+CSUK.L,iShares MSCI UK UCITS ETF,etf,gb,0.1135937272608,GBP
+XUT3.L,Xtrackers II IBOXX USD TREASURIES 1-3 UCITS ETF (DR) Distribution 1D,etf,gb,0.1127621352709097,USD
+PSDL.L,Phoenix Spree Deutschland Ltd,etf,gb,0.11240135,GBP
+SXRD.DE,iShares MSCI UK Small Cap UCITS ETF,etf,de,0.1112841803041847,USD
+SPPX.DE,"SSgA SPDR ETFs Europe I Plc - Blm.10+ Yr. US Treas, Bd. ETF USD",etf,de,0.111231507148891,USD
+SYBK.DE,State Street SPDR BBG U.S High Yld Corp. Scored UCITS ETF USD,etf,de,0.1104641109816133,USD
+NGSP.L,WisdomTree Natural Gas,etf,gb,0.1092976770852867,USD
+DBX9.DE,Xtrackers MSCI China A UCITS ETF Capitalisation -1C-,etf,de,0.1085092152787663,USD
+ZPRP.DE,SSgA SPDR ETFs Europe I Plc - FTSE EPRA Eur. ex-UK Real.,etf,de,0.108229214888,USD
+SYBS.DE,State Street SPDR Bloomberg Sterling Corporate Bond UCITS ETF GBP,etf,de,0.108020418246074,USD
+XDUK.DE,Xtrackers FTSE 100 UCITS ETF (DR) Capitalisation 1C,etf,de,0.1078044512091556,USD
+QUID.L,PIMCO Sterling Short Maturity UCITS ETF,etf,gb,0.1070651275550999,GBP
+IGC.L,India Capital Growth Fund Limited,etf,gb,0.1060989055,GBP
+SPYP.DE,State Street SPDR MSCI Europe Materials UCITS ETF Acc Ptg EUR,etf,de,0.10581824448,USD
+CEBG.DE,iShares MSCI Mexico Capped UCITS ETF,etf,de,0.105374435280294,USD
+UEF9.DE,UBS (Lux) Fund Sol - UBS Core BBG US Liquid Corp UCITS ETF USD Distribution,etf,de,0.1052588450703655,USD
+HCAN.L,HSBC MSCI Canada UCITS ETF,etf,gb,0.1043119278466741,USD
+XLIS.L,Invesco Industrials S&P US Select Sector UCITS ETF,etf,gb,0.1035987018575753,USD
+XCS4.DE,Xtrackers MSCI THAILAND UCITS ETF Capitalisation 1C,etf,de,0.103539284196053,USD
+UBUS.DE,UBS Factor MSCI USA Prime Value Screened UCITS ETF Shs dis USD,etf,de,0.103139589793756,USD
+FEDG.L,Multi Units LU - Amundi Fed Funds US Dollar Cash,etf,gb,0.1031214213348365,USD
+AWAT.PA,Amundi PEA Eau (MSCI Water) UCITS ETF,etf,fr,0.1029406594902,USD
+SPP3.DE,State Street SPDR Bloomberg 3-7 Year U.S. Treasury Bond UCITS ETF USD,etf,de,0.1019874342605773,USD
+LGQI.DE,Amundi Global Equity Quality Income UCITS ETF DIST,etf,de,0.1013512673267,USD
+XUKX.DE,Xtrackers FTSE 100 Income UCITS ETF,etf,de,0.1011888986582537,USD
+C006.DE,Amundi Index Solutions - F.A.Z. 100 UCITS ETF,etf,de,0.1010183251432,USD
+U1FB.DE,UBS ETF SICAV - MSCI Japan Socially Responsible UCITS ETF -(hedged to EUR) A-acc- Capitalisation,etf,de,0.1008930989551,USD
+US13.L,Amundi US Treasury Bond 1-3Y UCITS ETF -Dist- Distribution,etf,gb,0.1003243510610134,USD
+SXLY.L,SSgA SPDR ETFs Europe II Plc - S&P US Cons. Disc. Sel. Sector,etf,gb,0.10018530212229,USD
+NSI.L,New Star Investment Trust PLC,etf,gb,0.098012706,GBP
+JEMA.L,JPMorgan Emerging Europe Middle East & Africa Securities PLC Shs GBP,etf,gb,0.09502507,GBP
+GOT.L,Global Opportunities Trust PLC,etf,gb,0.094533817,GBP
+BEMO.L,Barings Emerging EMEA Opportunities PLC GBP,etf,gb,0.092240925,GBP
+BRLA.L,Blackrock Latin American Investment Trust PLC,etf,gb,0.089903858,GBP
+VIP.L,Value and Indexed Property Income Trust PLC,etf,gb,0.088398729,GBP
+RMMC.L,River UK Micro Cap Limited,etf,gb,0.08321716,GBP
+MVI.L,Marwyn Value Investors Ltd Registered,etf,gb,0.08050683252,GBP
+INOV.L,Schroders Capital Global Innovation Trust Plc GBP,etf,gb,0.07666275,GBP
+MIGO.L,MIGO Opportunities Trust PLC GBP,etf,gb,0.0683102875,GBP
+GABI.L,GCP Asset Backed Income Fund Ltd.,etf,gb,0.06167894,GBP
+VNH.L,VietNam Holding Limited,etf,gb,0.060530407,GBP
+ESO.L,EPE Special Opportunities Ltd Registered,etf,gb,0.058937436,GBP
+CTHT.L,CT Healthcare Trust Plc,etf,gb,0.051218332,GBP
+BRIG.L,BlackRock Income and Growth Investment Trust PLC GBP,etf,gb,0.043142513,GBP
+CRS.L,Crystal Amber Fund Ltd.,etf,gb,0.042269779,GBP
+VSL.L,VPC Specialty Lending Investments Plc,etf,gb,0.034923638,GBP
+SDV.L,Chelverton UK Dividend Trust PLC GBP,etf,gb,0.031879,GBP
+RSE.L,Riverstone Energy Limited,etf,gb,0.02893158,GBP
+DPA.L,DP Aircraft I Ltd.,etf,gb,0.0278992806399999,USD
+RMII.L,RM Infrastructure Income PLC GBP,etf,gb,0.027196442,GBP
+CIC.L,Conygar Investment Company PLC,etf,gb,0.017891577,GBP
+GRIO.L,Ground Rents Income Fund PLC,etf,gb,0.0158808216,GBP
+AGI.L,Potentially AI Plc,etf,gb,0.015787763,GBP
+MAFL.L,Mineral and Financial Investments Ltd,etf,gb,0.015777128,GBP
+JPEL.L,JPEL Private Equity Ltd,etf,gb,0.0152969305542899,USD
+LBOW.L,ICG-Longbow Senior Secured-UK Property Debt Investments Limited GBP,etf,gb,0.0151022235,GBP
+AOF.L,Africa Opportunity Fund Ltd.,etf,gb,0.0077579917499699,USD
