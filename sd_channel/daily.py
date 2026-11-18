@@ -33,7 +33,7 @@ HERE = Path(__file__).resolve().parent
 CAL_DAYS = 2500 * 365.25 / 252.0
 MIN_R = 0.7
 MIN_AUM = 0.5
-PAGE = "https://claude.ai/artifact/2L6MCFus9Zbzx4YmQLdwm5"
+PAGE = "https://soylee22.github.io/sd-channel-scanner/"
 # Band edges the indicator draws. A crossing is a move from one side of an edge to the other.
 EDGES = [(-4, "-4 SD"), (-3, "-3 SD"), (1, "+1 SD"), (2, "+2 SD")]
 
@@ -59,7 +59,7 @@ def channel(close: pd.Series) -> dict | None:
     if sd <= 0:
         return None
     return {"z": (win[-1] - fitted[-1]) / sd, "R": float(np.corrcoef(t, win)[0, 1]),
-            "close": float(win[-1]), "line": float(fitted[-1]),
+            "close": float(win[-1]), "line": float(fitted[-1]), "sd": float(sd),
             "asof": sub.index[-1].date().isoformat()}
 
 
@@ -144,18 +144,59 @@ def build_html(df: pd.DataFrame, asof: str, missing: int) -> tuple[str, str]:
     subject = (f"SD channel {asof}: {len(cross)} crossings · lowest stock {lowest.ticker} {fmt_z(lowest.z)}")
     body = f"""<div style="font-family:-apple-system,Segoe UI,Arial,sans-serif;color:#17202b;max-width:720px">
 <h1 style="font-size:20px;margin:0 0 4px">2500-day SD channel, {asof}</h1>
-<p style="color:#5d6878;margin:0">SD position = (close − 10-year regression line) ÷ residual SD. Bands: +1, +2, −3, −4. Tables show Pearson R ≥ {MIN_R} only.</p>
+<p style="color:#5d6878;margin:0 0 12px">SD position = (close − 10-year regression line) ÷ residual SD. Bands: +1, +2, −3, −4. Tables show Pearson R ≥ {MIN_R} only.</p>
+<p style="margin:0 0 16px"><a href="{PAGE}" style="display:inline-block;background:#17202b;color:#ffffff;text-decoration:none;font-size:13px;font-weight:600;padding:8px 14px;border-radius:6px">Open live interactive rankings</a></p>
 <h2 {h2}>Band crossings since last run</h2>{cross_html}
 <p style="font-size:13px;color:#5d6878">Stocks: {zone_counts(s)}<br>ETFs: {zone_counts(e)}</p>
 <h2 {h2}>Stocks furthest below the line</h2>{table(s.head(15), "Cap $bn")}
 <h2 {h2}>ETFs furthest below the line (AUM ≥ {MIN_AUM}bn)</h2>{table(e.head(10), "AUM bn")}
 <h2 {h2}>Stocks furthest above the line</h2>{table(s.tail(10).iloc[::-1], "Cap $bn")}
-<p style="font-size:12px;color:#5d6878;margin-top:20px">{len(df)} lines scanned, {missing} without usable history today. Full results attached as CSV. Interactive page (snapshot of 17 November): <a href="{PAGE}">Ten-Year Channel Ranks</a>.</p>
+<p style="font-size:12px;color:#5d6878;margin-top:20px">{len(df)} lines scanned, {missing} without usable history today. Full searchable table and CSV export: <a href="{PAGE}">{PAGE}</a>.</p>
 </div>"""
     return subject, body
 
 
-def send(subject: str, html: str, csv_bytes: bytes, csv_name: str) -> bool:
+def build_site_json(df: pd.DataFrame, asof: str, missing: int) -> dict:
+    def num(v, digits=4):
+        return None if pd.isna(v) else round(float(v), digits)
+
+    ordered = df.sort_values("z")
+    rows = []
+    for r in ordered.itertuples():
+        cur = "" if pd.isna(getattr(r, "aum_currency", None)) else str(r.aum_currency)
+        cross = "" if pd.isna(r.cross) or not r.cross else str(r.cross)
+        rows.append([
+            str(r.ticker),
+            str(r.name),
+            "s" if r.kind == "stock" else "e",
+            "" if pd.isna(r.region) else str(r.region),
+            num(r.size_usd_bn, 2),
+            num(r.z, 3),
+            num(r.dz, 3),
+            num(r.R, 3),
+            num(r.close, 4),
+            num(r.line, 4),
+            num(getattr(r, "sd", np.nan), 4),
+            cur,
+            cross,
+        ])
+    cross_df = ordered[ordered.cross.notna()]
+    crossings = [
+        [str(r.ticker), str(r.name), "s" if r.kind == "stock" else "e",
+         num(r.z, 3), num(r.dz, 3), num(r.R, 3), str(r.cross)]
+        for r in cross_df.itertuples()
+    ]
+    return {
+        "asof": asof,
+        "updated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "scanned": len(rows),
+        "missing": int(missing),
+        "crossings": crossings,
+        "rows": rows,
+    }
+
+
+def send(subject: str, html: str) -> bool:
     host = os.environ.get("SMTP_HOST")
     user = os.environ.get("SMTP_USER")
     pw = (os.environ.get("SMTP_PASS") or "").replace(" ", "")
@@ -167,9 +208,6 @@ def send(subject: str, html: str, csv_bytes: bytes, csv_name: str) -> bool:
     msg = MIMEMultipart()
     msg["Subject"], msg["From"], msg["To"] = subject, f"SD Channel Scan <{user}>", to
     msg.attach(MIMEText(html, "html", "utf-8"))
-    att = MIMEApplication(csv_bytes, Name=csv_name)
-    att["Content-Disposition"] = f'attachment; filename="{csv_name}"'
-    msg.attach(att)
     if port == 465:
         with smtplib.SMTP_SSL(host, port) as srv:
             srv.login(user, pw)
@@ -215,13 +253,15 @@ def main() -> None:
                                "close", "line", "asof", "cross"]]
     csv_bytes = out.round(4).to_csv(index=False).encode()
     (HERE / "latest.csv").write_bytes(csv_bytes)
+    site_data = build_site_json(df, asof, missing)
+    (HERE / "data.json").write_text(json.dumps(site_data, separators=(",", ":")))
     # Keep last-known values for lines that failed today, so a one-day gap does not fake a crossing later.
     new_state = dict(prev)
     new_state.update({r.ticker: round(r.z, 4) for r in df.itertuples()})
     state_path.write_text(json.dumps({"asof": asof, "z": new_state}, separators=(",", ":")))
     print(subject)
     if not args.no_email:
-        send(subject, html, csv_bytes, f"sd-channel-{asof}.csv")
+        send(subject, html)
 
 
 if __name__ == "__main__":
